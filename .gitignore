@@ -6,3 +6,4 @@ gnu_debug
 all_plats.sh
 list_plat
 _install/src/dmft_tools_version.inc
+install.log
