@@ -14,14 +14,19 @@ usage(){
     echo ""
     echo "usage:"
     echo ""
-    echo "$0  -p,--plat=FC_PLAT  [ --prefix=PREFIX_DIR   -s,--sfprefix=SCIFOR_DIR -c,--clean -d,--debug  -h,--help]"
+    echo "$0  --plat=FC_PLAT --prefix=PREFIX_DIR    [--sfprefix=SciFor_root ($SFROOT) -c,--clean -q,--quiet -d,--debug  -h,--help]"
     echo ""
-    echo "    -p,--plat   : specifies the actual platform/compiler to use [intel,gnu]"
-    echo "    --prefix    : specifies the target directory [default: FC_PLAT]"
-    echo "    -q,--quiet  : assume Y to all questions."
-    echo "    -c,--clean  : clean out the former compilation."
-    echo "    -d,--debug  : debug flag"
-    echo "    -h,--help   : this help"
+    echo ""
+    echo "mandatory arguments:" 
+    echo "    --plat       : specifies the actual platform/compiler to use [intel,gnu]"
+    echo "    --prefix     : specifies the target directory "
+    echo "    --sfprefix   : specifies the SciFor root directory "
+    echo ""    
+    echo "optional arguments:" 
+    echo "    -q,--quiet   : assume Y to all questions."
+    echo "    -c,--clean   : clean out the former compilation."
+    echo "    -d,--debug   : debug flag"
+    echo "    -h,--help    : this help"
     echo ""
     exit
 }
@@ -43,7 +48,7 @@ nparent_dir(){
 LIST_ARGS=$*
 
 #>>> GET LONG & SHORT OPTIONS
-params="$(getopt -n "$0" --options p:s:qcwdh --longoptions plat:,prefix:,sfprefix:,quiet,clean,debug,help -- "$@")"
+params="$(getopt -n "$0" --options qcdh --longoptions plat:,prefix:,sfprefix:,quiet,clean,debug,help -- "$@")"
 if [ $? -ne 0 ];then
     usage
 fi
@@ -62,25 +67,23 @@ fi
 WPLAT=1
 DEBUG=1
 CLEAN=1
+QUIET=0
 VERSION=$(git describe --tags 2>/dev/null)
 WRK_INSTALL=$(pwd)
-PREFIX=$WRK_INSTALL
-#$(nparent_dir $WRK_INSTALL 2)
 BIN_INSTALL=$WRK_INSTALL/bin
 ETC_INSTALL=$WRK_INSTALL/etc
 OPT_INSTALL=$WRK_INSTALL/opt
 ENVMOD_INSTALL=$ETC_INSTALL/environment_modules
 SRC_INSTALL=$WRK_INSTALL/src
-SFROOT=$(nparent_dir $WRK_INSTALL 1)/scifor
+
 #>>> THE LISTS OF ALLOWED PLAT
 LIST_FC="gnu intel"
-
 
 #>>> GO THROUGH THE INPUT ARGUMENTS. FOR EACH ONE IF REQUIRED TAKE ACTION BY SETTING VARIABLES.
 while true
 do
     case $1 in
-	-p|--plat)
+	--plat)
 	    WPLAT=0
 	    PLAT=$2
 	    shift 2
@@ -94,28 +97,27 @@ do
 	    PREFIX=$2;
 	    shift 2
 	    ;;
-	-s|--sfprefix)
+	--sfprefix)
 	    SFROOT=$2
 	    shift 2
 	    ;;
 	-c|--clean) CLEAN=0;shift ;;
 	-d|--debug) DEBUG=0;shift ;;
         -h|--help) usage ;;
-	-o|--opt-lib) shift 2;;
-	-q|--quiet) shift ;;
+	-q|--quiet) QUIET=1;shift ;;
         --) shift; break ;;
         *) usage ;;
     esac
 done
 
 #>>> CHECK THAT THE MANDATORY OPTION -p,-plat IS PRESENT:
-[[ $WPLAT == 0 ]] || usage
+[[ $WPLAT == 0 ]] && [[ ! -z $PREFIX ]] || usage
+[[ ! -z $SFROOT ]]  || usage
 
 
 #RENAME WITH DEBUG IF NECESSARY 
-if [ $DEBUG == 0 ];then 
-    PLAT=${PLAT}_debug;
-fi
+[[ $DEBUG == 0 ]] && PLAT=${PLAT}_debug
+
 
 #>>> SET STANDARD NAMES FOR THE TARGET DIRECTORY
 DIR_TARGET=$PREFIX/$PLAT
@@ -123,28 +125,29 @@ BIN_TARGET=$DIR_TARGET/bin
 ETC_TARGET=$DIR_TARGET/etc
 LIB_TARGET=$DIR_TARGET/lib
 INC_TARGET=$DIR_TARGET/include
-echo "Installing in $DIR_TARGET."
-sleep 2
-
+DIR_TARGET_W=0
+if [ -d $PREFIX ];then
+    TEST_W_DIR=$PREFIX
+else
+    TEST_W_DIR=$(nparent_dir $PREFIX 1)
+fi
+if [ ! -w $TEST_W_DIR ];then
+    DIR_TARGET_W=1
+    echo "Can not create $DIR_TARGET: $TEST_W_DIR has no write access"
+    sleep 1
+    echo "Try to grant root privileges to create $DIR_TARGET for $USER:$GROUP"
+    sudo -v
+fi
 
 #TEST SCIFOR DIRECTORY EXISTS
 if [ ! -d $SFROOT ];then echo "$0: can not find SciFor root directory at $SCIFOR";exit;fi
 if [ ! -d $SFROOT/$PLAT ];then echo "$0: can not find $SFROOT/$PLAT directory";exit;fi
 
 
+
 create_makeinc(){
     local PLAT=$1
     cd $WRK_INSTALL
-    OBJ_INSTALL=$SRC_INSTALL/obj_$PLAT
-    INC_INSTALL=$SRC_INSTALL/mod_$PLAT
-    echo "Creating directories:" 
-    mkdir -pv $DIR_TARGET
-    mkdir -pv $BIN_TARGET
-    mkdir -pv $ETC_TARGET/modules/$LNAME
-    mkdir -pv $LIB_TARGET
-    mkdir -pv $INC_TARGET
-    mkdir -pv $OBJ_INSTALL
-    mkdir -pv $INC_INSTALL
     case $PLAT in
 	intel)
 	    local FC=ifort
@@ -186,35 +189,83 @@ PLAT=$PLAT
 LIB_DMFTT=$LIB_TARGET/libdmftt.a
 INC_SCIFOR=$SFROOT/$PLAT/include
 INC_TARGET=$INC_TARGET
-OBJ_INSTALL=$OBJ_INSTALL
-INC_INSTALL=$INC_INSTALL
 EOF
+}
 
-    echo "Copying init script for $UNAME" 
-    cp -fv $BIN_INSTALL/configvars.sh $BIN_TARGET/configvars.sh
-    cat <<EOF >> $BIN_TARGET/configvars.sh
+
+#>>> GET THE ACTUAL DIRECTORY
+HERE=$(pwd)
+
+
+create_makeinc $PLAT
+sleep 1
+if [ $CLEAN == 0 ];then
+    make cleanall
+    exit 0
+fi
+
+
+
+if [ $QUIET == 0 ];then
+    _DIR=Y
+    echo -n "Installing in $DIR_TARGET. Continue [Y/n]: "
+    read _DIR;
+    _DIR=`echo $_DIR |tr [:lower:] [:upper:]`
+    [[ $_DIR == Y ]] || exit 1
+else
+    echo "Installing DMFT_Tools in $DIR_TARGET (quiet mode): "
+    sleep 2
+fi
+
+
+# >>> CREATE THE DIRECTORY HIERARCHY:
+echo "Creating directories:"
+sleep 1
+if [ $DIR_TARGET_W -eq 0 ];then
+    echo "mkdir -pv $DIR_TARGET"
+    mkdir -pv $DIR_TARGET
+else
+    echo "sudo mkdir -pv $DIR_TARGET && sudo chown $USER:$GROUP $DIR_TARGET"
+    sudo mkdir -pv $DIR_TARGET && sudo chown $USER:$GROUP $DIR_TARGET
+fi
+mkdir -pv $BIN_TARGET
+mkdir -pv $ETC_TARGET/modules/$LNAME
+mkdir -pv $LIB_TARGET
+mkdir -pv $INC_TARGET
+sleep 1
+
+
+echo "Copying init script for $UNAME" 
+cp -fv $BIN_INSTALL/configvars.sh $BIN_TARGET/configvars.sh
+cat <<EOF >> $BIN_TARGET/configvars.sh
 add_library_to_system ${PREFIX}/${PLAT}
 EOF
-    echo "" 
-    echo "Generating environment module file for $UNAME" 
-    cat <<EOF > $ETC_TARGET/modules/$LNAME/$PLAT
+echo "" 
+sleep 1
+
+echo "Generating environment module file for $UNAME" 
+cat <<EOF > $ETC_TARGET/modules/$LNAME/$PLAT
 #%Modules
 set	root	$PREFIX
 set	plat	$PLAT
 set	version	"($PLAT)"
 EOF
-    cat $ENVMOD_INSTALL/module >> $ETC_TARGET/modules/$LNAME/$PLAT
-    echo "" 
-    echo "Compiling $UNAME library on platform $PLAT:"
-    echo "" 
-}
+cat $ENVMOD_INSTALL/module >> $ETC_TARGET/modules/$LNAME/$PLAT
+echo "" 
+sleep 1
 
-create_makeinc $PLAT
-if [ $CLEAN == 0 ];then
-    make cleanall
-    exit 0
-fi
+echo "Compiling $UNAME library on platform $PLAT:"
+echo "" 
+sleep 1
+
+
+
+
+
+
+rm -fv $LIB_TARGET/$LIBNAME
 make all
+sleep 1
 if [ $? == 0 ];then
     make clean
     mv -vf $WRK_INSTALL/make.inc $ETC_TARGET/make.inc.dmfttols
@@ -238,7 +289,7 @@ echo " (or copy this line into your bash profile [e.g. .bashrc])"
 echo ""
 module avail >/dev/null 2>&1 
 if [ $? == 0 ];then
-echo " or load the $UNAME modules:" 
+    echo " or load the $UNAME modules:" 
 echo "   $ module use $HOME/.modules.d/applications" 
 echo "   $ module load $LNAME/$PLAT" 
 echo "(or copy these lines into your bash profile [e.g. .bashrc])" 

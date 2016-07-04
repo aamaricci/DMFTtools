@@ -1,10 +1,15 @@
 module DMFT_TIGHT_BINDING
   USE SF_CONSTANTS, only: pi,pi2,xi,one,zero
-  USE SF_IOTOOLS, only:free_unit,reg,txtfy
-  USE SF_LINALG, only: matrix_diagonalize
+  USE SF_IOTOOLS, only:free_unit,reg,txtfy,free_units
+  USE SF_LINALG, only: eigh,eigh_jacobi
   USE SF_COLORS
   implicit none
   private
+
+
+
+  public :: kgrid
+  public :: kgrid_from_path
 
 
   interface build_hk_model
@@ -18,6 +23,7 @@ module DMFT_TIGHT_BINDING
      module procedure build_hkpath_model_1_d 
      module procedure build_hkpath_model_1_c
   end interface build_hk_model
+  public :: build_Hk_model !< for back-compatibility reasons. To be removed.
 
 
   interface build_hkr_model
@@ -26,6 +32,43 @@ module DMFT_TIGHT_BINDING
      module procedure build_hkr_model_Norb_c
      module procedure build_hkr_model_1_c
   end interface build_hkr_model
+  public :: build_Hkr_model !< for back-compatibility reasons. To be removed.
+
+
+  interface TB_build_model
+     module procedure build_hk_model_Norb_d
+     module procedure build_hk_model_Norb_c
+     module procedure build_hk_model_1_d
+     module procedure build_hk_model_1_c
+     !
+     module procedure build_hkpath_model_Norb_d
+     module procedure build_hkpath_model_Norb_c
+     module procedure build_hkpath_model_1_d 
+     module procedure build_hkpath_model_1_c
+     !
+     module procedure build_hkr_model_Norb_d
+     module procedure build_hkr_model_1_d
+     module procedure build_hkr_model_Norb_c
+     module procedure build_hkr_model_1_c
+  end interface TB_build_model
+  public :: TB_build_model  
+
+
+
+
+
+
+  interface TB_solve_path
+     module procedure solve_Hk_along_BZpath
+     module procedure solve_HkR_along_BZpath
+  end interface TB_solve_path
+  public :: TB_solve_path
+  public :: solve_Hk_along_BZpath  !< for back-compatibility reasons. To be removed.
+  public :: solve_HkR_along_BZpath !< for back-compatibility reasons. To be removed.
+
+
+
+
 
 
   interface write_hk_w90
@@ -34,42 +77,35 @@ module DMFT_TIGHT_BINDING
      module procedure write_hk_w90_3
      module procedure write_hk_w90_4
   end interface write_hk_w90
+  public :: write_hk_w90
 
   interface read_hk_w90
      module procedure read_hk_w90_1
      module procedure read_hk_w90_2
   end interface read_hk_w90
+  public :: read_hk_w90
+
+
 
 
   interface write_Hloc
      module procedure write_Hloc_1
      module procedure write_Hloc_2
   end interface write_Hloc
+  public :: write_hloc
 
 
   interface read_Hloc
      module procedure read_Hloc_1
      module procedure read_Hloc_2
   end interface read_Hloc
-
-
-  public :: indx2ix,indx2iy,indx2iz
-  public :: coord2indx
-  public :: indx2coord
-  public :: kgrid
-  public :: kgrid_from_path
-  public :: build_Hk_model
-  public :: build_Hkr_model
-  public :: write_hk_w90
-  public :: read_hk_w90
-  public :: solve_Hk_along_BZpath
-  public :: solve_HkR_along_BZpath
-  public :: write_hloc
   public :: read_hloc
 
-  public :: shrink_Hkr
-  public :: expand_Hkr
-
+  ! public :: shrink_Hkr
+  ! public :: expand_Hkr
+  ! public :: indx2ix,indx2iy,indx2iz
+  ! public :: coord2indx
+  ! public :: indx2coord
 
   !Some special points in the BZ:
   !we do everything in 3d.
@@ -88,365 +124,17 @@ contains
 
 
   !-------------------------------------------------------------------------------------------
-  !PURPOSE:  build the \hat{H}({\mathbf k}) Hamiltonian matrix from the function hk_model
-  ! different cases here: 
+  !PURPOSE:  build the \hat{H}({\mathbf k}) or \hat{H}({\mathbf k};i,j) Hamiltonian matrix
+  ! from the function user defined hk_model procedure.
+  ! > multi-orbital/lattice sites Norb: real,complex
+  ! > single orbital/lattice site: real,complex
   ! > multi-orbital/lattice sites Norb: real,complex
   ! > single orbital/lattice site: real,complex
   !-------------------------------------------------------------------------------------------
-  function build_hk_model_Norb_d(hk_model,Norb,kxgrid,kygrid,kzgrid) result(Hk)
-    integer                                                             :: Norb
-    integer                                                             :: Nk,Nkx,Nky,Nkz
-    integer                                                             :: ik,ix,iy,iz
-    real(8),dimension(:)                                                :: kxgrid,kygrid,kzgrid
-    real(8)                                                             :: kx,ky,kz
-    real(8),dimension(Norb,Norb,size(kxgrid)*size(kygrid)*size(kzgrid)) :: hk
-    interface 
-       function hk_model(kpoint,N)
-         real(8),dimension(:)    :: kpoint
-         real(8),dimension(N,N)  :: hk_model
-       end function hk_model
-    end interface
-    Nkx = size(kxgrid)
-    Nky = size(kygrid)
-    Nkz = size(kzgrid)
-    Nk  = Nkx*Nky*Nkz
-    do ik=1,Nk
-       call indx2coord(ik,ix,iy,iz,[Nkx,Nky,Nkz])
-       kx=kxgrid(ix)
-       ky=kygrid(iy)
-       kz=kzgrid(iz)
-       Hk(:,:,ik) = hk_model([kx,ky,kz],Norb)
-    enddo
-  end function build_hk_model_Norb_d
-
-  function build_hkpath_model_Norb_d(hk_model,Norb,kpath,Nkpath) result(Hk)
-    interface 
-       function hk_model(kpoint,N)
-         real(8),dimension(:)   :: kpoint
-         real(8),dimension(N,N) :: hk_model
-       end function hk_model
-    end interface
-    integer                                                   :: Norb
-    real(8),dimension(:,:)                                    :: kpath
-    integer                                                   :: Nkpath
-    !
-    integer                                                   :: Ndim,Npts,Nk
-    integer                                                   :: ik,i
-    real(8),dimension((size(kpath,1)-1)*Nkpath,size(kpath,2)) :: kgrid
-    real(8),dimension(size(kpath,2))                          :: kvec
-    !
-    real(8),dimension(Norb,Norb,(size(kpath,1)-1)*Nkpath)     :: hk
-    Npts=size(kpath,1)          !# of k-points along the path
-    Ndim=size(kpath,2)          !# of dimension of the k-vectors
-    Nk  = (Npts-1)*Nkpath
-    if(Ndim>3)stop "build_hkpath_model_Norb_d error: Ndim > 3"
-    do i=1,Ndim
-       kgrid(:,i) = kgrid_from_path(kpath,Npts,Nkpath,i)
-    enddo
-    do ik=1,Nk
-       Hk(:,:,ik) = hk_model(kgrid(ik,:) , Norb)
-    enddo
-  end function build_hkpath_model_Norb_d
+  include "tight_binding_build_hk_model.f90"
+  include "tight_binding_build_hkR_model.f90"
 
 
-
-
-  function build_hk_model_Norb_c(hk_model,Norb,kxgrid,kygrid,kzgrid) result(Hk)
-    integer                                                                :: Norb
-    integer                                                                :: Nk,Nkx,Nky,Nkz
-    integer                                                                :: ik,ix,iy,iz
-    real(8),dimension(:)                                                   :: kxgrid,kygrid,kzgrid
-    real(8)                                                                :: kx,ky,kz
-    complex(8),dimension(Norb,Norb,size(kxgrid)*size(kygrid)*size(kzgrid)) :: hk
-    interface 
-       function hk_model(kpoint,N)
-         real(8),dimension(:)       :: kpoint
-         complex(8),dimension(N,N)  :: hk_model
-       end function hk_model
-    end interface
-    Nkx = size(kxgrid)
-    Nky = size(kygrid)
-    Nkz = size(kzgrid)
-    Nk  = Nkx*Nky*Nkz
-    do ik=1,Nk
-       call indx2coord(ik,ix,iy,iz,[Nkx,Nky,Nkz])
-       kx=kxgrid(ix)
-       ky=kygrid(iy)
-       kz=kzgrid(iz)
-       Hk(:,:,ik) = hk_model([kx,ky,kz],Norb)
-    enddo
-  end function build_hk_model_Norb_c
-
-  function build_hkpath_model_Norb_c(hk_model,Norb,kpath,Nkpath) result(Hk)
-    interface 
-       function hk_model(kpoint,N)
-         real(8),dimension(:)      :: kpoint
-         complex(8),dimension(N,N) :: hk_model
-       end function hk_model
-    end interface
-    integer                                                   :: Norb
-    real(8),dimension(:,:)                                    :: kpath
-    integer                                                   :: Nkpath
-    !
-    integer                                                   :: Ndim,Npts,Nk
-    integer                                                   :: ik,i
-    real(8),dimension((size(kpath,1)-1)*Nkpath,size(kpath,2)) :: kgrid
-    real(8),dimension(size(kpath,2))                          :: kvec
-    !
-    complex(8),dimension(Norb,Norb,(size(kpath,1)-1)*Nkpath)  :: hk
-    Npts=size(kpath,1)          !# of k-points along the path
-    Ndim=size(kpath,2)          !# of dimension of the k-vectors
-    Nk  = (Npts-1)*Nkpath
-    if(Ndim>3)stop "build_hkpath_model_Norb_c error: Ndim > 3"
-    do i=1,Ndim
-       kgrid(:,i) = kgrid_from_path(kpath,Npts,Nkpath,i)
-    enddo
-    do ik=1,Nk
-       Hk(:,:,ik) = hk_model(kgrid(ik,:) , Norb)
-    enddo
-  end function build_hkpath_model_Norb_c
-
-
-
-
-  function build_hk_model_1_d(hk_model,kxgrid,kygrid,kzgrid) result(Hk)
-    integer                                                      :: Nk,Nkx,Nky,Nkz
-    integer                                                      :: ik,ix,iy,iz
-    real(8),dimension(:)                                         :: kxgrid,kygrid,kzgrid
-    real(8)                                                      :: kx,ky,kz
-    real(8),dimension(size(kxgrid)*size(kygrid)*size(kzgrid))    :: hk
-    interface 
-       function hk_model(kpoint)
-         real(8),dimension(:)   :: kpoint
-         real(8)                :: hk_model
-       end function hk_model
-    end interface
-    Nkx = size(kxgrid)
-    Nky = size(kygrid)
-    Nkz = size(kzgrid)
-    Nk  = Nkx*Nky*Nkz
-    do ik=1,Nk
-       call indx2coord(ik,ix,iy,iz,[Nkx,Nky,Nkz])
-       kx=kxgrid(ix)
-       ky=kygrid(iy)
-       kz=kzgrid(iz)
-       Hk(ik) = hk_model([kx,ky,kz])
-    enddo
-  end function build_hk_model_1_d
-
-  function build_hkpath_model_1_d(hk_model,kpath,Nkpath) result(Hk)
-    interface 
-       function hk_model(kpoint)
-         real(8),dimension(:) :: kpoint
-         real(8)              :: hk_model
-       end function hk_model
-    end interface
-    real(8),dimension(:,:)                                    :: kpath
-    integer                                                   :: Nkpath
-    !
-    integer                                                   :: Ndim,Npts,Nk
-    integer                                                   :: ik,i
-    real(8),dimension((size(kpath,1)-1)*Nkpath,size(kpath,2)) :: kgrid
-    real(8),dimension(size(kpath,2))                          :: kvec
-    !
-    real(8),dimension((size(kpath,1)-1)*Nkpath)               :: hk
-    !
-    Npts=size(kpath,1)          !# of k-points along the path
-    Ndim=size(kpath,2)          !# of dimension of the k-vectors
-    Nk  = (Npts-1)*Nkpath
-    if(Ndim>3)stop "build_hk_model_Norb_d error: Ndim > 3"
-    do i=1,Ndim
-       kgrid(:,i) = kgrid_from_path(kpath,Npts,Nkpath,i)
-    enddo
-    do ik=1,Nk
-       Hk(ik) = hk_model(kgrid(ik,:))
-    enddo
-  end function build_hkpath_model_1_d
-
-
-
-
-  function build_hk_model_1_c(hk_model,kxgrid,kygrid,kzgrid) result(Hk)
-    integer                                                      :: Nk,Nkx,Nky,Nkz
-    integer                                                      :: ik,ix,iy,iz
-    real(8),dimension(:)                                         :: kxgrid,kygrid,kzgrid
-    real(8)                                                      :: kx,ky,kz
-    complex(8),dimension(size(kxgrid)*size(kygrid)*size(kzgrid)) :: hk
-    interface 
-       function hk_model(kpoint)
-         real(8),dimension(:)      :: kpoint
-         complex(8)                :: hk_model
-       end function hk_model
-    end interface
-    Nkx = size(kxgrid)
-    Nky = size(kygrid)
-    Nkz = size(kzgrid)
-    Nk  = Nkx*Nky*Nkz
-    do ik=1,Nk
-       call indx2coord(ik,ix,iy,iz,[Nkx,Nky,Nkz])
-       kx=kxgrid(ix)
-       ky=kygrid(iy)
-       kz=kzgrid(iz)
-       Hk(ik) = hk_model([kx,ky,kz])
-    enddo
-  end function build_hk_model_1_c
-
-  function build_hkpath_model_1_c(hk_model,kpath,Nkpath) result(Hk)
-    interface 
-       function hk_model(kpoint)
-         real(8),dimension(:) :: kpoint
-         complex(8)           :: hk_model
-       end function hk_model
-    end interface
-    real(8),dimension(:,:)                                    :: kpath
-    integer                                                   :: Nkpath
-    !
-    integer                                                   :: Ndim,Npts,Nk
-    integer                                                   :: ik,i
-    real(8),dimension((size(kpath,1)-1)*Nkpath,size(kpath,2)) :: kgrid
-    real(8),dimension(size(kpath,2))                          :: kvec
-    !
-    complex(8),dimension((size(kpath,1)-1)*Nkpath)            :: hk
-    !
-    Npts=size(kpath,1)          !# of k-points along the path
-    Ndim=size(kpath,2)          !# of dimension of the k-vectors
-    Nk  = (Npts-1)*Nkpath
-    if(Ndim>3)stop "build_hk_model_Norb_d error: Ndim > 3"
-    do i=1,Ndim
-       kgrid(:,i) = kgrid_from_path(kpath,Npts,Nkpath,i)
-    enddo
-    do ik=1,Nk
-       Hk(ik) = hk_model(kgrid(ik,:))
-    enddo
-  end function build_hkpath_model_1_c
-
-
-
-
-
-
-
-
-
-  !-------------------------------------------------------------------------------------------
-  !PURPOSE:  build the \hat{H}({\mathbf k};i,j) Hamiltonian matrix from the function hkr_model
-  ! different cases here: 
-  ! > multi-orbital/lattice sites Norb: real,complex
-  ! > single orbital/lattice site: real,complex
-  !-------------------------------------------------------------------------------------------
-  function build_hkr_model_1_d(hkr_model,Nlat,kxgrid,kygrid,kzgrid,pbc) result(Hk)
-    integer                                                             :: Nlat,Nk,Nkx,Nky,Nkz
-    integer                                                             :: ik,ix,iy,iz
-    real(8),dimension(:)                                                :: kxgrid,kygrid,kzgrid
-    real(8)                                                             :: kx,ky,kz
-    real(8),dimension(Nlat,Nlat,size(kxgrid)*size(kygrid)*size(kzgrid)) :: hk
-    logical                                                             :: pbc
-    interface 
-       function hkr_model(kpoint,Nlat,pbc)
-         real(8),dimension(:)         :: kpoint
-         integer                      :: Nlat
-         real(8),dimension(Nlat,Nlat) :: hkr_model
-         logical                      :: pbc
-       end function hkr_model
-    end interface
-    Nkx = size(kxgrid)
-    Nky = size(kygrid)
-    Nkz = size(kzgrid)
-    Nk  = Nkx*Nky*Nkz
-    do ik=1,Nk
-       call indx2coord(ik,ix,iy,iz,[Nkx,Nky,Nkz])
-       kx=kxgrid(ix)
-       ky=kygrid(iy)
-       kz=kzgrid(iz)
-       Hk(:,:,ik) = hkr_model([kx,ky,kz],Nlat,pbc)
-    enddo
-  end function build_hkr_model_1_d
-
-  function build_hkr_model_1_c(hkr_model,Nlat,kxgrid,kygrid,kzgrid,pbc) result(Hk)
-    integer                                                                :: Nlat,Nk,Nkx,Nky,Nkz
-    integer                                                                :: ik,ix,iy,iz
-    real(8),dimension(:)                                                   :: kxgrid,kygrid,kzgrid
-    real(8)                                                                :: kx,ky,kz
-    complex(8),dimension(Nlat,Nlat,size(kxgrid)*size(kygrid)*size(kzgrid)) :: hk
-    logical                                                                :: pbc
-    interface 
-       function hkr_model(kpoint,Nlat,pbc)
-         real(8),dimension(:)            :: kpoint
-         integer                         :: Nlat
-         complex(8),dimension(Nlat,Nlat) :: hkr_model
-         logical                         :: pbc
-       end function hkr_model
-    end interface
-    Nkx = size(kxgrid)
-    Nky = size(kygrid)
-    Nkz = size(kzgrid)
-    Nk  = Nkx*Nky*Nkz
-    do ik=1,Nk
-       call indx2coord(ik,ix,iy,iz,[Nkx,Nky,Nkz])
-       kx=kxgrid(ix)
-       ky=kygrid(iy)
-       kz=kzgrid(iz)
-       Hk(:,:,ik) = hkr_model([kx,ky,kz],Nlat,pbc)
-    enddo
-  end function build_hkr_model_1_c
-
-  function build_hkr_model_Norb_d(hkr_model,Nlat,Norb,kxgrid,kygrid,kzgrid,pbc) result(Hk)
-    integer                                                                       :: Nlat,Norb
-    integer                                                                       :: Nk,Nkx,Nky,Nkz
-    integer                                                                       :: ik,ix,iy,iz
-    real(8),dimension(:)                                                          :: kxgrid,kygrid,kzgrid
-    real(8)                                                                       :: kx,ky,kz
-    real(8),dimension(Nlat*Norb,Nlat*Norb,size(kxgrid)*size(kygrid)*size(kzgrid)) :: hk
-    logical                                                                       :: pbc
-    interface 
-       function hkr_model(kpoint,Nlat,Norb,pbc)
-         real(8),dimension(:)                   :: kpoint
-         integer                                :: Nlat,Norb
-         logical                                :: pbc
-         real(8),dimension(Nlat*Norb,Nlat*Norb) :: hkr_model
-       end function hkr_model
-    end interface
-    Nkx = size(kxgrid)
-    Nky = size(kygrid)
-    Nkz = size(kzgrid)
-    Nk  = Nkx*Nky*Nkz
-    do ik=1,Nk
-       call indx2coord(ik,ix,iy,iz,[Nkx,Nky,Nkz])
-       kx=kxgrid(ix)
-       ky=kygrid(iy)
-       kz=kzgrid(iz)
-       Hk(:,:,ik) = hkr_model([kx,ky,kz],Nlat,Norb,pbc)
-    enddo
-  end function build_hkr_model_Norb_d
-
-  function build_hkr_model_Norb_c(hkr_model,Nlat,Norb,kxgrid,kygrid,kzgrid,pbc) result(Hk)
-    integer                                                                          :: Nlat,Norb
-    integer                                                                          :: Nk,Nkx,Nky,Nkz
-    integer                                                                          :: ik,ix,iy,iz
-    real(8),dimension(:)                                                             :: kxgrid,kygrid,kzgrid
-    real(8)                                                                          :: kx,ky,kz
-    complex(8),dimension(Nlat*Norb,Nlat*Norb,size(kxgrid)*size(kygrid)*size(kzgrid)) :: hk
-    logical                                                                          :: pbc
-    interface 
-       function hkr_model(kpoint,Nlat,Norb,pbc)
-         real(8),dimension(:)                      :: kpoint
-         integer                                   :: Nlat,Norb
-         logical                                   :: pbc
-         complex(8),dimension(Nlat*Norb,Nlat*Norb) :: hkr_model
-       end function hkr_model
-    end interface
-    Nkx = size(kxgrid)
-    Nky = size(kygrid)
-    Nkz = size(kzgrid)
-    Nk  = Nkx*Nky*Nkz
-    do ik=1,Nk
-       call indx2coord(ik,ix,iy,iz,[Nkx,Nky,Nkz])
-       kx=kxgrid(ix)
-       ky=kygrid(iy)
-       kz=kzgrid(iz)
-       Hk(:,:,ik) = hkr_model([kx,ky,kz],Nlat,Norb,pbc)
-    enddo
-  end function build_hkr_model_Norb_c
 
 
 
@@ -458,7 +146,367 @@ contains
 
 
   !-------------------------------------------------------------------------------------------
-  !PURPOSE:  write/read the Hamiltonian matrix to a file in the Wannier 90 style
+  !PURPOSE:  solve the \hat{H}({\mathbf k}) or \hat{H}({\mathbf k};i,j) along a given linear 
+  ! path in the Brillouin Zone. A GNUPLOT script to plot the bands together with their
+  ! character is generated.
+  !-------------------------------------------------------------------------------------------
+  subroutine solve_Hk_along_BZpath(hk_model,Norb,kpath,Nk,colors_name,points_name,file)
+    interface 
+       function hk_model(kpoint,N)
+         real(8),dimension(:)                 :: kpoint
+         complex(8),dimension(N,N)            :: hk_model
+       end function hk_model
+    end interface
+    integer                                   :: Norb
+    real(8),dimension(:,:)                    :: kpath
+    integer                                   :: Nk
+    type(rgb_color),dimension(Norb)           :: colors_name
+    character(len=*),dimension(size(kpath,1)) :: points_name
+    character(len=*),optional                 :: file
+    character(len=256)                        :: file_,xtics
+    integer                                   :: Npts,Nrot
+    integer                                   :: ipts,ik,ic,unit,u1,u2,iorb
+    real(8),dimension(size(kpath,2))          :: kstart,kstop,kpoint,kdiff
+    real(8)                                   :: eval(Norb),coeff(Norb)
+    complex(8)                                :: h(Norb,Norb),u(Norb,Norb)
+    type(rgb_color)                           :: corb(Norb),c(Norb)
+    file_="Eigenbands.tb";if(present(file))file_=file
+    Npts=size(kpath,1)
+    do iorb=1,Norb
+       corb(iorb) = colors_name(iorb)
+    enddo
+    unit=free_unit()
+    open(unit,file=reg(file_))
+    ic = 0
+    do ipts=1,Npts-1
+       kstart = kpath(ipts,:)
+       kstop  = kpath(ipts+1,:)
+       kdiff  = (kstop-kstart)/dble(Nk)
+       do ik=1,Nk
+          ic=ic+1
+          kpoint = kstart + (ik-1)*kdiff
+          h = hk_model(kpoint,Norb)
+          call eigh(h,Eval)
+          do iorb=1,Norb
+             coeff(:)=h(:,iorb)*conjg(h(:,iorb))
+             c(iorb) = coeff.dot.corb
+          enddo
+          write(unit,'(I12,100(F18.12,I18))')ic,(Eval(iorb),rgb(c(iorb)),iorb=1,Norb)
+       enddo
+    enddo
+    close(unit)
+    xtics="'"//reg(points_name(1))//"'1,"
+    do ipts=2,Npts-1
+       xtics=reg(xtics)//"'"//reg(points_name(ipts))//"'"//reg(txtfy((ipts-1)*Nk+1))//","
+    enddo
+    xtics=reg(xtics)//"'"//reg(points_name(Npts))//"'"//reg(txtfy((Npts-1)*Nk))//""
+    open(unit,file=reg(file_)//".gp")
+    write(unit,*)"set term wxt"
+    write(unit,*)"unset key"
+    write(unit,*)"set xtics ("//reg(xtics)//")"
+    write(unit,*)"set grid noytics xtics"
+    write(unit,*)"plot '"//reg(file_)//"' u 1:2:3 w l lw 3 lc rgb variable"
+    do iorb=2,Norb
+       u1=2+(iorb-1)*2
+       u2=3+(iorb-1)*2
+       write(unit,*)"rep '"//reg(file_)//"' u 1:"&
+            //reg(txtfy(u1))//":"//reg(txtfy(u2))//" w l lw 3 lc rgb variable"
+    enddo
+    write(unit,*)"#set terminal pngcairo size 350,262 enhanced font 'Verdana,10'"
+    write(unit,*)"#set out '"//reg(file_)//".png'"
+    write(unit,*)"#rep"
+    write(unit,*)""
+    write(unit,*)"#set terminal svg size 350,262 fname 'Verdana, Helvetica, Arial, sans-serif'"
+    write(unit,*)"#set out '"//reg(file_)//".svg'"
+    write(unit,*)"#rep"
+    write(unit,*)""
+    write(unit,*)"#set term postscript eps enhanced color 'Times'"
+    write(unit,*)"#set output '|ps2pdf - "//reg(file_)//".pdf'"
+    write(unit,*)"#rep"
+    close(unit)
+    call system("chmod +x "//reg(file_)//".gp")
+  end subroutine solve_Hk_along_BZpath
+
+
+  subroutine solve_HkR_along_BZpath(hkr_model,Nlat,Nso,kpath,Nkpath,colors_name,points_name,file,pbc)
+    interface 
+       function hkr_model(kpoint,Nlat,Nso,pbc)
+         real(8),dimension(:)                    :: kpoint
+         integer                                 :: Nlat,Nso
+         logical                                 :: pbc
+         complex(8),dimension(Nlat*Nso,Nlat*Nso) :: hkr_model
+       end function hkr_model
+    end interface
+    integer                                      :: Nlat,Nso,Nlso
+    real(8),dimension(:,:)                       :: kpath
+    integer                                      :: Nkpath,Nktot
+    type(rgb_color),dimension(2*Nso)             :: colors_name
+    character(len=*),dimension(size(kpath,1))    :: points_name
+    character(len=*),optional                    :: file
+    logical                                      :: pbc
+    character(len=256)                           :: file_,xtics
+    integer                                      :: Npts,units(Nlat*Nso)
+    integer                                      :: ipts,ik,ic,unit,iorb,ilat,io,nrot,u1,u2
+    real(8)                                      :: coeff(Nlat*Nso)
+    type(rgb_color)                              :: corb(Nlat*Nso),c(Nlat*Nso)
+    real(8),dimension(size(kpath,2))             :: kstart,kstop,kpoint,kdiff
+    complex(8),dimension(Nlat*Nso,Nlat*Nso)      :: h
+    real(8),dimension(Nlat*Nso)                  :: Eval
+    character(len=64)                            :: fmt
+    !
+    Nlso  = Nlat*Nso
+    write(fmt,"(A,I0,A)")"(I12,",Nlso,"(F18.12,I18))"
+    file_ = "Eigenbands.tb";if(present(file))file_=file
+    Npts  = size(kpath,1)
+    Nktot = (Npts-1)*Nkpath
+    !
+    do io=1,Nso
+       corb(io) = colors_name(io)
+    enddo
+    do io=Nso+1,(Nlat-1)*Nso
+       corb(io) = gray88
+    enddo
+    do io=1,Nso
+       corb( (Nlat-1)*Nso + io) = colors_name(Nso + io)
+    enddo
+    !
+    units=free_units(Nlso)
+    do io=1,Nlso
+       open(units(io),file="site_"//reg(txtfy(io,4))//"_"//reg(file_))
+    enddo
+    open(free_unit(unit),file=reg(file_))
+    ic=0
+    do ipts=1,Npts-1
+       kstart = kpath(ipts,:)
+       kstop  = kpath(ipts+1,:)
+       kdiff  = (kstop-kstart)/Nkpath
+       do ik=1,Nkpath
+          ic=ic+1
+          kpoint = kstart + (ik-1)*kdiff
+          h = hkr_model(kpoint,Nlat,Nso,pbc)
+          call eigh(h,Eval)
+          do io=1,Nlso
+             coeff(:)=h(:,io)*conjg(h(:,io))
+             c(io) = coeff.dot.corb
+             write(units(io),"(I12,F18.12,I18)")ic,Eval(io),rgb(c(io))
+          enddo
+          write(unit,fmt)ic,(Eval(io),rgb(c(io)),io=1,Nlso)
+       enddo
+    enddo
+    close(unit)
+    do io=1,Nlso
+       close(units(io))
+    enddo
+    xtics="'"//reg(points_name(1))//"'1,"
+    do ipts=2,Npts-1
+       xtics=reg(xtics)//"'"//reg(points_name(ipts))//"'"//reg(txtfy((ipts-1)*Nkpath+1))//","
+    enddo
+    xtics=reg(xtics)//"'"//reg(points_name(Npts))//"'"//reg(txtfy((Npts-1)*Nkpath))//""
+    open(unit,file=reg(file_)//".gp")
+    write(unit,*)"set term wxt"
+    write(unit,*)"unset key"
+    write(unit,*)"set xtics ("//reg(xtics)//")"
+    write(unit,*)"set grid ytics xtics"
+    io=1
+    write(unit,*)"plot 'site_"//reg(txtfy(io,4))//"_"//reg(file_)//"' u 1:2:3 w l lw 2 lc rgb variable"
+    do io=2,Nlso
+       write(unit,*)"rep 'site_"//reg(txtfy(io,4))//"_"//reg(file_)//"' u 1:2:3 w l lw 2 lc rgb variable"
+    enddo
+    write(unit,*)"#set terminal pngcairo size 350,262 enhanced font 'Verdana,10'"
+    write(unit,*)"#set out '"//reg(file_)//".png'"
+    write(unit,*)"#rep"
+    write(unit,*)"#set terminal svg size 350,262 fname 'Verdana, Helvetica, Arial, sans-serif'"
+    write(unit,*)"#set out '"//reg(file_)//".svg'"
+    write(unit,*)"#rep"
+    write(unit,*)"#set term postscript eps enhanced color 'Times'"
+    write(unit,*)"#set output '|ps2pdf - "//reg(file_)//".pdf'"
+    write(unit,*)"#rep"
+    close(unit)
+    call system("chmod +x "//reg(file_)//".gp")
+  end subroutine solve_HkR_along_BZpath
+  !>OLD VERSION:
+  ! subroutine solve_HkR_along_BZpath(hkr_model,Nlat,Norb,kpath,Nkpath,file,pbc,jacobi)
+  !   integer                              :: Nlat,Norb
+  !   real(8),dimension(:,:)               :: kpath
+  !   integer                              :: Nkpath,Nktot
+  !   logical                              :: pbc
+  !   logical,optional                     :: jacobi
+  !   character(len=*),optional            :: file
+  !   character(len=256)                   :: file_,xtics
+  !   integer                              :: Npts
+  !   integer                              :: ipts,ik,ic,unit,iorb,ilat,io,nrot
+  !   real(8),dimension(size(kpath,2))     :: kstart,kstop,kpoint,kdiff
+  !   complex(8)                           :: h(Nlat*Norb,Nlat*Norb),u(Nlat*Norb,Nlat*Norb)
+  !   real(8),dimension(Nlat*Norb)         :: Efoo
+  !   real(8),dimension(:,:,:),allocatable :: Eval
+  !   interface 
+  !      function hkr_model(kpoint,Nlat,Norb,pbc)
+  !        real(8),dimension(:)                      :: kpoint
+  !        integer                                   :: Nlat,Norb
+  !        logical                                   :: pbc
+  !        complex(8),dimension(Nlat*Norb,Nlat*Norb) :: hkr_model
+  !      end function hkr_model
+  !   end interface
+  !   file_="Eigenbands.tb";if(present(file))file_=file
+  !   Npts=size(kpath,1)
+  !   Nktot=(Npts-1)*Nkpath
+  !   allocate(Eval(Nlat,Norb,Nktot))
+  !   ic=0
+  !   do ipts=1,Npts-1
+  !      kstart = kpath(ipts,:)
+  !      kstop  = kpath(ipts+1,:)
+  !      kdiff  = (kstop-kstart)/Nkpath
+  !      do ik=1,Nkpath
+  !         ic=ic+1
+  !         kpoint = kstart + (ik-1)*kdiff
+  !         h = hkr_model(kpoint,Nlat,Norb,pbc)
+  !         if(present(jacobi).AND.jacobi)then
+  !            call eigh_jacobi(h,Efoo,u,nrot);h=u
+  !         else
+  !            call eigh(h,Efoo)
+  !         endif
+  !         do ilat=1,Nlat
+  !            do iorb=1,Norb
+  !               io=iorb + (ilat-1)*Norb
+  !               Eval(ilat,iorb,ic)=Efoo(io)
+  !            enddo
+  !         enddo
+  !      enddo
+  !   enddo
+  !   if(ic/=Nktot)stop "solve_HkR_along_BZpath error: bad counting of the k-points along the path"
+  !   do iorb=1,Norb
+  !      open(free_unit(unit),file="l_"//reg(txtfy(iorb))//"_"//reg(file_))
+  !      do ilat=1,Nlat
+  !         do ik=1,Nktot
+  !            write(unit,"(I4,4F18.9)")ik,Eval(ilat,iorb,ik)
+  !         enddo
+  !         write(unit,*)""
+  !      enddo
+  !      close(unit)
+  !   enddo
+  ! end subroutine solve_HkR_along_BZpath
+
+
+
+
+
+
+
+
+
+
+
+  !-------------------------------------------------------------------------------------------
+  !PURPOSE:  obtain the coordinates ix,iy,iz from the lattice index ik
+  !-------------------------------------------------------------------------------------------
+  function indx2ix(ik,ndim) result(ix)
+    integer              :: ik
+    integer              :: ix
+    integer              :: nx_,ny_,nz_
+    integer,dimension(3) :: ndim
+    nx_=ndim(1)
+    ny_=ndim(2)
+    nz_=ndim(3)
+    ix=int(ik-1)/ny_/nz_+1
+  end function indx2ix
+  !
+  function indx2iy(ik,ndim) result(iy)
+    integer              :: ik
+    integer              :: iy
+    integer              :: nx_,ny_,nz_
+    integer,dimension(3) :: ndim
+    nx_=ndim(1)
+    ny_=ndim(2)
+    nz_=ndim(3)
+    iy=mod(int(ik-1)/nz_,ny_)+1
+  end function indx2iy
+  !
+  function indx2iz(ik,ndim) result(iz)
+    integer              :: ik
+    integer              :: iz
+    integer              :: nx_,ny_,nz_
+    integer,dimension(3) :: ndim
+    nx_=ndim(1)
+    ny_=ndim(2)
+    nz_=ndim(3)
+    iz=mod(ik-1,nz_)+1
+  end function indx2iz
+  !
+  subroutine coord2indx(ik,ix,iy,iz,ndim)
+    integer              :: ix,iy,iz
+    integer,dimension(3) :: ndim
+    integer              :: nx,ny,nz
+    integer              :: ik
+    nx=ndim(1)
+    ny=ndim(2)
+    nz=ndim(3)
+    ik = (ix-1)*ny*nz+(iy-1)*nz+iz
+  end subroutine coord2indx
+  !
+  subroutine indx2coord(ik,ix,iy,iz,ndim)
+    integer              :: ix,iy,iz
+    integer,dimension(3) :: ndim
+    integer              :: ik
+    ix=indx2ix(ik,ndim)
+    iy=indx2iy(ik,ndim)
+    iz=indx2iz(ik,ndim)
+  end subroutine indx2coord
+
+
+
+
+
+
+  !-------------------------------------------------------------------------------------------
+  !PURPOSE:  construct a grid of k-points with minimum information
+  !-------------------------------------------------------------------------------------------
+  function kgrid(Nk,start,len)
+    integer               :: Nk,i
+    real(8),optional      :: start,len
+    real(8)               :: start_,len_
+    real(8),dimension(Nk) :: kgrid
+    start_=-pi ;if(present(start))start_=start
+    len_=2d0*pi;if(present(len))len_=len
+    do i=1,Nk
+       kgrid(i) = start_ + len_*(i-1)/Nk
+    enddo
+  end function kgrid
+  !
+  function kgrid_from_path(kpath,Npts,Nk,dim) result(kxpath)
+    real(8),dimension(Npts,3)      :: kpath
+    real(8),dimension((Npts-1)*Nk) :: kxpath
+    real(8),dimension(3)           :: kstart,kstop,kpoint,kdiff
+    integer                        :: ipts,ik,ic,dim,Nk,Npts
+    if(dim>3)stop "error kigrid_from_path: dim > 3"
+    ic=0
+    do ipts=1,Npts-1
+       kstart = kpath(ipts,:)
+       kstop  = kpath(ipts+1,:)
+       kdiff  = (kstop-kstart)/dble(Nk)
+       do ik=1,Nk
+          ic=ic+1
+          kpoint = kstart + (ik-1)*kdiff
+          kxpath(ic)=kpoint(dim)
+       enddo
+    enddo
+  end function kgrid_from_path
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  !-------------------------------------------------------------------------------------------
+  !PURPOSE:  write the Hamiltonian matrix H(k)
   !-------------------------------------------------------------------------------------------
   subroutine write_hk_w90_1(file,No,Nd,Np,Nineq,hk_model,kxgrid,kygrid,kzgrid)
     character(len=*)               :: file
@@ -585,8 +633,16 @@ contains
   end subroutine write_hk_w90_4
 
 
+
+
+
+
+
+
+
+
   !-------------------------------------------------------------------------------------------
-  !PURPOSE:  comment
+  !PURPOSE:  read the Hamiltonian matrix H(k)
   !-------------------------------------------------------------------------------------------
   subroutine read_hk_w90_1(file,No,Nd,Np,Nineq,hk,kxgrid,kygrid,kzgrid)
     character(len=*)            :: file
@@ -637,7 +693,6 @@ contains
     logical                     :: ioexist
     complex(8),dimension(:)     :: Hk
     character(len=1)            :: achar
-
     inquire(file=reg(file),exist=ioexist)
     if(.not.ioexist)then
        write(*,*)"can not find file:"//reg(file)
@@ -662,255 +717,6 @@ contains
     enddo
     close(unit)
   end subroutine read_hk_w90_2
-
-
-
-
-
-
-
-
-
-
-  !-------------------------------------------------------------------------------------------
-  !PURPOSE:  solve the Hamiltonian along a path in the Brillouin Zone
-  !-------------------------------------------------------------------------------------------
-  subroutine solve_Hk_along_BZpath(hk_model,Norb,kpath,Nk,colors_name,points_name,file)
-    integer                                   :: Norb
-    real(8),dimension(:,:)                    :: kpath
-    integer                                   :: Nk
-    character(len=*),dimension(Norb)          :: colors_name
-    character(len=*),dimension(size(kpath,1)) :: points_name
-    character(len=*),optional                 :: file
-    character(len=256)                        :: file_,xtics
-    integer                                   :: Npts
-    integer                                   :: ipts,ik,ic,unit,u1,u2,iorb
-    real(8),dimension(size(kpath,2))          :: kstart,kstop,kpoint,kdiff
-    real(8)                                   :: eval(Norb),coeff(Norb)
-    complex(8)                                :: h(Norb,Norb)
-    type(rgb_color)                           :: corb(Norb),c(Norb)
-    interface 
-       function hk_model(kpoint,N)
-         real(8),dimension(:)                 :: kpoint
-         complex(8),dimension(N,N)            :: hk_model
-       end function hk_model
-    end interface
-    file_="Eigenbands.tb";if(present(file))file_=file
-    Npts=size(kpath,1)
-
-    do iorb=1,Norb
-       corb(iorb) = pick_color(colors_name(iorb))
-    enddo
-    unit=free_unit()
-    open(unit,file=reg(file_))
-    ic = 0
-    do ipts=1,Npts-1
-       kstart = kpath(ipts,:)
-       kstop  = kpath(ipts+1,:)
-       kdiff  = (kstop-kstart)/dble(Nk)
-       do ik=1,Nk
-          ic=ic+1
-          kpoint = kstart + (ik-1)*kdiff
-          h = hk_model(kpoint,Norb)
-          call matrix_diagonalize(h,Eval)
-          do iorb=1,Norb
-             coeff(:)=h(:,iorb)*conjg(h(:,iorb))
-             c(iorb) = coeff.dot.corb
-          enddo
-          write(unit,'(I12,100(F18.12,I18))')ic,(Eval(iorb),rgb(c(iorb)),iorb=1,Norb)
-       enddo
-    enddo
-    close(unit)
-    xtics=' '
-    do ipts=1,Npts-1
-       xtics=reg(xtics)//"'"//reg(points_name(ipts))//"'"//reg(txtfy((ipts-1)*Nk))//","
-    enddo
-    xtics=reg(xtics)//"'"//reg(points_name(Npts))//"'"//reg(txtfy((Npts-1)*Nk))//""
-    open(unit,file=reg(file_)//".gp")
-    ! write(unit,*)"gnuplot -persist << EOF"
-    write(unit,*)"set term wxt"
-    write(unit,*)"set nokey"
-    write(unit,*)"set xtics ("//reg(xtics)//")"
-    write(unit,*)"set grid noytics xtics"
-    write(unit,*)"plot '"//reg(file_)//"' u 1:2:3 w l lw 3 lc rgb variable"
-    do iorb=2,Norb
-       u1=2+(iorb-1)*2
-       u2=3+(iorb-1)*2
-       write(unit,*)"rep '"//reg(file_)//"' u 1:"&
-            //reg(txtfy(u1))//":"//reg(txtfy(u2))//" w l lw 3 lc rgb variable"
-    enddo
-    ! write(unit,*)"#set term png size 1920,1280"
-    write(unit,*)"#set terminal pngcairo size 350,262 enhanced font 'Verdana,10'"
-    write(unit,*)"#set out '"//reg(file_)//".png'"
-    write(unit,*)"#set terminal svg size 350,262 fname 'Verdana, Helvetica, Arial, sans-serif'"
-    write(unit,*)"#set out '"//reg(file_)//".svg'"
-    write(unit,*)"#rep"
-    ! write(unit,"(A)")"EOF"
-    close(unit)
-    call system("chmod +x "//reg(file_)//".gp")
-  end subroutine solve_Hk_along_BZpath
-
-  subroutine solve_HkR_along_BZpath(hkr_model,Nlat,Norb,kpath,Nkpath,file,pbc)
-    integer                              :: Nlat,Norb
-    real(8),dimension(:,:)               :: kpath
-    integer                              :: Nkpath,Nktot
-    logical                              :: pbc
-    character(len=*),optional            :: file
-    character(len=256)                   :: file_,xtics
-    integer                              :: Npts
-    integer                              :: ipts,ik,ic,unit,iorb,ilat,io
-    real(8),dimension(size(kpath,2))     :: kstart,kstop,kpoint,kdiff
-    complex(8)                           :: h(Nlat*Norb,Nlat*Norb)
-    real(8),dimension(Nlat*Norb)         :: Efoo
-    real(8),dimension(:,:,:),allocatable :: Eval
-    interface 
-       function hkr_model(kpoint,Nlat,Norb,pbc)
-         real(8),dimension(:)                      :: kpoint
-         integer                                   :: Nlat,Norb
-         logical                                   :: pbc
-         complex(8),dimension(Nlat*Norb,Nlat*Norb) :: hkr_model
-       end function hkr_model
-    end interface
-    file_="Eigenbands.tb";if(present(file))file_=file
-    Npts=size(kpath,1)
-    Nktot=(Npts-1)*Nkpath
-    allocate(Eval(Nlat,Norb,Nktot))
-    ic=0
-    do ipts=1,Npts-1
-       kstart = kpath(ipts,:)
-       kstop  = kpath(ipts+1,:)
-       kdiff  = (kstop-kstart)/Nkpath
-       do ik=1,Nkpath
-          ic=ic+1
-          kpoint = kstart + (ik-1)*kdiff
-          h = hkr_model(kpoint,Nlat,Norb,pbc)
-          call matrix_diagonalize(h,Efoo)
-          do ilat=1,Nlat
-             do iorb=1,Norb
-                io=iorb + (ilat-1)*Norb
-                Eval(ilat,iorb,ic)=Efoo(io)
-             enddo
-          enddo
-       enddo
-    enddo
-    if(ic/=Nktot)stop "solve_HkR_along_BZpath error: bad counting of the k-points along the path"
-    do iorb=1,Norb
-       open(free_unit(unit),file="l_"//reg(txtfy(iorb))//"_"//reg(file_))
-       do ilat=1,Nlat
-          do ik=1,Nktot
-             write(unit,"(I4,4F18.9)")ik,Eval(ilat,iorb,ik)
-          enddo
-          write(unit,*)""
-       enddo
-       close(unit)
-    enddo
-  end subroutine solve_HkR_along_BZpath
-
-
-
-
-
-  !-------------------------------------------------------------------------------------------
-  !PURPOSE:  obtain the coordinates ix,iy,iz from the lattice index ik
-  !-------------------------------------------------------------------------------------------
-  function indx2ix(ik,ndim) result(ix)
-    integer              :: ik
-    integer              :: ix
-    integer              :: nx_,ny_,nz_
-    integer,dimension(3) :: ndim
-    nx_=ndim(1)
-    ny_=ndim(2)
-    nz_=ndim(3)
-    ix=int(ik-1)/ny_/nz_+1
-  end function indx2ix
-  !
-  function indx2iy(ik,ndim) result(iy)
-    integer              :: ik
-    integer              :: iy
-    integer              :: nx_,ny_,nz_
-    integer,dimension(3) :: ndim
-    nx_=ndim(1)
-    ny_=ndim(2)
-    nz_=ndim(3)
-    iy=mod(int(ik-1)/nz_,ny_)+1
-  end function indx2iy
-  !
-  function indx2iz(ik,ndim) result(iz)
-    integer              :: ik
-    integer              :: iz
-    integer              :: nx_,ny_,nz_
-    integer,dimension(3) :: ndim
-    nx_=ndim(1)
-    ny_=ndim(2)
-    nz_=ndim(3)
-    iz=mod(ik-1,nz_)+1
-  end function indx2iz
-  !
-  subroutine coord2indx(ik,ix,iy,iz,ndim)
-    integer              :: ix,iy,iz
-    integer,dimension(3) :: ndim
-    integer              :: nx,ny,nz
-    integer              :: ik
-    nx=ndim(1)
-    ny=ndim(2)
-    nz=ndim(3)
-    ik = (ix-1)*ny*nz+(iy-1)*nz+iz
-  end subroutine coord2indx
-  !
-  subroutine indx2coord(ik,ix,iy,iz,ndim)
-    integer              :: ix,iy,iz
-    integer,dimension(3) :: ndim
-    integer              :: ik
-    ix=indx2ix(ik,ndim)
-    iy=indx2iy(ik,ndim)
-    iz=indx2iz(ik,ndim)
-  end subroutine indx2coord
-
-
-
-
-
-
-  !-------------------------------------------------------------------------------------------
-  !PURPOSE:  construct a grid of k-points with minimum information
-  !-------------------------------------------------------------------------------------------
-  function kgrid(Nk,start,len)
-    integer               :: Nk,i
-    real(8),optional      :: start,len
-    real(8)               :: start_,len_
-    real(8),dimension(Nk) :: kgrid
-    start_=-pi ;if(present(start))start_=start
-    len_=2d0*pi;if(present(len))len_=len
-    do i=1,Nk
-       kgrid(i) = start_ + len_*(i-1)/Nk
-    enddo
-  end function kgrid
-  !
-  function kgrid_from_path(kpath,Npts,Nk,dim) result(kxpath)
-    real(8),dimension(Npts,3)      :: kpath
-    real(8),dimension((Npts-1)*Nk) :: kxpath
-    real(8),dimension(3)           :: kstart,kstop,kpoint,kdiff
-    integer                        :: ipts,ik,ic,dim,Nk,Npts
-    if(dim>3)stop "error kigrid_from_path: dim > 3"
-    ic=0
-    do ipts=1,Npts-1
-       kstart = kpath(ipts,:)
-       kstop  = kpath(ipts+1,:)
-       kdiff  = (kstop-kstart)/dble(Nk)
-       do ik=1,Nk
-          ic=ic+1
-          kpoint = kstart + (ik-1)*kdiff
-          kxpath(ic)=kpoint(dim)
-       enddo
-    enddo
-  end function kgrid_from_path
-
-
-
-
-
-
-
 
 
 
