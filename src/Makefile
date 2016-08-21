@@ -6,16 +6,17 @@ DIR = ./dmft_tools_portable
 
 .SUFFIXES:.f90 .f
 
-all: version allmod libdmftt.a
+all: version dmftt lib
 
 
-allmod: DMFT_TOOLS_VERSION.o DMFT_FFTGF.o DMFT_FFTAUX.o DMFT_MISC.o DMFT_CONVERGENCE.o DMFT_VECTORS.o DMFT_TIGHT_BINDING.o DMFT_CTRL_VARS.o DMFT_TOOLS.o
+dmftt: DMFT_TOOLS_VERSION.o DMFT_FFTGF.o DMFT_FFTAUX.o DMFT_MISC.o DMFT_CONVERGENCE.o DMFT_VECTORS.o DMFT_TIGHT_BINDING.o DMFT_CTRL_VARS.o DMFT_GLOC.o DMFT_EKIN.o DMFT_TOOLS.o
 
 
-libdmftt.a: 
+lib:
+	@rsync -avP *.mod $(INC_TARGET)/
 	ar crv $(LIB_DMFTT) `ls *.o | sort | uniq` 
 	ranlib $(LIB_DMFTT)
-	@echo 'LIBRARY IS DONE.........'
+	@echo 'DMFT_Tools library is done.........'
 	@echo ' '
 
 version:
@@ -25,7 +26,7 @@ version:
 clean:
 	@echo ""
 	@echo "Cleaning ..."
-	rm -fv *.o
+	rm -fv *.o *.mod
 	@echo ""
 	@echo "done."
 	@echo ""
@@ -40,38 +41,7 @@ cmdexit:
 
 
 .f90.o:
-	$(FC) -c $(FFLAGS) -I$(INC_SCIFOR)/ -I$(INC_TARGET)/ $(MOPT)$(INC_TARGET)/ $<
+	$(FC) -c $(FCOPT) -I$(INC_SCIFOR)/ -I./ $(MOPT)./ $< -o ./$@
 
 .f.o:
-	$(FC) -c $(FFLAGS) $< 
-
-
-# DMFT_TOOLS_VERSION: version
-# 	$(FC) -c $(FFLAGS) $@.f90 -I$(MOD_DIR)/ -I$(MOD_SCIFOR)/ -o $(OBJ_DIR)/$@.o $(MOPT)$(MOD_DIR)/
-
-# DMFT_PARSE_INPUT: 
-# 	$(FC) -c $(FFLAGS)  PARSE_LIST_INPUT.f90 -o $(OBJ_DIR)/PARSE_LIST_INPUT.o $(MOPT)$(MOD_DIR)/
-# 	$(FC) -c $(FFLAGS) $@.f90 -I$(MOD_DIR)/ -I$(MOD_SCIFOR)/ -o $(OBJ_DIR)/$@.o $(MOPT)$(MOD_DIR)/
-
-# DMFT_FFTGF:  
-# 	$(FC) -c $(FFLAGS) $@.f90 -I$(MOD_DIR)/ -I$(MOD_SCIFOR)/ -o $(OBJ_DIR)/$@.o $(MOPT)$(MOD_DIR)/
-
-# DMFT_FFTAUX:  
-# 	$(FC) -c $(FFLAGS) $@.f90 -I$(MOD_DIR)/ -I$(MOD_SCIFOR)/ -o $(OBJ_DIR)/$@.o $(MOPT)$(MOD_DIR)/
-
-# DMFT_MISC:  
-# 	$(FC) -c $(FFLAGS) $@.f90 -I$(MOD_DIR)/ -I$(MOD_SCIFOR)/ -o $(OBJ_DIR)/$@.o $(MOPT)$(MOD_DIR)/
-
-# DMFT_CONVERGENCE:  
-# 	$(FC) -c $(FFLAGS) $@.f90 -I$(MOD_DIR)/ -I$(MOD_SCIFOR)/ -o $(OBJ_DIR)/$@.o $(MOPT)$(MOD_DIR)/
-
-# DMFT_VECTORS: 
-# 	$(FC) -c $(FFLAGS) $@.f90 -I$(MOD_DIR)/ -I$(MOD_SCIFOR)/ -o $(OBJ_DIR)/$@.o $(MOPT)$(MOD_DIR)/
-
-# DMFT_TIGHT_BINDING: 
-# 	$(FC) -c $(FFLAGS) $@.f90 -I$(MOD_DIR)/ -I$(MOD_SCIFOR)/ -o $(OBJ_DIR)/$@.o $(MOPT)$(MOD_DIR)/
-
-# DMFT_TOOLS: 
-# 	$(FC) -c $(FFLAGS) $@.f90 -I$(MOD_DIR)/ -I$(MOD_SCIFOR)/ -o $(OBJ_DIR)/$@.o $(MOPT)$(MOD_DIR)/
-
-# mod_DMFT_TOOLS:  DMFT_TOOLS libupdate
+	$(FC) -c $(FCOPT)  $< -o ./$@

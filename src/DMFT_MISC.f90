@@ -4,6 +4,8 @@ module DMFT_MISC
   implicit none
   private
 
+
+
   !LOOP:
   public :: start_loop
   public :: end_loop
@@ -273,6 +275,10 @@ contains
        endif
     enddo
   end function fastsearchreal
+
+
+
+
 
 
 
