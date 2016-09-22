@@ -243,7 +243,7 @@ contains
     Lk   = size(Hk,3)
     Nlat = size(Sigma,1)
     Nso  = size(Sigma,2)
-    Liw  = size(Sigma,3)
+    Liw  = size(Sigma,4)
     !Testing:
     if(Nso/=Norb*Nspin)stop "dmft_kinetic_energy_normal_main_lattice: Nso != Norb*Nspin [from Sigma]"
     call assert_shape(Hk,[Nlat*Nso,Nlso,Lk],"dmft_kinetic_energy_normal_main_lattice","Hk") !implcitly test that Nlat*Nso=Nlso
@@ -508,7 +508,7 @@ contains
     Lk   = size(Hk,3)
     Nlat = size(Sigma,1)
     Nso  = size(Sigma,2)
-    Liw  = size(Sigma,3)
+    Liw  = size(Sigma,4)
     !Testing:
     if(Nso/=Norb*Nspin)stop "dmft_kinetic_energy_lattice_normal_main: Nso != Norb*Nspin [from Sigma]"
     call assert_shape(Hk,[Nlat*Nso,Nlso,Lk],"dmft_kinetic_energy_lattice_normal_main","Hk") !implcitly test that Nlat*Nso=Nlso

@@ -145,7 +145,7 @@ module DMFT_GLOC
 
 
 
-  
+
   !####################################################################
   !                    COMPUTATIONAL ROUTINES
   !####################################################################
@@ -218,7 +218,7 @@ contains
   !####################################################################
 
 
-  
+
   !--------------------------------------------------------------------!
   ! PURPOSE: evaluate the normal/superconducting local Green's function:
   ! input:
@@ -4508,15 +4508,11 @@ contains
 
 
   !PRINT GLOC LATTICE
-  subroutine dmft_gloc_print_matsubara_lattice(w,Gmats,fname,iprint,split)
+  subroutine dmft_gloc_print_matsubara_lattice(w,Gmats,fname,iprint)
     complex(8),dimension(:,:,:,:,:,:),intent(in) :: Gmats
     real(8),dimension(size(Gmats,6))             :: w        
     character(len=*),intent(in)                  :: fname
     integer,intent(in)                           :: iprint
-    logical,optional                             :: split
-    logical                                      :: split_
-    !
-    split_=.false. ; if(present(split)) split_ = split
     !
     Nlat  = size(Gmats,1)
     Nspin = size(Gmats,2)
@@ -4528,80 +4524,80 @@ contains
        write(*,"(A)") "Gloc matsubara: not written to file."
        !
     case(1)                  !print only diagonal elements
-       write(*,*)"Gloc matsubara: write spin-orbital diagonal elements."
-       if(split_)then
-          do ilat=1,Nlat
-             do ispin=1,Nspin
-                do iorb=1,Norb
+       write(*,*)"Gloc matsubara: write spin-orbital diagonal elements. No Split."
+       do ispin=1,Nspin
+          do iorb=1,Norb
+             suffix=reg(fname)//&
+                  "_l"//reg(txtfy(iorb))//&
+                  "_s"//reg(txtfy(ispin))//&
+                  "_iw"//reg(gloc_suffix)
+             call store_data(reg(suffix),Gmats(:,ispin,ispin,iorb,iorb,:),w)
+          enddo
+       enddo
+       !
+    case(2)                  !print spin-diagonal, all orbitals 
+       write(*,*)"Gloc matsubara: write spin diagonal and all orbitals elements. No Split."
+       do ispin=1,Nspin
+          do iorb=1,Norb
+             do jorb=1,Norb
+                suffix=reg(fname)//&
+                     "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
+                     "_s"//reg(txtfy(ispin))//&
+                     "_iw"//reg(gloc_suffix)
+                call store_data(reg(suffix),Gmats(:,ispin,ispin,iorb,jorb,:),w)
+             enddo
+          enddo
+       enddo
+       !
+    case(3)                  !print all off-diagonals
+       write(*,*)"Gloc matsubara: write all elements. No Split."
+       do ispin=1,Nspin
+          do jspin=1,Nspin
+             do iorb=1,Norb
+                do jorb=1,Norb
                    suffix=reg(fname)//&
-                        "_l"//reg(txtfy(iorb))//&
-                        "_s"//reg(txtfy(ispin))//&
-                        "_iw_indx"//reg(txtfy(ilat,6))//reg(gloc_suffix)
-                   call splot(reg(suffix),w,Gmats(ilat,ispin,ispin,iorb,iorb,:))
+                        "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
+                        "_s"//reg(txtfy(ispin))//reg(txtfy(jspin))//&
+                        "_iw"//reg(gloc_suffix)
+                   call store_data(reg(suffix),Gmats(:,ispin,jspin,iorb,jorb,:),w)
                 enddo
              enddo
           enddo
-       else
+       enddo
+       !
+    case(4)                  !print only diagonal elements
+       write(*,*)"Gloc matsubara: write spin-orbital diagonal elements. Split."
+       do ilat=1,Nlat
           do ispin=1,Nspin
              do iorb=1,Norb
                 suffix=reg(fname)//&
                      "_l"//reg(txtfy(iorb))//&
                      "_s"//reg(txtfy(ispin))//&
-                     "_iw"//reg(gloc_suffix)
-                call store_data(reg(suffix),Gmats(:,ispin,ispin,iorb,iorb,:),w)
+                     "_iw_indx"//reg(txtfy(ilat,6))//reg(gloc_suffix)
+                call splot(reg(suffix),w,Gmats(ilat,ispin,ispin,iorb,iorb,:))
              enddo
           enddo
-       endif
+       enddo
        !
-    case(2)                  !print spin-diagonal, all orbitals 
-       write(*,*)"Gloc matsubara: write spin diagonal and all orbitals elements."
-       if(split_)then
-          do ilat=1,Nlat
-             do ispin=1,Nspin
-                do iorb=1,Norb
-                   do jorb=1,Norb
-                      suffix=reg(fname)//&
-                           "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
-                           "_s"//reg(txtfy(ispin))//&
-                           "_iw_indx"//reg(txtfy(ilat,6))//reg(gloc_suffix)
-                      call splot(reg(suffix),w,Gmats(ilat,ispin,ispin,iorb,jorb,:))
-                   enddo
-                enddo
-             enddo
-          enddo
-       else
+    case(5)                  !print spin-diagonal, all orbitals 
+       write(*,*)"Gloc matsubara: write spin diagonal and all orbitals elements. Split."
+       do ilat=1,Nlat
           do ispin=1,Nspin
              do iorb=1,Norb
                 do jorb=1,Norb
                    suffix=reg(fname)//&
                         "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                         "_s"//reg(txtfy(ispin))//&
-                        "_iw"//reg(gloc_suffix)
-                   call store_data(reg(suffix),Gmats(:,ispin,ispin,iorb,jorb,:),w)
+                        "_iw_indx"//reg(txtfy(ilat,6))//reg(gloc_suffix)
+                   call splot(reg(suffix),w,Gmats(ilat,ispin,ispin,iorb,jorb,:))
                 enddo
              enddo
           enddo
-       endif
+       enddo
        !
-    case default                  !print all off-diagonals
-       write(*,*)"Gloc matsubara: write all elements."
-       if(split_)then
-          do ilat=1,Nlat
-             do ispin=1,Nspin
-                do jspin=1,Nspin
-                   do iorb=1,Norb
-                      do jorb=1,Norb
-                         suffix=reg(fname)//&
-                              "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
-                              "_s"//reg(txtfy(ispin))//reg(txtfy(jspin))//&
-                              "_iw_indx"//reg(txtfy(ilat,6))//reg(gloc_suffix)
-                         call splot(reg(suffix),w,Gmats(ilat,ispin,jspin,iorb,jorb,:))
-                      enddo
-                   enddo
-                enddo
-             enddo
-          enddo
-       else
+    case default
+       write(*,*)"Gloc matsubara: write all elements. Split."
+       do ilat=1,Nlat
           do ispin=1,Nspin
              do jspin=1,Nspin
                 do iorb=1,Norb
@@ -4609,27 +4605,22 @@ contains
                       suffix=reg(fname)//&
                            "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                            "_s"//reg(txtfy(ispin))//reg(txtfy(jspin))//&
-                           "_iw"//reg(gloc_suffix)
-                      call store_data(reg(suffix),Gmats(:,ispin,jspin,iorb,jorb,:),w)
+                           "_iw_indx"//reg(txtfy(ilat,6))//reg(gloc_suffix)
+                      call splot(reg(suffix),w,Gmats(ilat,ispin,jspin,iorb,jorb,:))
                    enddo
                 enddo
              enddo
           enddo
-       endif
+       enddo
        !
     end select
   end subroutine dmft_gloc_print_matsubara_lattice
 
-  subroutine dmft_gloc_print_realaxis_lattice(w,Greal,fname,iprint,split)
+  subroutine dmft_gloc_print_realaxis_lattice(w,Greal,fname,iprint)
     complex(8),dimension(:,:,:,:,:,:),intent(in) :: Greal
     real(8),dimension(size(Greal,6))             :: w
     character(len=*),intent(in)                  :: fname
     integer,intent(in)                           :: iprint
-    logical,optional                             :: split
-    logical                                      :: split_
-
-    !
-    split_=.false. ; if(present(split)) split_ = split
     !
     Nlat  = size(Greal,1)
     Nspin = size(Greal,2)
@@ -4641,80 +4632,80 @@ contains
        write(*,"(A)") "Gloc real: not written to file."
        !
     case(1)                  !print only diagonal elements
-       write(*,*)"Gloc real: write spin-orbital diagonal elements."
-       if(split_)then
-          do ilat=1,Nlat
-             do ispin=1,Nspin
-                do iorb=1,Norb
+       write(*,*)"Gloc real: write spin-orbital diagonal elements. No Split."
+       do ispin=1,Nspin
+          do iorb=1,Norb
+             suffix=reg(fname)//&
+                  "_l"//reg(txtfy(iorb))//&
+                  "_s"//reg(txtfy(ispin))//&
+                  "_realw"//reg(gloc_suffix)
+             call store_data(reg(suffix),Greal(ilat,ispin,ispin,iorb,iorb,:),w)
+          enddo
+       enddo
+       !
+    case(2)                  !print spin-diagonal, all orbitals 
+       write(*,*)"Gloc real: write spin diagonal and all orbitals elements. No Split."
+       do ispin=1,Nspin
+          do iorb=1,Norb
+             do jorb=1,Norb
+                suffix=reg(fname)//&
+                     "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
+                     "_s"//reg(txtfy(ispin))//&
+                     "_realw"//reg(gloc_suffix)
+                call store_data(reg(suffix),Greal(ilat,ispin,ispin,iorb,jorb,:),w)
+             enddo
+          enddo
+       enddo
+       !
+    case(3)
+       write(*,*)"Gloc real: write all elements. No Split."
+       do ispin=1,Nspin
+          do jspin=1,Nspin
+             do iorb=1,Norb
+                do jorb=1,Norb
                    suffix=reg(fname)//&
-                        "_l"//reg(txtfy(iorb))//&
-                        "_s"//reg(txtfy(ispin))//&
-                        "_realw_indx"//reg(txtfy(ilat,6))//reg(gloc_suffix)
-                   call splot(reg(suffix),w,Greal(ilat,ispin,ispin,iorb,iorb,:))
+                        "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
+                        "_s"//reg(txtfy(ispin))//reg(txtfy(jspin))//&
+                        "_realw"//reg(gloc_suffix)
+                   call store_data(reg(suffix),Greal(ilat,ispin,jspin,iorb,jorb,:),w)
                 enddo
              enddo
           enddo
-       else
+       enddo
+       !
+    case(4)                  !print only diagonal elements
+       write(*,*)"Gloc real: write spin-orbital diagonal elements. Split."
+       do ilat=1,Nlat
           do ispin=1,Nspin
              do iorb=1,Norb
                 suffix=reg(fname)//&
                      "_l"//reg(txtfy(iorb))//&
                      "_s"//reg(txtfy(ispin))//&
-                     "_realw"//reg(gloc_suffix)
-                call store_data(reg(suffix),Greal(ilat,ispin,ispin,iorb,iorb,:),w)
+                     "_realw_indx"//reg(txtfy(ilat,6))//reg(gloc_suffix)
+                call splot(reg(suffix),w,Greal(ilat,ispin,ispin,iorb,iorb,:))
              enddo
           enddo
-       endif
+       enddo
        !
-    case(2)                  !print spin-diagonal, all orbitals 
-       write(*,*)"Gloc real: write spin diagonal and all orbitals elements."
-       if(split_)then
-          do ilat=1,Nlat
-             do ispin=1,Nspin
-                do iorb=1,Norb
-                   do jorb=1,Norb
-                      suffix=reg(fname)//&
-                           "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
-                           "_s"//reg(txtfy(ispin))//&
-                           "_realw_indx"//reg(txtfy(ilat,6))//reg(gloc_suffix)
-                      call splot(reg(suffix),w,Greal(ilat,ispin,ispin,iorb,jorb,:))
-                   enddo
-                enddo
-             enddo
-          enddo
-       else
+    case(5)                  !print spin-diagonal, all orbitals 
+       write(*,*)"Gloc real: write spin diagonal and all orbitals elements. Split."
+       do ilat=1,Nlat
           do ispin=1,Nspin
              do iorb=1,Norb
                 do jorb=1,Norb
                    suffix=reg(fname)//&
                         "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                         "_s"//reg(txtfy(ispin))//&
-                        "_realw"//reg(gloc_suffix)
-                   call store_data(reg(suffix),Greal(ilat,ispin,ispin,iorb,jorb,:),w)
+                        "_realw_indx"//reg(txtfy(ilat,6))//reg(gloc_suffix)
+                   call splot(reg(suffix),w,Greal(ilat,ispin,ispin,iorb,jorb,:))
                 enddo
              enddo
           enddo
-       endif
+       enddo
        !
-    case default                  !print all off-diagonals
-       write(*,*)"Gloc real: write all elements."
-       if(split_)then
-          do ilat=1,Nlat
-             do ispin=1,Nspin
-                do jspin=1,Nspin
-                   do iorb=1,Norb
-                      do jorb=1,Norb
-                         suffix=reg(fname)//&
-                              "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
-                              "_s"//reg(txtfy(ispin))//reg(txtfy(jspin))//&
-                              "_realw_indx"//reg(txtfy(ilat,6))//reg(gloc_suffix)
-                         call splot(reg(suffix),w,Greal(ilat,ispin,jspin,iorb,jorb,:))
-                      enddo
-                   enddo
-                enddo
-             enddo
-          enddo
-       else
+    case default
+       write(*,*)"Gloc real: write all elements. Split."
+       do ilat=1,Nlat
           do ispin=1,Nspin
              do jspin=1,Nspin
                 do iorb=1,Norb
@@ -4722,13 +4713,13 @@ contains
                       suffix=reg(fname)//&
                            "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                            "_s"//reg(txtfy(ispin))//reg(txtfy(jspin))//&
-                           "_realw"//reg(gloc_suffix)
-                      call store_data(reg(suffix),Greal(ilat,ispin,jspin,iorb,jorb,:),w)
+                           "_realw_indx"//reg(txtfy(ilat,6))//reg(gloc_suffix)
+                      call splot(reg(suffix),w,Greal(ilat,ispin,jspin,iorb,jorb,:))
                    enddo
                 enddo
              enddo
           enddo
-       endif
+       enddo
        !
     end select
   end subroutine dmft_gloc_print_realaxis_lattice
