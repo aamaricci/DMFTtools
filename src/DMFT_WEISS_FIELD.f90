@@ -111,10 +111,6 @@ module DMFT_WEISS_FIELD
   real(8),dimension(:),allocatable :: wm !Matsubara frequencies
   character(len=128)               :: suffix
   character(len=128)               :: weiss_suffix=".dat"
-  ! complex,parameter                :: zero=dcmplx(0d0,0d0)
-  ! complex,parameter                :: xi=dcmplx(0d0,1d0)
-  ! complex,parameter                :: one=dcmplx(1d0,0d0)
-  ! real(8),parameter                :: pi=3.141592653589793238462643383279502884197d0
   integer                          :: Nlat,Nspin,Norb
   integer                          :: i,j,ik,ilat,jlat,iorb,jorb,ispin,jspin,io,jo,is,js
   !
@@ -257,7 +253,9 @@ contains
     do ilat=1,Nlat
        !Dump the Gloc and the Smats for the ilat-th site into a [Norb*Nspin]^2 matrix and create the zeta_site
        do i=1,Lmats
-          zeta_site(:,:,i)    = (xi*wm(i)+xmu)*eye(Nso) - nn2so_reshape(Hloc(ilat,:,:,:,:),Nspin,Norb) - nn2so_reshape(Smats(ilat,:,:,:,:,i),Nspin,Norb)
+          zeta_site(:,:,i)    = (xi*wm(i)+xmu)*eye(Nso) - &
+               nn2so_reshape(Hloc(ilat,:,:,:,:),Nspin,Norb) - &
+               nn2so_reshape(Smats(ilat,:,:,:,:,i),Nspin,Norb)
           invGloc_site(:,:,i) = nn2so_reshape(Gloc(ilat,:,:,:,:,i),Nspin,Norb)
           Smats_site(:,:,i)   = nn2so_reshape(Smats(ilat,:,:,:,:,i),Nspin,Norb)
        enddo
@@ -345,7 +343,9 @@ contains
     MPIloop: do ilat=1+mpi_rank,Nlat,mpi_size
        !Dump the Gloc and the Smats for the ilat-th site into a [Norb*Nspin]^2 matrix and create the zeta_site
        do i=1,Lmats
-          zeta_site(:,:,i)    = (xi*wm(i)+xmu)*eye(Nso) - nn2so_reshape(Hloc(ilat,:,:,:,:),Nspin,Norb) - nn2so_reshape(Smats(ilat,:,:,:,:,i),Nspin,Norb)
+          zeta_site(:,:,i)    = (xi*wm(i)+xmu)*eye(Nso) - &
+               nn2so_reshape(Hloc(ilat,:,:,:,:),Nspin,Norb) - &
+               nn2so_reshape(Smats(ilat,:,:,:,:,i),Nspin,Norb)
           invGloc_site(:,:,i) = nn2so_reshape(Gloc(ilat,:,:,:,:,i),Nspin,Norb)
           Smats_site(:,:,i)   = nn2so_reshape(Smats(ilat,:,:,:,:,i),Nspin,Norb)
        enddo
@@ -602,10 +602,12 @@ contains
              do jorb=1,Norb
                 io = iorb + (ispin-1)*Norb
                 jo = jorb + (jspin-1)*Norb
-                zeta_site(io,jo,:)           = zeta_site(io,jo,:)         - Hloc(ispin,jspin,iorb,jorb) - Smats(1,ispin,jspin,iorb,jorb,:)
-                zeta_site(io,jo+Nso,:)       =                                                          - Smats(2,ispin,jspin,iorb,jorb,:)
-                zeta_site(io+Nso,jo,:)       =                                                          - Smats(2,ispin,jspin,iorb,jorb,:)
-                zeta_site(io+Nso,jo+Nso,:)   = zeta_site(io+Nso,jo+Nso,:) + Hloc(ispin,jspin,iorb,jorb) + conjg(Smats(1,ispin,jspin,iorb,jorb,:))
+                zeta_site(io,jo,:)           = zeta_site(io,jo,:)         &
+                     - Hloc(ispin,jspin,iorb,jorb) - Smats(1,ispin,jspin,iorb,jorb,:)
+                zeta_site(io,jo+Nso,:)       =     - Smats(2,ispin,jspin,iorb,jorb,:)
+                zeta_site(io+Nso,jo,:)       =     - Smats(2,ispin,jspin,iorb,jorb,:)
+                zeta_site(io+Nso,jo+Nso,:)   = zeta_site(io+Nso,jo+Nso,:) + &
+                     Hloc(ispin,jspin,iorb,jorb) + conjg(Smats(1,ispin,jspin,iorb,jorb,:))
                 !
                 invGloc_site(io,jo,:)        = Gloc(1,ispin,jspin,iorb,jorb,:)
                 invGloc_site(io,jo+Nso,:)    = Gloc(2,ispin,jspin,iorb,jorb,:)
@@ -1193,7 +1195,9 @@ contains
     do ilat=1,Nlat
        !Dump the Gloc and the Smats for the ilat-th site into a [Norb*Nspin]^2 matrix and create the zeta_site
        do i=1,Lmats
-          zeta_site(:,:,i)    = (xi*wm(i)+xmu)*eye(Nso) - nn2so_reshape(Hloc(ilat,:,:,:,:),Nspin,Norb) - nn2so_reshape(Smats(ilat,:,:,:,:,i),Nspin,Norb)
+          zeta_site(:,:,i)    = (xi*wm(i)+xmu)*eye(Nso) - &
+               nn2so_reshape(Hloc(ilat,:,:,:,:),Nspin,Norb) - &
+               nn2so_reshape(Smats(ilat,:,:,:,:,i),Nspin,Norb)
           invGloc_site(:,:,i) = nn2so_reshape(Gloc(ilat,:,:,:,:,i),Nspin,Norb)
           Smats_site(:,:,i)   = nn2so_reshape(Smats(ilat,:,:,:,:,i),Nspin,Norb)
        enddo
@@ -1278,7 +1282,9 @@ contains
     MPIloop: do ilat=1+mpi_rank,Nlat,mpi_size
        !Dump the Gloc and the Smats for the ilat-th site into a [Norb*Nspin]^2 matrix and create the zeta_site
        do i=1,Lmats
-          zeta_site(:,:,i)    = (xi*wm(i)+xmu)*eye(Nso) - nn2so_reshape(Hloc(ilat,:,:,:,:),Nspin,Norb) - nn2so_reshape(Smats(ilat,:,:,:,:,i),Nspin,Norb)
+          zeta_site(:,:,i)    = (xi*wm(i)+xmu)*eye(Nso) - &
+               nn2so_reshape(Hloc(ilat,:,:,:,:),Nspin,Norb) - &
+               nn2so_reshape(Smats(ilat,:,:,:,:,i),Nspin,Norb)
           invGloc_site(:,:,i) = nn2so_reshape(Gloc(ilat,:,:,:,:,i),Nspin,Norb)
           Smats_site(:,:,i)   = nn2so_reshape(Smats(ilat,:,:,:,:,i),Nspin,Norb)
        enddo
@@ -1534,10 +1540,12 @@ contains
              do jorb=1,Norb
                 io = iorb + (ispin-1)*Norb
                 jo = jorb + (jspin-1)*Norb
-                zeta_site(io,jo,:)           = zeta_site(io,jo,:)         - Hloc(ispin,jspin,iorb,jorb) - Smats(1,ispin,jspin,iorb,jorb,:)
-                zeta_site(io,jo+Nso,:)       =                                                          - Smats(2,ispin,jspin,iorb,jorb,:)
-                zeta_site(io+Nso,jo,:)       =                                                          - Smats(2,ispin,jspin,iorb,jorb,:)
-                zeta_site(io+Nso,jo+Nso,:)   = zeta_site(io+Nso,jo+Nso,:) + Hloc(ispin,jspin,iorb,jorb) + conjg(Smats(1,ispin,jspin,iorb,jorb,:))
+                zeta_site(io,jo,:)           = zeta_site(io,jo,:)         - &
+                     Hloc(ispin,jspin,iorb,jorb) - Smats(1,ispin,jspin,iorb,jorb,:)
+                zeta_site(io,jo+Nso,:)       =  - Smats(2,ispin,jspin,iorb,jorb,:)
+                zeta_site(io+Nso,jo,:)       =  - Smats(2,ispin,jspin,iorb,jorb,:)
+                zeta_site(io+Nso,jo+Nso,:)   = zeta_site(io+Nso,jo+Nso,:) + &
+                     Hloc(ispin,jspin,iorb,jorb) + conjg(Smats(1,ispin,jspin,iorb,jorb,:))
                 !
                 invGloc_site(io,jo,:)        = Gloc(1,ispin,jspin,iorb,jorb,:)
                 invGloc_site(io,jo+Nso,:)    = Gloc(2,ispin,jspin,iorb,jorb,:)

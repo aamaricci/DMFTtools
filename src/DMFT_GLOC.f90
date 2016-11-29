@@ -145,6 +145,20 @@ module DMFT_GLOC
 
 
 
+  interface dmft_set_Gamma_matsubara
+     module procedure :: dmft_set_Gamma_matsubara_local
+     module procedure :: dmft_set_Gamma_matsubara_lattice
+  end interface dmft_set_Gamma_matsubara
+
+
+
+  interface dmft_set_Gamma_realaxis
+     module procedure :: dmft_set_Gamma_realaxis_local
+     module procedure :: dmft_set_Gamma_realaxis_lattice
+  end interface dmft_set_Gamma_realaxis
+
+
+
 
   !####################################################################
   !                    COMPUTATIONAL ROUTINES
@@ -205,6 +219,8 @@ module DMFT_GLOC
   public :: dmft_gij_realaxis
   public :: dmft_gij_realaxis_superc
 
+  public :: dmft_set_Gamma_matsubara
+  public :: dmft_set_Gamma_realaxis
 
 
 
@@ -1348,13 +1364,13 @@ contains
           do ik=1,Lk
              call invert_gk_normal_lattice_mpi(MpiComm,zeta_real,Hk(:,:,ik),hk_symm_(ik),Gkreal)
              Greal = Greal + Gkreal*Wtk(ik)
-             call eta(ik,Lk)
+             if(mpi_master)call eta(ik,Lk)
           end do
        else
           do ik=1,Lk
              call invert_gk_normal_tridiag_mpi(MpiComm,zeta_real,Hk(:,:,ik),hk_symm_(ik),Gkreal)
              Greal = Greal + Gkreal*Wtk(ik)
-             call eta(ik,Lk)
+             if(mpi_master)call eta(ik,Lk)
           end do
        endif
        !
@@ -1364,13 +1380,13 @@ contains
           do ik=1+mpi_rank,Lk,mpi_size
              call invert_gk_normal_lattice(zeta_real,Hk(:,:,ik),hk_symm_(ik),Gkreal)
              Gtmp = Gtmp + Gkreal*Wtk(ik)
-             call eta(ik,Lk)
+             if(mpi_master)call eta(ik,Lk)
           end do
        else
           do ik=1+mpi_rank,Lk,mpi_size
              call invert_gk_normal_tridiag(zeta_real,Hk(:,:,ik),hk_symm_(ik),Gkreal)
              Gtmp = Gtmp + Gkreal*Wtk(ik)
-             call eta(ik,Lk)
+             if(mpi_master)call eta(ik,Lk)
           end do
        endif
        call Mpi_AllReduce(Gtmp,Greal, size(Greal), MPI_Double_Complex, MPI_Sum, MpiComm, MPI_ierr)
@@ -4293,9 +4309,6 @@ contains
     call MPI_AllReduce(Fktmp, Fkout, size(Fkout), MPI_Double_Complex, MPI_Sum, MpiComm, mpi_ierr)
   end subroutine invert_gk_superc_gij_mpi
 #endif
-
-
-
 
 
 

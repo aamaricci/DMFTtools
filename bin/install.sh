@@ -80,6 +80,12 @@ DEBUG=1
 QUIET=1
 WMPI=0				# assume with MPI (WMPI=True)
 VERSION=$(git describe --tags 2>/dev/null)
+#DEFAULT PREFIX
+PREFIX=$HOME/opt/dmft_tools
+#DEFAULT PLATFORM
+PLAT=gnu
+#DEFAULT SFROOT
+SFROOT=$SFROOT
 WRK_INSTALL=$(pwd)
 BIN_INSTALL=$WRK_INSTALL/bin
 ETC_INSTALL=$WRK_INSTALL/etc
@@ -307,7 +313,6 @@ sleep 1
 
 #rm -fv $LIB_TARGET/$LIBNAME
 make all
-sleep 1
 if [ $? == 0 ];then
     make clean
     mv -vf $WRK_INSTALL/make.inc $ETC_TARGET/make.inc.dmfttols
@@ -315,7 +320,7 @@ else
     echo "Error from Makefile. STOP here."
     exit 1
 fi
-
+sleep 1
 
 #LAST TOUCH COPY THE CONFIGVARS AND CREATE THE USER MODULES FILE. PRINT USAGE DETAILS.
 CONFIGFILE=$PREFIX/$PLAT/bin/configvars.sh
