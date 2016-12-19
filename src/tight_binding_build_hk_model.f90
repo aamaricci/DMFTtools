@@ -67,7 +67,7 @@ subroutine build_hk_model_nkvec_d(Hk,hk_model,Norb,Nkvec)
      end function hk_model
   end interface
   !
-  kgrid = TB_build_kgrid(Nkvec,.true.)
+  call TB_build_kgrid(Nkvec,kgrid,.true.)
   !
   Nktot  = product(Nkvec)
   do ik=1,Nktot
@@ -90,7 +90,7 @@ subroutine build_hk_model_Nkvec_c(Hk,hk_model,Norb,Nkvec)
      end function hk_model
   end interface
   !
-  kgrid = TB_build_kgrid(Nkvec,.true.)
+  call TB_build_kgrid(Nkvec,kgrid,.true.)
   !
   Nktot  = product(Nkvec)
   do ik=1,Nktot
@@ -188,7 +188,7 @@ subroutine build_hkr_model_nkvec_d(hk,hkr_model,Nlat,Norb,pbc,Nkvec)
      end function hkr_model
   end interface
   !
-  kgrid = TB_build_kgrid(Nkvec,.true.)
+  call TB_build_kgrid(Nkvec,kgrid,.true.)
   !
   Nktot  = product(Nkvec)
   !
@@ -215,7 +215,7 @@ subroutine build_hkr_model_nkvec_c(hk,hkr_model,Nlat,Norb,pbc,Nkvec)
      end function hkr_model
   end interface
   !
-  kgrid = TB_build_kgrid(Nkvec,.true.)
+  call TB_build_kgrid(Nkvec,kgrid,.true.)
   !
   Nktot  = product(Nkvec)
   !
@@ -255,7 +255,7 @@ subroutine build_hk_path_d(hk,hk_model,Norb,kpath,Nkpath)
   Npts  =  size(kpath,1)          !# of k-points along the path
   Nktot = (Npts-1)*Nkpath
   !
-  kgrid = TB_build_kgrid(kpath,Nkpath)
+  call TB_build_kgrid(kpath,Nkpath,kgrid)
   !
   do ik=1,Nktot
      Hk(:,:,ik) = hk_model(kgrid(ik,:) , Norb)
@@ -282,7 +282,7 @@ subroutine build_hk_path_c(hk,hk_model,Norb,kpath,Nkpath)
   Npts  =  size(kpath,1)          !# of k-points along the path
   Nktot = (Npts-1)*Nkpath
   !
-  kgrid = TB_build_kgrid(kpath,Nkpath)
+  call TB_build_kgrid(kpath,Nkpath,kgrid)
   !
   do ik=1,Nktot
      Hk(:,:,ik) = hk_model(kgrid(ik,:) , Norb)
@@ -328,7 +328,7 @@ subroutine build_hkR_path_d(hk,hkr_model,Nlat,Norb,pbc,kpath,Nkpath)
   Npts  =  size(kpath,1)          !# of k-points along the path
   Nktot = (Npts-1)*Nkpath
   !
-  kgrid = TB_build_kgrid(kpath,Nkpath)
+  call TB_build_kgrid(kpath,Nkpath,kgrid)
   !
   do ik=1,Nktot
      Hk(:,:,ik) = hkr_model(kgrid(ik,:),Nlat,Norb,pbc)
@@ -357,7 +357,7 @@ subroutine build_hkR_path_c(hk,hkr_model,Nlat,Norb,pbc,kpath,Nkpath)
   Npts  =  size(kpath,1)          !# of k-points along the path
   Nktot = (Npts-1)*Nkpath
   !
-  kgrid = TB_build_kgrid(kpath,Nkpath)
+  call TB_build_kgrid(kpath,Nkpath,kgrid)
   !
   do ik=1,Nktot
      Hk(:,:,ik) = hkr_model(kgrid(ik,:),Nlat,Norb,pbc)

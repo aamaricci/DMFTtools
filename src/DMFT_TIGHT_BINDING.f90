@@ -58,11 +58,11 @@ module DMFT_TIGHT_BINDING
 
   interface TB_build_kgrid
      module procedure ::   build_kgrid
-     module procedure :: f_build_kgrid
+  !   module procedure :: f_build_kgrid
      module procedure ::   kgrid_from_path_grid
-     module procedure :: f_kgrid_from_path_grid
+  !   module procedure :: f_kgrid_from_path_grid
      module procedure ::   kgrid_from_path_dim
-     module procedure :: f_kgrid_from_path_dim
+  !   module procedure :: f_kgrid_from_path_dim
   end interface TB_build_kgrid
 
 

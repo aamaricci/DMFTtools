@@ -14,7 +14,7 @@ subroutine write_hk_w90_func(hk_model,file,No,Nd,Np,Nineq,Nkvec)
      end function hk_model
   end interface
   !
-  kgrid = TB_build_kgrid(Nkvec,.true.)
+  call TB_build_kgrid(Nkvec,kgrid,.true.)
   !
   open(free_unit(unit),file=reg(file))
   write(unit,'(1A1,1x,3(A2,1x))')"#",reg(txtfy(Nd)),reg(txtfy(Np)),reg(txtfy(Nineq))
@@ -43,7 +43,7 @@ subroutine write_hk_w90_array(Hk,file,No,Nd,Np,Nineq,Nkvec)
   complex(8),dimension(No,No,product(Nkvec))    :: Hk
   !
   !
-  kgrid = TB_build_kgrid(Nkvec,.true.)
+  call TB_build_kgrid(Nkvec,kgrid,.true.)
   !
   Nktot  = product(Nkvec)!==size(Hk,3)
   !
