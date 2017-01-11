@@ -4652,7 +4652,7 @@ contains
                   "_l"//reg(txtfy(iorb))//&
                   "_s"//reg(txtfy(ispin))//&
                   "_realw"//reg(gloc_suffix)
-             call store_data(reg(suffix),Greal(ilat,ispin,ispin,iorb,iorb,:),w)
+             call store_data(reg(suffix),Greal(:,ispin,ispin,iorb,iorb,:),w)
           enddo
        enddo
        !
@@ -4665,7 +4665,7 @@ contains
                      "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                      "_s"//reg(txtfy(ispin))//&
                      "_realw"//reg(gloc_suffix)
-                call store_data(reg(suffix),Greal(ilat,ispin,ispin,iorb,jorb,:),w)
+                call store_data(reg(suffix),Greal(:,ispin,ispin,iorb,jorb,:),w)
              enddo
           enddo
        enddo
@@ -4680,7 +4680,7 @@ contains
                         "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                         "_s"//reg(txtfy(ispin))//reg(txtfy(jspin))//&
                         "_realw"//reg(gloc_suffix)
-                   call store_data(reg(suffix),Greal(ilat,ispin,jspin,iorb,jorb,:),w)
+                   call store_data(reg(suffix),Greal(:,ispin,jspin,iorb,jorb,:),w)
                 enddo
              enddo
           enddo
