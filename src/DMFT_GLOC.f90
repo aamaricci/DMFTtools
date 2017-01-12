@@ -17,6 +17,7 @@ module DMFT_GLOC
      module procedure :: dmft_get_gloc_matsubara_normal_main
      module procedure :: dmft_get_gloc_matsubara_normal_1band
      module procedure :: dmft_get_gloc_matsubara_normal_Nband
+     module procedure :: dmft_get_gloc_matsubara_normal_dos_main
      module procedure :: dmft_get_gloc_matsubara_normal_lattice_main
      module procedure :: dmft_get_gloc_matsubara_normal_lattice_1band
      module procedure :: dmft_get_gloc_matsubara_normal_lattice_Nband
@@ -24,6 +25,7 @@ module DMFT_GLOC
      module procedure :: dmft_get_gloc_matsubara_normal_main_mpi
      module procedure :: dmft_get_gloc_matsubara_normal_1band_mpi
      module procedure :: dmft_get_gloc_matsubara_normal_Nband_mpi
+     module procedure :: dmft_get_gloc_matsubara_normal_dos_main_mpi
      module procedure :: dmft_get_gloc_matsubara_normal_lattice_main_mpi
      module procedure :: dmft_get_gloc_matsubara_normal_lattice_1band_mpi     
      module procedure :: dmft_get_gloc_matsubara_normal_lattice_Nband_mpi
@@ -59,6 +61,7 @@ module DMFT_GLOC
      module procedure :: dmft_get_gloc_realaxis_normal_main
      module procedure :: dmft_get_gloc_realaxis_normal_1band
      module procedure :: dmft_get_gloc_realaxis_normal_Nband
+     module procedure :: dmft_get_gloc_realaxis_normal_dos_main
      module procedure :: dmft_get_gloc_realaxis_normal_lattice_main
      module procedure :: dmft_get_gloc_realaxis_normal_lattice_1band     
      module procedure :: dmft_get_gloc_realaxis_normal_lattice_Nband
@@ -66,6 +69,7 @@ module DMFT_GLOC
      module procedure :: dmft_get_gloc_realaxis_normal_main_mpi
      module procedure :: dmft_get_gloc_realaxis_normal_1band_mpi
      module procedure :: dmft_get_gloc_realaxis_normal_Nband_mpi
+     module procedure :: dmft_get_gloc_realaxis_normal_dos_main_mpi
      module procedure :: dmft_get_gloc_realaxis_normal_lattice_main_mpi
      module procedure :: dmft_get_gloc_realaxis_normal_lattice_1band_mpi
      module procedure :: dmft_get_gloc_realaxis_normal_lattice_Nband_mpi
@@ -304,6 +308,71 @@ contains
   end subroutine dmft_get_gloc_matsubara_normal_main
 #undef FROUTINE
 
+
+
+#define FROUTINE 'dmft_get_gloc_matsubara_normal_dos_main'
+  subroutine dmft_get_gloc_matsubara_normal_dos_main(Ebands,Dbands,Hloc,Gmats,Smats,iprint)
+    real(8),dimension(:,:),intent(in)                           :: Ebands    ![Nspin*Norb][Lk]
+    real(8),dimension(size(Ebands,1),size(Ebands,2)),intent(in) :: Dbands    ![Nspin*Norb][Lk]
+    real(8),dimension(size(Ebands,1)),intent(in)                :: Hloc      ![Nspin*Norb]
+    complex(8),dimension(:,:,:,:,:),intent(in)                  :: Smats     ![Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:),intent(inout)               :: Gmats     !as Smats
+    integer,intent(in)                                          :: iprint
+    !
+    complex(8)                                                  :: gktmp
+    complex(8),dimension(:,:,:),allocatable                     :: zeta_mats ![Nspin*Norb][Nspin*Norb][Lmats]
+    !
+    real(8)                                                     :: beta
+    real(8)                                                     :: xmu,eps
+    real(8)                                                     :: wini,wfin
+    !
+    !Retrieve parameters:
+    call get_ctrl_var(beta,"BETA")
+    call get_ctrl_var(xmu,"XMU")
+    !
+    Nspin = size(Smats,1)
+    Norb  = size(Smats,3)
+    Lmats = size(Smats,5)
+    Lk    = size(Ebands,2)
+    Nso   = Nspin*Norb    
+    !Testing part:
+    call assert_shape(Ebands,[Nso,Lk],FROUTINE,"Ebands")
+    call assert_shape(Smats,[Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Smats")
+    call assert_shape(Gmats,[Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Gmats")
+    !
+    !Allocate and setup the Matsubara freq.
+    allocate(zeta_mats(Nso,Nso,Lmats))
+    if(allocated(wm))deallocate(wm);allocate(wm(Lmats))
+    wm = pi/beta*dble(2*arange(1,Lmats)-1)
+    !
+    do i=1,Lmats
+       zeta_mats(:,:,i)=(xi*wm(i)+xmu)*eye(Nso) - nn2so_reshape(Smats(:,:,:,:,i),Nspin,Norb)
+    enddo
+    !
+    !invert (Z-Hk) for each k-point
+    write(*,"(A)")"Get local Green's function (print mode:"//reg(txtfy(iprint))//")"
+    call start_timer
+    Gmats=zero
+    do i=1,Lmats
+       do ispin=1,Nspin
+          do iorb=1,Norb
+             io = iorb + (ispin-1)*Norb
+             do ik=1,Lk
+                gktmp = Dbands(io,ik)/( zeta_mats(io,io,i)-Hloc(io)-Ebands(io,ik) )
+                Gmats(ispin,ispin,iorb,iorb,i) = Gmats(ispin,ispin,iorb,iorb,i) + gktmp
+             enddo
+          enddo
+       enddo
+       call eta(i,Lmats)
+    end do
+    call stop_timer
+    call dmft_gloc_print_matsubara(wm,Gmats,"Gloc",iprint)
+  end subroutine dmft_get_gloc_matsubara_normal_dos_main
+#undef FROUTINE
+
+
+
+
 #define FROUTINE 'dmft_get_gloc_matsubara_normal_lattice_main'
   subroutine dmft_get_gloc_matsubara_normal_lattice_main(Hk,Wtk,Gmats,Smats,iprint,tridiag,hk_symm)
     complex(8),dimension(:,:,:),intent(in)          :: Hk        ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Nk]
@@ -380,6 +449,8 @@ contains
     call dmft_gloc_print_matsubara_lattice(wm,Gmats,"LG",iprint)
   end subroutine dmft_get_gloc_matsubara_normal_lattice_main
 #undef FROUTINE
+
+
 
 #define FROUTINE 'dmft_get_gloc_matsubara_normal_gij_main'
   subroutine dmft_get_gloc_matsubara_normal_gij_main(Hk,Wtk,Gmats,Smats,iprint,hk_symm)
@@ -518,6 +589,100 @@ contains
     if(mpi_master)call dmft_gloc_print_matsubara(wm,Gmats,"Gloc",iprint)
   end subroutine dmft_get_gloc_matsubara_normal_main_mpi
 #undef FROUTINE
+
+
+#define FROUTINE 'dmft_get_gloc_matsubara_normal_dos_main_mpi'
+  subroutine dmft_get_gloc_matsubara_normal_dos_main_mpi(MpiComm,Ebands,Dbands,Hloc,Gmats,Smats,iprint,mpi_split)
+    integer                                                     :: MpiComm
+    real(8),dimension(:,:),intent(in)                           :: Ebands    ![Nspin*Norb][Lk]
+    real(8),dimension(size(Ebands,1),size(Ebands,2)),intent(in) :: Dbands    ![Nspin*Norb][Lk]
+    real(8),dimension(size(Ebands,1)),intent(in)                :: Hloc      ![Nspin*Norb]
+    complex(8),dimension(:,:,:,:,:),intent(in)                  :: Smats     ![Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:),intent(inout)               :: Gmats     !as Smats
+    integer,intent(in)                                          :: iprint
+    character(len=*),optional                                   :: mpi_split  
+    character(len=1)                                            :: mpi_split_ 
+    !
+    complex(8)                                                  :: gktmp
+    complex(8),dimension(:,:,:),allocatable                     :: zeta_mats ![Nspin*Norb][Nspin*Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:),allocatable                 :: Gtmp      !as Smats
+    !
+    real(8)                                                     :: beta
+    real(8)                                                     :: xmu,eps
+    real(8)                                                     :: wini,wfin
+    !
+    !MPI setup:
+    mpi_size  = MPI_Get_size(MpiComm)
+    mpi_rank =  MPI_Get_rank(MpiComm)
+    mpi_master= MPI_Get_master(MpiComm)
+    !Retrieve parameters:
+    call get_ctrl_var(beta,"BETA")
+    call get_ctrl_var(xmu,"XMU")
+    !
+    mpi_split_='w'    ;if(present(mpi_split)) mpi_split_=mpi_split
+    !
+    Nspin = size(Smats,1)
+    Norb  = size(Smats,3)
+    Lmats = size(Smats,5)
+    Lk    = size(Ebands,2)
+    Nso   = Nspin*Norb    
+    !Testing part:
+    call assert_shape(Ebands,[Nso,Lk],FROUTINE,"Ebands")
+    call assert_shape(Smats,[Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Smats")
+    call assert_shape(Gmats,[Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Gmats")
+    !
+    !Allocate and setup the Matsubara freq.
+    allocate(zeta_mats(Nso,Nso,Lmats))
+    if(allocated(wm))deallocate(wm);allocate(wm(Lmats))
+    wm = pi/beta*dble(2*arange(1,Lmats)-1)
+    !
+    do i=1,Lmats
+       zeta_mats(:,:,i)=(xi*wm(i)+xmu)*eye(Nso) - nn2so_reshape(Smats(:,:,:,:,i),Nspin,Norb)
+    enddo
+    !
+    !invert (Z-Hk) for each k-point
+    if(mpi_master)write(*,"(A)")"Get local Green's function (print mode:"//reg(txtfy(iprint))//")"
+    if(mpi_master)call start_timer
+    Gmats=zero
+    allocate(Gtmp(Nspin,Nspin,Norb,Norb,Lmats));Gtmp=zero
+    !
+    select case(mpi_split_)
+    case default
+       stop "dmft_get_gloc_matsubara_normal_dos_main_mpi: ! mpi_split_ in ['w','k'] "
+    case ('w')
+       do i = 1+mpi_rank, Lmats, mpi_size
+          do ispin=1,Nspin
+             do iorb=1,Norb
+                io = iorb + (ispin-1)*Norb
+                do ik=1,Lk
+                   gktmp = Dbands(io,ik)/( zeta_mats(io,io,i)-Hloc(io)-Ebands(io,ik) )
+                   Gtmp(ispin,ispin,iorb,iorb,i) = Gtmp(ispin,ispin,iorb,iorb,i) + gktmp
+                enddo
+             enddo
+          enddo
+          if(mpi_master)call eta(i,Lmats)
+       end do
+       call Mpi_AllReduce(Gtmp,Gmats, size(Gmats), MPI_Double_Complex, MPI_Sum, MpiComm, MPI_ierr)
+    case ('k')
+       do ik = 1+mpi_rank, Lk, mpi_size
+          do ispin=1,Nspin
+             do iorb=1,Norb
+                io = iorb + (ispin-1)*Norb
+                do i=1,Lmats
+                   gktmp = Dbands(io,ik)/( zeta_mats(io,io,i)-Hloc(io)-Ebands(io,ik) )
+                   Gtmp(ispin,ispin,iorb,iorb,i) = Gtmp(ispin,ispin,iorb,iorb,i) + gktmp
+                enddo
+             enddo
+          enddo
+          if(mpi_master)call eta(ik,Lk)
+       end do
+       call Mpi_AllReduce(Gtmp,Gmats, size(Gmats), MPI_Double_Complex, MPI_Sum, MpiComm, MPI_ierr)
+    end select
+    if(mpi_master)call stop_timer
+    if(mpi_master)call dmft_gloc_print_matsubara(wm,Gmats,"Gloc",iprint)
+  end subroutine dmft_get_gloc_matsubara_normal_dos_main_mpi
+#undef FROUTINE
+
 
 #define FROUTINE 'dmft_get_gloc_matsubara_normal_lattice_main_mpi'
   subroutine dmft_get_gloc_matsubara_normal_lattice_main_mpi(MpiComm,Hk,Wtk,Gmats,Smats,iprint,tridiag,mpi_split,hk_symm)
@@ -1061,6 +1226,70 @@ contains
   end subroutine dmft_get_gloc_realaxis_normal_main
 #undef FROUTINE
 
+
+#define FROUTINE 'dmft_get_gloc_realaxis_normal_dos_main'
+  subroutine dmft_get_gloc_realaxis_normal_dos_main(Ebands,Dbands,Hloc,Greal,Sreal,iprint)
+    real(8),dimension(:,:),intent(in)                           :: Ebands    ![Nspin*Norb][Lk]
+    real(8),dimension(size(Ebands,1),size(Ebands,2)),intent(in) :: Dbands    ![Nspin*Norb][Lk]
+    real(8),dimension(size(Ebands,1)),intent(in)                :: Hloc      ![Nspin*Norb]
+    complex(8),dimension(:,:,:,:,:),intent(in)                  :: Sreal     ![Nspin][Nspin][Norb][Norb][Lreal]
+    complex(8),dimension(:,:,:,:,:),intent(inout)               :: Greal     !as Sreal
+    integer,intent(in)                                          :: iprint
+    !
+    complex(8)                                                  :: gktmp
+    complex(8),dimension(:,:,:),allocatable                     :: zeta_real ![Nspin*Norb][Nspin*Norb][Lreal]
+    !
+    real(8)                                                     :: xmu,eps
+    real(8)                                                     :: wini,wfin
+    !
+    !Retrieve parameters:
+    call get_ctrl_var(xmu,"XMU")
+    call get_ctrl_var(wini,"WINI")
+    call get_ctrl_var(wfin,"WFIN")
+    call get_ctrl_var(eps,"EPS")
+    !
+    Nspin = size(Sreal,1)
+    Norb  = size(Sreal,3)
+    Lreal = size(Sreal,5)
+    Lk    = size(Ebands,2)
+    Nso   = Nspin*Norb    
+    !Testing part:
+    call assert_shape(Ebands,[Nso,Lk],FROUTINE,"Ebands")
+    call assert_shape(Sreal,[Nspin,Nspin,Norb,Norb,Lreal],FROUTINE,"Sreal")
+    call assert_shape(Greal,[Nspin,Nspin,Norb,Norb,Lreal],FROUTINE,"Greal")
+    !
+    !Allocate and setup the Realaxis freq.
+    allocate(zeta_real(Nso,Nso,Lreal))
+    if(allocated(wr))deallocate(wr);allocate(wr(Lreal))
+    wr = linspace(wini,wfin,Lreal)
+    !
+    do i=1,Lreal
+       zeta_real(:,:,i)=(wr(i)+xi*eps+xmu)*eye(Nso) - nn2so_reshape(Sreal(:,:,:,:,i),Nspin,Norb)
+    enddo
+    !
+    !invert (Z-Hk) for each k-point
+    write(*,"(A)")"Get local Green's function (print mode:"//reg(txtfy(iprint))//")"
+    call start_timer
+    Greal=zero
+    do i=1,Lreal
+       do ispin=1,Nspin
+          do iorb=1,Norb
+             io = iorb + (ispin-1)*Norb
+             do ik=1,Lk
+                gktmp = Dbands(io,ik)/( zeta_real(io,io,i)-Hloc(io)-Ebands(io,ik) )
+                Greal(ispin,ispin,iorb,iorb,i) = Greal(ispin,ispin,iorb,iorb,i) + gktmp
+             enddo
+          enddo
+       enddo
+       call eta(i,Lreal)
+    end do
+    call stop_timer
+    call dmft_gloc_print_realaxis(wr,Greal,"Gloc",iprint)
+  end subroutine dmft_get_gloc_realaxis_normal_dos_main
+#undef FROUTINE
+
+
+
 #define FROUTINE 'dmft_get_gloc_realaxis_normal_lattice_main'
   subroutine dmft_get_gloc_realaxis_normal_lattice_main(Hk,Wtk,Greal,Sreal,iprint,tridiag,hk_symm)
     complex(8),dimension(:,:,:),intent(in)          :: Hk        ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Nk]
@@ -1282,6 +1511,103 @@ contains
     if(mpi_master)call dmft_gloc_print_realaxis(wr,Greal,"Gloc",iprint)
   end subroutine dmft_get_gloc_realaxis_normal_main_mpi
 #undef FROUTINE
+
+
+#define FROUTINE 'dmft_get_gloc_realaxis_normal_dos_main_mpi'
+  subroutine dmft_get_gloc_realaxis_normal_dos_main_mpi(MpiComm,Ebands,Dbands,Hloc,Greal,Sreal,iprint,mpi_split)
+    integer                                                     :: MpiComm
+    real(8),dimension(:,:),intent(in)                           :: Ebands    ![Nspin*Norb][Lk]
+    real(8),dimension(size(Ebands,1),size(Ebands,2)),intent(in) :: Dbands    ![Nspin*Norb][Lk]
+    real(8),dimension(size(Ebands,1)),intent(in)                :: Hloc      ![Nspin*Norb]
+    complex(8),dimension(:,:,:,:,:),intent(in)                  :: Sreal     ![Nspin][Nspin][Norb][Norb][Lreal]
+    complex(8),dimension(:,:,:,:,:),intent(inout)               :: Greal     !as Sreal
+    integer,intent(in)                                          :: iprint
+    character(len=*),optional                                   :: mpi_split  
+    character(len=1)                                            :: mpi_split_ 
+    !
+    complex(8)                                                  :: gktmp
+    complex(8),dimension(:,:,:),allocatable                     :: zeta_real ![Nspin*Norb][Nspin*Norb][Lreal]
+    complex(8),dimension(:,:,:,:,:),allocatable                 :: Gtmp      !as Sreal
+    !
+    real(8)                                                     :: beta
+    real(8)                                                     :: xmu,eps
+    real(8)                                                     :: wini,wfin
+    !
+    !MPI setup:
+    mpi_size  = MPI_Get_size(MpiComm)
+    mpi_rank =  MPI_Get_rank(MpiComm)
+    mpi_master= MPI_Get_master(MpiComm)
+    !Retrieve parameters:
+    call get_ctrl_var(xmu,"XMU")
+    call get_ctrl_var(wini,"WINI")
+    call get_ctrl_var(wfin,"WFIN")
+    call get_ctrl_var(eps,"EPS")
+    !
+    mpi_split_='w'    ;if(present(mpi_split)) mpi_split_=mpi_split
+    !
+    Nspin = size(Sreal,1)
+    Norb  = size(Sreal,3)
+    Lreal = size(Sreal,5)
+    Lk    = size(Ebands,2)
+    Nso   = Nspin*Norb    
+    !Testing part:
+    call assert_shape(Ebands,[Nso,Lk],FROUTINE,"Ebands")
+    call assert_shape(Sreal,[Nspin,Nspin,Norb,Norb,Lreal],FROUTINE,"Sreal")
+    call assert_shape(Greal,[Nspin,Nspin,Norb,Norb,Lreal],FROUTINE,"Greal")
+    !
+    !Allocate and setup the Realaxis freq.
+    allocate(zeta_real(Nso,Nso,Lreal))
+    if(allocated(wr))deallocate(wr);allocate(wr(Lreal))
+    wr = linspace(wini,wfin,Lreal)
+    !
+    do i=1,Lreal
+       zeta_real(:,:,i)=(wr(i)+xi*eps+xmu)*eye(Nso) - nn2so_reshape(Sreal(:,:,:,:,i),Nspin,Norb)
+    enddo
+    !
+    !invert (Z-Hk) for each k-point
+    if(mpi_master)write(*,"(A)")"Get local Green's function (print mode:"//reg(txtfy(iprint))//")"
+    if(mpi_master)call start_timer
+    Greal=zero
+    allocate(Gtmp(Nspin,Nspin,Norb,Norb,Lreal));Gtmp=zero
+    !
+    select case(mpi_split_)
+    case default
+       stop "dmft_get_gloc_realaxis_normal_dos_main_mpi: ! mpi_split_ in ['w','k'] "
+    case ('w')
+       do i = 1+mpi_rank, Lreal, mpi_size
+          do ispin=1,Nspin
+             do iorb=1,Norb
+                io = iorb + (ispin-1)*Norb
+                do ik=1,Lk
+                   gktmp = Dbands(io,ik)/( zeta_real(io,io,i)-Hloc(io)-Ebands(io,ik) )
+                   Gtmp(ispin,ispin,iorb,iorb,i) = Gtmp(ispin,ispin,iorb,iorb,i) + gktmp
+                enddo
+             enddo
+          enddo
+          if(mpi_master)call eta(i,Lreal)
+       end do
+       call Mpi_AllReduce(Gtmp,Greal, size(Greal), MPI_Double_Complex, MPI_Sum, MpiComm, MPI_ierr)
+    case ('k')
+       do ik = 1+mpi_rank, Lk, mpi_size
+          do ispin=1,Nspin
+             do iorb=1,Norb
+                io = iorb + (ispin-1)*Norb
+                do i=1,Lreal
+                   gktmp = Dbands(io,ik)/( zeta_real(io,io,i)-Hloc(io)-Ebands(io,ik) )
+                   Gtmp(ispin,ispin,iorb,iorb,i) = Gtmp(ispin,ispin,iorb,iorb,i) + gktmp
+                enddo
+             enddo
+          enddo
+          if(mpi_master)call eta(ik,Lk)
+       end do
+       call Mpi_AllReduce(Gtmp,Greal, size(Greal), MPI_Double_Complex, MPI_Sum, MpiComm, MPI_ierr)
+    end select
+    if(mpi_master)call stop_timer
+    if(mpi_master)call dmft_gloc_print_realaxis(wm,Greal,"Gloc",iprint)
+  end subroutine dmft_get_gloc_realaxis_normal_dos_main_mpi
+#undef FROUTINE
+
+
 
 #define FROUTINE 'dmft_get_gloc_realaxis_normal_lattice_main_mpi'
   subroutine dmft_get_gloc_realaxis_normal_lattice_main_mpi(MpiComm,Hk,Wtk,Greal,Sreal,iprint,tridiag,mpi_split,hk_symm)
