@@ -110,14 +110,8 @@ contains
     real(8),dimension(:),intent(in),optional :: bkz
     bk_x = 0d0
     bk_x = bkx
-    if(present(bky))then
-       bk_y = 0d0
-       bk_y = bky
-    endif
-    if(present(bkz))then
-       bk_z = 0d0
-       bk_z = bkz
-    endif
+    if(present(bky))bk_y(1:size(bky)) = bky
+    if(present(bkz))bk_z(1:size(bkz)) = bkz
     set_bkvec=.true.
   end subroutine TB_set_bk
 

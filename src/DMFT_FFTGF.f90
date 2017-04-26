@@ -2,7 +2,7 @@ module DMFT_FFTGF
   USE SF_FFT_FFTPACK
   USE SF_CONSTANTS, only   : pi, one, xi, zero
   USE SF_ARRAYS, only      : linspace, arange
-  USE SF_LINALG, only      : solve_linear_system
+  USE SF_LINALG, only      : solve
   USE SF_INTERPOLATE, only : linear_spline, cubic_spline
   USE SF_SPECIAL,only      : fermi
 

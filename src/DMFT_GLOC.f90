@@ -1496,7 +1496,7 @@ contains
        do ik=1,Lk
           call invert_gk_normal_mpi(MpiComm,zeta_real,Hk(:,:,ik),hk_symm_(ik),Gkreal)      
           Greal = Greal + Gkreal*Wtk(ik)
-          call eta(ik,Lk)
+          if(mpi_master)call eta(ik,Lk)
        end do
     case ('k')
        allocate(Gtmp(Nspin,Nspin,Norb,Norb,Lreal));Gtmp=zero
@@ -2090,16 +2090,28 @@ contains
 
 
 
+  !##################################################################
+  !##################################################################
+  !##################################################################
+
+
+
+  !##################################################################
+  !##################################################################
+  !##################################################################
+
+
+
 
 #define FROUTINE 'dmft_get_gloc_matsubara_superc_main'
   subroutine dmft_get_gloc_matsubara_superc_main(Hk,Wtk,Gmats,Smats,iprint,hk_symm)
-    complex(8),dimension(:,:,:),intent(in)          :: Hk        ![Nspin*Norb][Nspin*Norb][Nk]
-    real(8),dimension(size(Hk,3)),intent(in)        :: Wtk       ![Nk]
+    complex(8),dimension(:,:,:,:),intent(in)          :: Hk        ![2][Nspin*Norb][Nspin*Norb][Nk]
+    real(8),dimension(size(Hk,4)),intent(in)        :: Wtk       ![Nk]
     complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Smats     ![2][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gmats     !as Smats
     integer,intent(in)                              :: iprint
-    logical,dimension(size(Hk,3)),optional          :: hk_symm   ![Nk]
-    logical,dimension(size(Hk,3))                   :: hk_symm_  ![Nk]
+    logical,dimension(size(Hk,4)),optional          :: hk_symm   ![Nk]
+    logical,dimension(size(Hk,4))                   :: hk_symm_  ![Nk]
     !allocatable arrays
     complex(8),dimension(:,:,:,:,:,:),allocatable   :: Gkmats    !as Smats
     complex(8),dimension(:,:,:,:,:),allocatable     :: zeta_mats ![2][2][Nspin*Norb][Nspin*Norb][Lmats]
@@ -2115,10 +2127,10 @@ contains
     Nspin = size(Smats,2)
     Norb  = size(Smats,4)
     Lmats = size(Smats,6)
-    Lk    = size(Hk,3)
+    Lk    = size(Hk,4)
     Nso   = Nspin*Norb
     !Testing part:
-    call assert_shape(Hk,[Nso,Nso,Lk],FROUTINE,"Hk")
+    call assert_shape(Hk,[2,Nso,Nso,Lk],FROUTINE,"Hk")
     call assert_shape(Smats,[2,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Smats")
     call assert_shape(Gmats,[2,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Gmats")
     !
@@ -2139,7 +2151,7 @@ contains
     call start_timer
     Gmats=zero
     do ik=1,Lk
-       call invert_gk_superc(zeta_mats,Hk(:,:,ik),hk_symm_(ik),Gkmats)
+       call invert_gk_superc(zeta_mats,Hk(:,:,:,ik),hk_symm_(ik),Gkmats)
        Gmats = Gmats + Gkmats*Wtk(ik)
        call eta(ik,Lk)
     end do
@@ -2151,13 +2163,13 @@ contains
 
 #define FROUTINE 'dmft_get_gloc_matsubara_superc_lattice_main'
   subroutine dmft_get_gloc_matsubara_superc_lattice_main(Hk,Wtk,Gmats,Smats,iprint,hk_symm)
-    complex(8),dimension(:,:,:),intent(in)            :: Hk        ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Nk]
-    real(8),dimension(size(Hk,3)),intent(in)          :: Wtk       ![Nk]
+    complex(8),dimension(:,:,:,:),intent(in)            :: Hk        ![2][Nlat*Nspin*Norb][Nlat*Nspin*Norb][Nk]
+    real(8),dimension(size(Hk,4)),intent(in)          :: Wtk       ![Nk]
     complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Smats     ![2][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gmats     !as Smats
     integer,intent(in)                                :: iprint
-    logical,dimension(size(Hk,3)),optional            :: hk_symm   ![Nk]
-    logical,dimension(size(Hk,3))                     :: hk_symm_  ![Nk]
+    logical,dimension(size(Hk,4)),optional            :: hk_symm   ![Nk]
+    logical,dimension(size(Hk,4))                     :: hk_symm_  ![Nk]
     !allocatable arrays
     complex(8),dimension(:,:,:,:,:,:,:),allocatable   :: Gkmats    !as Smats
     complex(8),dimension(:,:,:,:,:,:),allocatable     :: zeta_mats ![2][2][Nlat][Nspin*Norb][Nspin*Norb][Lmats]
@@ -2175,11 +2187,11 @@ contains
     Nspin = size(Smats,3)
     Norb  = size(Smats,5)
     Lmats = size(Smats,7)
-    Lk    = size(Hk,3)
+    Lk    = size(Hk,4)
     Nso   = Nspin*Norb
     Nlso  = Nlat*Nspin*Norb
     !Testing part:
-    call assert_shape(Hk,[Nlso,Nlso,Lk],FROUTINE,"Hk")
+    call assert_shape(Hk,[2,Nlso,Nlso,Lk],FROUTINE,"Hk")
     call assert_shape(Smats,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Smats")
     call assert_shape(Gmats,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Gmats")
     !
@@ -2205,7 +2217,7 @@ contains
     call start_timer
     Gmats=zero
     do ik=1,Lk
-       call invert_gk_superc_lattice(zeta_mats,Hk(:,:,ik),hk_symm_(ik),Gkmats)
+       call invert_gk_superc_lattice(zeta_mats,Hk(:,:,:,ik),hk_symm_(ik),Gkmats)
        Gmats = Gmats + Gkmats*Wtk(ik)
        call eta(ik,Lk)
     end do
@@ -2217,14 +2229,14 @@ contains
 
 #define FROUTINE 'dmft_get_gloc_matsubara_superc_gij_main'
   subroutine dmft_get_gloc_matsubara_superc_gij_main(Hk,Wtk,Gmats,Fmats,Smats,iprint,hk_symm)
-    complex(8),dimension(:,:,:)                       :: Hk              ![Nlat*Norb*Nspin][Nlat*Norb*Nspin][Nk]
-    real(8)                                           :: Wtk(size(Hk,3)) ![Nk]
+    complex(8),dimension(:,:,:,:)                       :: Hk              ![2][Nlat*Norb*Nspin][Nlat*Norb*Nspin][Nk]
+    real(8)                                           :: Wtk(size(Hk,4)) ![Nk]
     complex(8),intent(inout),dimension(:,:,:,:,:,:,:) :: Gmats           ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),intent(inout),dimension(:,:,:,:,:,:,:) :: Fmats           ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),intent(inout),dimension(:,:,:,:,:,:,:) :: Smats           ![2][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     integer                                           :: iprint
-    logical,optional                                  :: hk_symm(size(Hk,3))
-    logical                                           :: hk_symm_(size(Hk,3))
+    logical,optional                                  :: hk_symm(size(Hk,4))
+    logical                                           :: hk_symm_(size(Hk,4))
     !
     complex(8),dimension(:,:,:,:,:,:),allocatable     :: zeta_mats       ![2][2][Nlat][Nspin*Norb][Nspin*Norb][Lmats]
     complex(8),dimension(:,:,:,:,:,:,:),allocatable   :: Gkmats          ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
@@ -2245,11 +2257,11 @@ contains
     Nspin = size(Smats,3)
     Norb  = size(Smats,5)
     Lmats = size(Smats,7)
-    Lk    = size(Hk,3)
+    Lk    = size(Hk,4)
     Nso   = Nspin*Norb
     Nlso  = Nlat*Nspin*Norb
     !Testing part:
-    call assert_shape(Hk,[Nlso,Nlso,Lk],FROUTINE,"Hk")
+    call assert_shape(Hk,[2,Nlso,Nlso,Lk],FROUTINE,"Hk")
     call assert_shape(Smats,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Smats")
     call assert_shape(Gmats,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Gmats")
     call assert_shape(Fmats,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Fmats")
@@ -2295,7 +2307,7 @@ contains
     call start_timer
     Gmats=zero
     do ik=1,Lk
-       call invert_gk_superc_gij(zeta_mats,Hk(:,:,ik),hk_symm_(ik),Gkmats,Fkmats)
+       call invert_gk_superc_gij(zeta_mats,Hk(:,:,:,ik),hk_symm_(ik),Gkmats,Fkmats)
        Gmats = Gmats + Gkmats*Wtk(ik)
        Fmats = Fmats + Fkmats*Wtk(ik)
        call eta(ik,Lk)
@@ -2311,15 +2323,15 @@ contains
 #define FROUTINE 'dmft_get_gloc_matsubara_superc_main_mpi'
   subroutine dmft_get_gloc_matsubara_superc_main_mpi(MpiComm,Hk,Wtk,Gmats,Smats,iprint,mpi_split,hk_symm)
     integer                                         :: MpiComm
-    complex(8),dimension(:,:,:),intent(in)          :: Hk        ![Nspin*Norb][Nspin*Norb][Nk]
-    real(8),dimension(size(Hk,3)),intent(in)        :: Wtk       ![Nk]
+    complex(8),dimension(:,:,:,:),intent(in)          :: Hk        ![2][Nspin*Norb][Nspin*Norb][Nk]
+    real(8),dimension(size(Hk,4)),intent(in)        :: Wtk       ![Nk]
     complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Smats     ![2][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gmats     !as Smats
     integer,intent(in)                              :: iprint
     character(len=*),optional                       :: mpi_split  
     character(len=1)                                :: mpi_split_ 
-    logical,dimension(size(Hk,3)),optional          :: hk_symm   ![Nk]
-    logical,dimension(size(Hk,3))                   :: hk_symm_  ![Nk]
+    logical,dimension(size(Hk,4)),optional          :: hk_symm   ![Nk]
+    logical,dimension(size(Hk,4))                   :: hk_symm_  ![Nk]
     !allocatable arrays
     complex(8),dimension(:,:,:,:,:,:),allocatable   :: Gkmats    !as Smats
     complex(8),dimension(:,:,:,:,:,:),allocatable   :: Gtmp    !as Smats
@@ -2341,10 +2353,10 @@ contains
     Nspin = size(Smats,2)
     Norb  = size(Smats,4)
     Lmats = size(Smats,6)
-    Lk    = size(Hk,3)
+    Lk    = size(Hk,4)
     Nso   = Nspin*Norb
     !Testing part:
-    call assert_shape(Hk,[Nso,Nso,Lk],FROUTINE,"Hk")
+    call assert_shape(Hk,[2,Nso,Nso,Lk],FROUTINE,"Hk")
     call assert_shape(Smats,[2,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Smats")
     call assert_shape(Gmats,[2,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Gmats")
     !
@@ -2370,7 +2382,7 @@ contains
        !
     case ('w')
        do ik=1,Lk
-          call invert_gk_superc_mpi(MpiComm,zeta_mats,Hk(:,:,ik),hk_symm_(ik),Gkmats)
+          call invert_gk_superc_mpi(MpiComm,zeta_mats,Hk(:,:,:,ik),hk_symm_(ik),Gkmats)
           Gmats = Gmats + Gkmats*Wtk(ik)
           if(mpi_master)call eta(ik,Lk)
        end do
@@ -2378,7 +2390,7 @@ contains
     case ('k')
        allocate(Gtmp(2,Nspin,Nspin,Norb,Norb,Lmats))
        do ik=1+mpi_rank,Lk,mpi_size
-          call invert_gk_superc(zeta_mats,Hk(:,:,ik),hk_symm_(ik),Gkmats)
+          call invert_gk_superc(zeta_mats,Hk(:,:,:,ik),hk_symm_(ik),Gkmats)
           Gtmp = Gtmp + Gkmats*Wtk(ik)
           if(mpi_master)call eta(ik,Lk)
        end do
@@ -2395,15 +2407,15 @@ contains
 #define FROUTINE 'dmft_get_gloc_matsubara_superc_lattice_main_mpi'
   subroutine dmft_get_gloc_matsubara_superc_lattice_main_mpi(MpiComm,Hk,Wtk,Gmats,Smats,iprint,mpi_split,hk_symm)
     integer                                           :: MpiComm
-    complex(8),dimension(:,:,:),intent(in)            :: Hk        ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Nk]
-    real(8),dimension(size(Hk,3)),intent(in)          :: Wtk       ![Nk]
+    complex(8),dimension(:,:,:,:),intent(in)            :: Hk        ![2][Nlat*Nspin*Norb][Nlat*Nspin*Norb][Nk]
+    real(8),dimension(size(Hk,4)),intent(in)          :: Wtk       ![Nk]
     complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Smats     ![2][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gmats     !as Smats
     integer,intent(in)                                :: iprint
     character(len=*),optional                         :: mpi_split  
     character(len=1)                                  :: mpi_split_ 
-    logical,dimension(size(Hk,3)),optional            :: hk_symm   ![Nk]
-    logical,dimension(size(Hk,3))                     :: hk_symm_  ![Nk]
+    logical,dimension(size(Hk,4)),optional            :: hk_symm   ![Nk]
+    logical,dimension(size(Hk,4))                     :: hk_symm_  ![Nk]
     !allocatable arrays
     complex(8),dimension(:,:,:,:,:,:,:),allocatable   :: Gkmats    !as Smats
     complex(8),dimension(:,:,:,:,:,:,:),allocatable   :: Gtmp    !as Smats
@@ -2426,11 +2438,11 @@ contains
     Nspin = size(Smats,3)
     Norb  = size(Smats,5)
     Lmats = size(Smats,7)
-    Lk    = size(Hk,3)
+    Lk    = size(Hk,4)
     Nso   = Nspin*Norb
     Nlso  = Nlat*Nspin*Norb
     !Testing part:
-    call assert_shape(Hk,[Nlso,Nlso,Lk],FROUTINE,"Hk")
+    call assert_shape(Hk,[2,Nlso,Nlso,Lk],FROUTINE,"Hk")
     call assert_shape(Smats,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Smats")
     call assert_shape(Gmats,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Gmats")
     !
@@ -2462,7 +2474,7 @@ contains
        !
     case ('w')
        do ik=1,Lk
-          call invert_gk_superc_lattice_mpi(MpiComm,zeta_mats,Hk(:,:,ik),hk_symm_(ik),Gkmats)
+          call invert_gk_superc_lattice_mpi(MpiComm,zeta_mats,Hk(:,:,:,ik),hk_symm_(ik),Gkmats)
           Gmats = Gmats + Gkmats*Wtk(ik)
           if(mpi_master)call eta(ik,Lk)
        end do
@@ -2470,7 +2482,7 @@ contains
     case ('k')
        allocate(Gtmp(2,Nlat,Nspin,Nspin,Norb,Norb,Lmats))
        do ik=1+mpi_rank,Lk,mpi_size
-          call invert_gk_superc_lattice(zeta_mats,Hk(:,:,ik),hk_symm_(ik),Gkmats)
+          call invert_gk_superc_lattice(zeta_mats,Hk(:,:,:,ik),hk_symm_(ik),Gkmats)
           Gtmp = Gtmp + Gkmats*Wtk(ik)
           if(mpi_master)call eta(ik,Lk)
        end do
@@ -2487,16 +2499,16 @@ contains
 #define FROUTINE 'dmft_get_gloc_matsubara_superc_gij_main_mpi'
   subroutine dmft_get_gloc_matsubara_superc_gij_main_mpi(MpiComm,Hk,Wtk,Gmats,Fmats,Smats,iprint,mpi_split,hk_symm)
     integer                                           :: MpiComm
-    complex(8),dimension(:,:,:)                       :: Hk              ![Nlat*Norb*Nspin][Nlat*Norb*Nspin][Nk]
-    real(8)                                           :: Wtk(size(Hk,3)) ![Nk]
+    complex(8),dimension(:,:,:,:)                       :: Hk              ![2][Nlat*Norb*Nspin][Nlat*Norb*Nspin][Nk]
+    real(8)                                           :: Wtk(size(Hk,4)) ![Nk]
     complex(8),intent(inout),dimension(:,:,:,:,:,:,:) :: Gmats           ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),intent(inout),dimension(:,:,:,:,:,:,:) :: Fmats           ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),intent(inout),dimension(:,:,:,:,:,:,:) :: Smats           ![2][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     integer                                           :: iprint
     character(len=*),optional                         :: mpi_split  
     character(len=1)                                  :: mpi_split_ 
-    logical,optional                                  :: hk_symm(size(Hk,3))
-    logical                                           :: hk_symm_(size(Hk,3))
+    logical,optional                                  :: hk_symm(size(Hk,4))
+    logical                                           :: hk_symm_(size(Hk,4))
     !
     complex(8),dimension(:,:,:,:,:,:),allocatable     :: zeta_mats       ![2][2][Nlat][Nspin*Norb][Nspin*Norb][Lmats]
     complex(8),dimension(:,:,:,:,:,:,:),allocatable   :: Gkmats,Gtmp          ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
@@ -2518,11 +2530,11 @@ contains
     Nspin = size(Smats,3)
     Norb  = size(Smats,5)
     Lmats = size(Smats,7)
-    Lk    = size(Hk,3)
+    Lk    = size(Hk,4)
     Nso   = Nspin*Norb
     Nlso  = Nlat*Nspin*Norb
     !Testing part:
-    call assert_shape(Hk,[Nlso,Nlso,Lk],FROUTINE,"Hk")
+    call assert_shape(Hk,[2,Nlso,Nlso,Lk],FROUTINE,"Hk")
     call assert_shape(Smats,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Smats")
     call assert_shape(Gmats,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Gmats")
     call assert_shape(Fmats,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Fmats")
@@ -2574,7 +2586,7 @@ contains
        !
     case ('w')
        do ik=1,Lk
-          call invert_gk_superc_gij(zeta_mats,Hk(:,:,ik),hk_symm_(ik),Gkmats,Fkmats)
+          call invert_gk_superc_gij(zeta_mats,Hk(:,:,:,ik),hk_symm_(ik),Gkmats,Fkmats)
           Gmats = Gmats + Gkmats*Wtk(ik)
           Fmats = Fmats + Fkmats*Wtk(ik)
           if(mpi_master)call eta(ik,Lk)
@@ -2584,7 +2596,7 @@ contains
        allocate(Gtmp(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats));Gtmp=zero
        allocate(Ftmp(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats));Ftmp=zero
        do ik=1,Lk
-          call invert_gk_superc_gij(zeta_mats,Hk(:,:,ik),hk_symm_(ik),Gkmats,Fkmats)
+          call invert_gk_superc_gij(zeta_mats,Hk(:,:,:,ik),hk_symm_(ik),Gkmats,Fkmats)
           Gtmp = Gtmp + Gkmats*Wtk(ik)
           Ftmp = Ftmp + Fkmats*Wtk(ik)
           if(mpi_master)call eta(ik,Lk)
@@ -2612,21 +2624,21 @@ contains
 
 #define FROUTINE 'dmft_get_gloc_matsubara_superc_1band'
   subroutine dmft_get_gloc_matsubara_superc_1band(Hk,Wtk,Gmats,Smats,iprint,hk_symm)
-    complex(8),dimension(:),intent(in)            :: Hk              ![Nk]
-    real(8),intent(in)                            :: Wtk(size(Hk))   ![Nk]
+    complex(8),dimension(:,:),intent(in)            :: Hk              ![2][Nk]
+    real(8),intent(in)                            :: Wtk(size(Hk,2))   ![Nk]
     complex(8),intent(in)                         :: Smats(:,:)
     complex(8),intent(inout)                      :: Gmats(2,size(Smats,2))
-    logical,optional                              :: hk_symm(size(Hk,1))
-    logical                                       :: hk_symm_(size(Hk,1))
+    logical,optional                              :: hk_symm(size(Hk,2))
+    logical                                       :: hk_symm_(size(Hk,2))
     integer                                       :: iprint
     !
-    complex(8),dimension(1,1,size(Hk))            :: Hk_             ![Norb*Nspin][Norb*Nspin][Nk]
+    complex(8),dimension(2,1,1,size(Hk,2))            :: Hk_             ![Norb*Nspin][Norb*Nspin][Nk]
     complex(8),dimension(2,1,1,1,1,size(Smats,2)) :: Gmats_
     complex(8),dimension(2,1,1,1,1,size(Smats,2)) :: Smats_
     !
     call assert_shape(Smats,[2,size(Smats,2)],FROUTINE,"Smats")
     !
-    Hk_(1,1,:)          = Hk
+    Hk_(:,1,1,:)          = Hk
     Smats_(:,1,1,1,1,:) = Smats(:,:)
     hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
     call dmft_get_gloc_matsubara_superc_main(Hk_,Wtk,Gmats_,Smats_,iprint,hk_symm_)
@@ -2636,19 +2648,19 @@ contains
 
 #define FROUTINE 'dmft_get_gloc_matsubara_superc_lattice_1band'
   subroutine dmft_get_gloc_matsubara_superc_lattice_1band(Hk,Wtk,Gmats,Smats,iprint,hk_symm)
-    complex(8),dimension(:,:,:),intent(in)                   :: Hk              ![Nlat*Norb*Nspin][Nlat*Norb*Nspin][Nk]
-    real(8),intent(in)                                       :: Wtk(size(Hk,3)) ![Nk]
+    complex(8),dimension(:,:,:,:),intent(in)                   :: Hk              ![2][Nlat*Norb*Nspin][Nlat*Norb*Nspin][Nk]
+    real(8),intent(in)                                       :: Wtk(size(Hk,4)) ![Nk]
     complex(8),intent(in)                                    :: Smats(:,:,:)
-    complex(8),intent(inout)                                 :: Gmats(2,size(Hk,1),size(Smats,3))
-    logical,optional                                         :: hk_symm(size(Hk,1))
-    logical                                                  :: hk_symm_(size(Hk,1))
+    complex(8),intent(inout)                                 :: Gmats(2,size(Hk,2),size(Smats,3))
+    logical,optional                                         :: hk_symm(size(Hk,4))
+    logical                                                  :: hk_symm_(size(Hk,4))
     integer                                                  :: iprint
     !
-    complex(8),dimension(2,size(Hk,1),1,1,1,1,size(Smats,3)) :: Gmats_
-    complex(8),dimension(2,size(Hk,1),1,1,1,1,size(Smats,3)) :: Smats_
+    complex(8),dimension(2,size(Hk,2),1,1,1,1,size(Smats,3)) :: Gmats_
+    complex(8),dimension(2,size(Hk,2),1,1,1,1,size(Smats,3)) :: Smats_
     !
-    call assert_shape(Hk,[size(Hk,1),size(Hk,1),size(Hk,3)],FROUTINE,"Hk")
-    call assert_shape(Smats,[2,size(Hk,1),size(Smats,3)],FROUTINE,"Smats")
+    call assert_shape(Hk,[2,size(Hk,2),size(Hk,2),size(Hk,4)],FROUTINE,"Hk")
+    call assert_shape(Smats,[2,size(Hk,2),size(Smats,3)],FROUTINE,"Smats")
     !
     Smats_(:,:,1,1,1,1,:) = Smats(:,:,:)
     hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
@@ -2661,23 +2673,23 @@ contains
 #define FROUTINE 'dmft_get_gloc_matsubara_superc_1band_mpi'
   subroutine dmft_get_gloc_matsubara_superc_1band_mpi(MpiComm,Hk,Wtk,Gmats,Smats,iprint,mpi_split,hk_symm)
     integer                                       :: MpiComm
-    complex(8),dimension(:),intent(in)            :: Hk              ![Nk]
-    real(8),intent(in)                            :: Wtk(size(Hk))   ![Nk]
+    complex(8),dimension(:,:),intent(in)            :: Hk              ![2][Nk]
+    real(8),intent(in)                            :: Wtk(size(Hk,2))   ![Nk]
     complex(8),intent(in)                         :: Smats(:,:)
     complex(8),intent(inout)                      :: Gmats(2,size(Smats,2))
-    logical,optional                              :: hk_symm(size(Hk,1))
-    logical                                       :: hk_symm_(size(Hk,1))
+    logical,optional                              :: hk_symm(size(Hk,2))
+    logical                                       :: hk_symm_(size(Hk,2))
     integer                                       :: iprint
     character(len=*),optional                     :: mpi_split  
     character(len=1)                              :: mpi_split_ 
     !
-    complex(8),dimension(1,1,size(Hk))            :: Hk_             ![Norb*Nspin][Norb*Nspin][Nk]
+    complex(8),dimension(2,1,1,size(Hk,2))            :: Hk_             ![Norb*Nspin][Norb*Nspin][Nk]
     complex(8),dimension(2,1,1,1,1,size(Smats,2)) :: Gmats_
     complex(8),dimension(2,1,1,1,1,size(Smats,2)) :: Smats_
     !
     call assert_shape(Smats,[2,size(Smats,2)],FROUTINE,"Smats")
     !
-    Hk_(1,1,:)          = Hk
+    Hk_(:,1,1,:)          = Hk
     Smats_(:,1,1,1,1,:) = Smats(:,:)
     mpi_split_='w'    ;if(present(mpi_split)) mpi_split_=mpi_split
     hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
@@ -2689,21 +2701,21 @@ contains
 #define FROUTINE 'dmft_get_gloc_matsubara_superc_lattice_1band_mpi'
   subroutine dmft_get_gloc_matsubara_superc_lattice_1band_mpi(MpiComm,Hk,Wtk,Gmats,Smats,iprint,mpi_split,hk_symm)
     integer                                                  :: MpiComm
-    complex(8),dimension(:,:,:),intent(in)                   :: Hk              ![Nlat*Norb*Nspin][Nlat*Norb*Nspin][Nk]
-    real(8),intent(in)                                       :: Wtk(size(Hk,3)) ![Nk]
+    complex(8),dimension(:,:,:,:),intent(in)                   :: Hk              ![2][Nlat*Norb*Nspin][Nlat*Norb*Nspin][Nk]
+    real(8),intent(in)                                       :: Wtk(size(Hk,4)) ![Nk]
     complex(8),intent(in)                                    :: Smats(:,:,:)
-    complex(8),intent(inout)                                 :: Gmats(2,size(Hk,1),size(Smats,3))
-    logical,optional                                         :: hk_symm(size(Hk,1))
-    logical                                                  :: hk_symm_(size(Hk,1))
+    complex(8),intent(inout)                                 :: Gmats(2,size(Hk,2),size(Smats,3))
+    logical,optional                                         :: hk_symm(size(Hk,4))
+    logical                                                  :: hk_symm_(size(Hk,4))
     integer                                                  :: iprint
     character(len=*),optional                                :: mpi_split  
     character(len=1)                                         :: mpi_split_ 
     !
-    complex(8),dimension(2,size(Hk,1),1,1,1,1,size(Smats,3)) :: Gmats_
-    complex(8),dimension(2,size(Hk,1),1,1,1,1,size(Smats,3)) :: Smats_
+    complex(8),dimension(2,size(Hk,2),1,1,1,1,size(Smats,3)) :: Gmats_
+    complex(8),dimension(2,size(Hk,2),1,1,1,1,size(Smats,3)) :: Smats_
     !
-    call assert_shape(Hk,[size(Hk,1),size(Hk,1),size(Hk,3)],FROUTINE,"Hk")
-    call assert_shape(Smats,[2,size(Hk,1),size(Smats,3)],FROUTINE,"Smats")
+    call assert_shape(Hk,[2,size(Hk,2),size(Hk,2),size(Hk,4)],FROUTINE,"Hk")
+    call assert_shape(Smats,[2,size(Hk,2),size(Smats,3)],FROUTINE,"Smats")
     !
     Smats_(:,:,1,1,1,1,:) = Smats(:,:,:)
     hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
@@ -2723,12 +2735,12 @@ contains
 
 #define FROUTINE 'dmft_get_gloc_matsubara_superc_Nband'
   subroutine dmft_get_gloc_matsubara_superc_Nband(Hk,Wtk,Gmats,Smats,iprint,hk_symm)
-    complex(8),dimension(:,:,:),intent(in)                          :: Hk              ![Norb][Norb][Nk]
-    real(8),intent(in)                                              :: Wtk(size(Hk,3)) ![Nk]
+    complex(8),dimension(:,:,:,:),intent(in)                          :: Hk              ![2][Norb][Norb][Nk]
+    real(8),intent(in)                                              :: Wtk(size(Hk,4)) ![Nk]
     complex(8),intent(in)                                           :: Smats(:,:,:,:)  ![2][Norb][Norb][Lmats]
     complex(8),intent(inout)                                        :: Gmats(:,:,:,:)  !as Smats
-    logical,optional                                                :: hk_symm(size(Hk,3))
-    logical                                                         :: hk_symm_(size(Hk,3))
+    logical,optional                                                :: hk_symm(size(Hk,4))
+    logical                                                         :: hk_symm_(size(Hk,4))
     integer                                                         :: iprint
     !
     complex(8),&
@@ -2741,7 +2753,7 @@ contains
     Norb  = size(Smats,2)
     Lmats = size(Smats,4)
     Nso   = Nspin*Norb
-    call assert_shape(Hk,[Nso,Nso,size(Hk,3)],FROUTINE,"Hk")
+    call assert_shape(Hk,[2,Nso,Nso,size(Hk,4)],FROUTINE,"Hk")
     call assert_shape(Smats,[2,Norb,Norb,Lmats],FROUTINE,"Smats")
     call assert_shape(Gmats,[2,Norb,Norb,Lmats],FROUTINE,"Gmats")
     !
@@ -2754,12 +2766,12 @@ contains
 
 #define FROUTINE 'dmft_get_gloc_matsubara_superc_lattice_Nband'
   subroutine dmft_get_gloc_matsubara_superc_lattice_Nband(Hk,Wtk,Gmats,Smats,iprint,hk_symm)
-    complex(8),dimension(:,:,:),intent(in)                                        :: Hk               ![Nlat*Norb][Nlat*Norb][Nk]
-    real(8),intent(in)                                                            :: Wtk(size(Hk,3))  ![Nk]
+    complex(8),dimension(:,:,:,:),intent(in)                                        :: Hk               ![2][Nlat*Norb][Nlat*Norb][Nk]
+    real(8),intent(in)                                                            :: Wtk(size(Hk,4))  ![Nk]
     complex(8),intent(in)                                                         :: Smats(:,:,:,:,:) ![2][Nlat][Norb][Norb][Lmats]
     complex(8),intent(inout)                                                      :: Gmats(:,:,:,:,:) ![2][Nlat][Norb][Norb][Lmats]
-    logical,optional                                                              :: hk_symm(size(Hk,3))
-    logical                                                                       :: hk_symm_(size(Hk,3))
+    logical,optional                                                              :: hk_symm(size(Hk,4))
+    logical                                                                       :: hk_symm_(size(Hk,4))
     integer                                                                       :: iprint
     !
     complex(8),&
@@ -2776,7 +2788,7 @@ contains
     Lmats = size(Smats,5)
     Nso   = Nspin*Norb
     Nlso  = Nlat*Nspin*Norb
-    call assert_shape(Hk,[Nlso,Nlso,size(Hk,3)],FROUTINE,"Hk")
+    call assert_shape(Hk,[2,Nlso,Nlso,size(Hk,4)],FROUTINE,"Hk")
     call assert_shape(Smats,[2,Nlat,Norb,Norb,Lmats],FROUTINE,"Smats")
     call assert_shape(Gmats,[2,Nlat,Norb,Norb,Lmats],FROUTINE,"Gmats")
     !
@@ -2790,12 +2802,12 @@ contains
 #define FROUTINE 'dmft_get_gloc_matsubara_superc_Nband_mpi'
   subroutine dmft_get_gloc_matsubara_superc_Nband_mpi(MpiComm,Hk,Wtk,Gmats,Smats,iprint,mpi_split,hk_symm)
     integer                                                         :: MpiComm
-    complex(8),dimension(:,:,:),intent(in)                          :: Hk              ![Norb][Norb][Nk]
-    real(8),intent(in)                                              :: Wtk(size(Hk,3)) ![Nk]
+    complex(8),dimension(:,:,:,:),intent(in)                          :: Hk              ![2][Norb][Norb][Nk]
+    real(8),intent(in)                                              :: Wtk(size(Hk,4)) ![Nk]
     complex(8),intent(in)                                           :: Smats(:,:,:,:)  ![2][Norb][Norb][Lmats]
     complex(8),intent(inout)                                        :: Gmats(:,:,:,:)  !as Smats
-    logical,optional                                                :: hk_symm(size(Hk,3))
-    logical                                                         :: hk_symm_(size(Hk,3))
+    logical,optional                                                :: hk_symm(size(Hk,4))
+    logical                                                         :: hk_symm_(size(Hk,4))
     integer                                                         :: iprint
     character(len=*),optional                                       :: mpi_split  
     character(len=1)                                                :: mpi_split_ 
@@ -2813,7 +2825,7 @@ contains
     Norb  = size(Smats,2)
     Lmats = size(Smats,4)
     Nso   = Nspin*Norb
-    call assert_shape(Hk,[Nso,Nso,size(Hk,3)],FROUTINE,"Hk")
+    call assert_shape(Hk,[2,Nso,Nso,size(Hk,4)],FROUTINE,"Hk")
     call assert_shape(Smats,[2,Norb,Norb,Lmats],FROUTINE,"Smats")
     call assert_shape(Gmats,[2,Norb,Norb,Lmats],FROUTINE,"Gmats")
     !
@@ -2826,12 +2838,12 @@ contains
 #define FROUTINE 'dmft_get_gloc_matsubara_superc_lattice_Nband_mpi'
   subroutine dmft_get_gloc_matsubara_superc_lattice_Nband_mpi(MpiComm,Hk,Wtk,Gmats,Smats,iprint,mpi_split,hk_symm)
     integer                                                                       :: MpiComm
-    complex(8),dimension(:,:,:),intent(in)                                        :: Hk               ![Nlat*Norb][Nlat*Norb][Nk]
-    real(8),intent(in)                                                            :: Wtk(size(Hk,3))  ![Nk]
+    complex(8),dimension(:,:,:,:),intent(in)                                        :: Hk               ![2][Nlat*Norb][Nlat*Norb][Nk]
+    real(8),intent(in)                                                            :: Wtk(size(Hk,4))  ![Nk]
     complex(8),intent(in)                                                         :: Smats(:,:,:,:,:) ![2][Nlat][Norb][Norb][Lmats]
     complex(8),intent(inout)                                                      :: Gmats(:,:,:,:,:) ![2][Nlat][Norb][Norb][Lmats]
-    logical,optional                                                              :: hk_symm(size(Hk,3))
-    logical                                                                       :: hk_symm_(size(Hk,3))
+    logical,optional                                                              :: hk_symm(size(Hk,4))
+    logical                                                                       :: hk_symm_(size(Hk,4))
     integer                                                                       :: iprint
     character(len=*),optional                                                     :: mpi_split  
     character(len=1)                                                              :: mpi_split_ 
@@ -2851,7 +2863,7 @@ contains
     Lmats = size(Smats,5)
     Nso   = Nspin*Norb
     Nlso  = Nlat*Nspin*Norb
-    call assert_shape(Hk,[Nlso,Nlso,size(Hk,3)],FROUTINE,"Hk")
+    call assert_shape(Hk,[2,Nlso,Nlso,size(Hk,4)],FROUTINE,"Hk")
     call assert_shape(Smats,[2,Nlat,Norb,Norb,Lmats],FROUTINE,"Smats")
     call assert_shape(Gmats,[2,Nlat,Norb,Norb,Lmats],FROUTINE,"Gmats")
     !
@@ -2869,13 +2881,13 @@ contains
 
 #define FROUTINE 'dmft_get_gloc_realaxis_superc_main'
   subroutine dmft_get_gloc_realaxis_superc_main(Hk,Wtk,Greal,Sreal,iprint,hk_symm)
-    complex(8),dimension(:,:,:),intent(in)          :: Hk        ![Nspin*Norb][Nspin*Norb][Nk]
-    real(8),dimension(size(Hk,3)),intent(in)        :: Wtk       ![Nk]
+    complex(8),dimension(:,:,:,:),intent(in)        :: Hk        ![2][Nspin*Norb][Nspin*Norb][Nk]
+    real(8),dimension(size(Hk,4)),intent(in)        :: Wtk       ![Nk]
     complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sreal     ![2][Nspin][Nspin][Norb][Norb][Lreal]
     complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Greal     !as Sreal
     integer,intent(in)                              :: iprint
-    logical,dimension(size(Hk,3)),optional          :: hk_symm   ![Nk]
-    logical,dimension(size(Hk,3))                   :: hk_symm_  ![Nk]
+    logical,dimension(size(Hk,4)),optional          :: hk_symm   ![Nk]
+    logical,dimension(size(Hk,4))                   :: hk_symm_  ![Nk]
     !allocatable arrays
     complex(8),dimension(:,:,:,:,:,:),allocatable   :: Gkreal    !as Sreal
     complex(8),dimension(:,:,:,:,:),allocatable     :: zeta_real ![2][2][Nspin*Norb][Nspin*Norb][Lreal]
@@ -2896,10 +2908,10 @@ contains
     Nspin = size(Sreal,2)
     Norb  = size(Sreal,4)
     Lreal = size(Sreal,6)
-    Lk    = size(Hk,3)
+    Lk    = size(Hk,4)
     Nso   = Nspin*Norb
     !Testing part:
-    call assert_shape(Hk,[Nso,Nso,Lk],FROUTINE,"Hk")
+    call assert_shape(Hk,[2,Nso,Nso,Lk],FROUTINE,"Hk")
     call assert_shape(Sreal,[2,Nspin,Nspin,Norb,Norb,Lreal],FROUTINE,"Sreal")
     call assert_shape(Greal,[2,Nspin,Nspin,Norb,Norb,Lreal],FROUTINE,"Greal")
     !
@@ -2924,7 +2936,7 @@ contains
     call start_timer
     Greal=zero
     do ik=1,Lk
-       call invert_gk_superc(zeta_real,Hk(:,:,ik),hk_symm_(ik),Gkreal)
+       call invert_gk_superc(zeta_real,Hk(:,:,:,ik),hk_symm_(ik),Gkreal)
        Greal = Greal + Gkreal*Wtk(ik)
        call eta(ik,Lk)
     end do
@@ -2936,13 +2948,13 @@ contains
 
 #define FROUTINE 'dmft_get_gloc_realaxis_superc_lattice_main'
   subroutine dmft_get_gloc_realaxis_superc_lattice_main(Hk,Wtk,Greal,Sreal,iprint,hk_symm)
-    complex(8),dimension(:,:,:),intent(in)            :: Hk        ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Nk]
-    real(8),dimension(size(Hk,3)),intent(in)          :: Wtk       ![Nk]
+    complex(8),dimension(:,:,:,:),intent(in)          :: Hk        ![2][Nlat*Nspin*Norb][Nlat*Nspin*Norb][Nk]
+    real(8),dimension(size(Hk,4)),intent(in)          :: Wtk       ![Nk]
     complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Sreal     ![2][Nlat][Nspin][Nspin][Norb][Norb][Lreal]
     complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Greal     !as Sreal
     integer,intent(in)                                :: iprint
-    logical,dimension(size(Hk,3)),optional            :: hk_symm   ![Nk]
-    logical,dimension(size(Hk,3))                     :: hk_symm_  ![Nk]
+    logical,dimension(size(Hk,4)),optional            :: hk_symm   ![Nk]
+    logical,dimension(size(Hk,4))                     :: hk_symm_  ![Nk]
     !allocatable arrays
     complex(8),dimension(:,:,:,:,:,:,:),allocatable   :: Gkreal    !as Sreal
     complex(8),dimension(:,:,:,:,:,:),allocatable     :: zeta_real ![2][2][Nlat][Nspin*Norb][Nspin*Norb][Lreal]
@@ -2964,11 +2976,11 @@ contains
     Nspin = size(Sreal,3)
     Norb  = size(Sreal,5)
     Lreal = size(Sreal,7)
-    Lk    = size(Hk,3)
+    Lk    = size(Hk,4)
     Nso   = Nspin*Norb
     Nlso  = Nlat*Nspin*Norb
     !Testing part:
-    call assert_shape(Hk,[Nlso,Nlso,Lk],FROUTINE,"Hk")
+    call assert_shape(Hk,[2,Nlso,Nlso,Lk],FROUTINE,"Hk")
     call assert_shape(Sreal,[2,Nlat,Nspin,Nspin,Norb,Norb,Lreal],FROUTINE,"Sreal")
     call assert_shape(Greal,[2,Nlat,Nspin,Nspin,Norb,Norb,Lreal],FROUTINE,"Greal")
     !
@@ -2998,7 +3010,7 @@ contains
     call start_timer
     Greal=zero
     do ik=1,Lk
-       call invert_gk_superc_lattice(zeta_real,Hk(:,:,ik),hk_symm_(ik),Gkreal)
+       call invert_gk_superc_lattice(zeta_real,Hk(:,:,:,ik),hk_symm_(ik),Gkreal)
        Greal = Greal + Gkreal*Wtk(ik)
        call eta(ik,Lk)
     end do
@@ -3010,14 +3022,14 @@ contains
 
 #define FROUTINE 'dmft_get_gloc_realaxis_superc_gij_main'
   subroutine dmft_get_gloc_realaxis_superc_gij_main(Hk,Wtk,Greal,Freal,Sreal,iprint,hk_symm)
-    complex(8),dimension(:,:,:)                       :: Hk              ![Nlat*Norb*Nspin][Nlat*Norb*Nspin][Nk]
-    real(8)                                           :: Wtk(size(Hk,3)) ![Nk]
+    complex(8),dimension(:,:,:,:)                       :: Hk              ![2][Nlat*Norb*Nspin][Nlat*Norb*Nspin][Nk]
+    real(8)                                           :: Wtk(size(Hk,4)) ![Nk]
     complex(8),intent(inout),dimension(:,:,:,:,:,:,:) :: Greal           ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lreal]
     complex(8),intent(inout),dimension(:,:,:,:,:,:,:) :: Freal           ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lreal]
     complex(8),intent(inout),dimension(:,:,:,:,:,:,:) :: Sreal           ![2][Nlat][Nspin][Nspin][Norb][Norb][Lreal]
     integer                                           :: iprint
-    logical,optional                                  :: hk_symm(size(Hk,3))
-    logical                                           :: hk_symm_(size(Hk,3))
+    logical,optional                                  :: hk_symm(size(Hk,4))
+    logical                                           :: hk_symm_(size(Hk,4))
     !
     complex(8),dimension(:,:,:,:,:,:),allocatable     :: zeta_real       ![2][2][Nlat][Nspin*Norb][Nspin*Norb][Lreal]
     complex(8),dimension(:,:,:,:,:,:,:),allocatable   :: Gkreal          ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lreal]
@@ -3039,11 +3051,11 @@ contains
     Nspin = size(Sreal,3)
     Norb  = size(Sreal,5)
     Lreal = size(Sreal,7)
-    Lk    = size(Hk,3)
+    Lk    = size(Hk,4)
     Nso   = Nspin*Norb
     Nlso  = Nlat*Nspin*Norb
     !Testing part:
-    call assert_shape(Hk,[Nlso,Nlso,Lk],FROUTINE,"Hk")
+    call assert_shape(Hk,[2,Nlso,Nlso,Lk],FROUTINE,"Hk")
     call assert_shape(Sreal,[2,Nlat,Nspin,Nspin,Norb,Norb,Lreal],FROUTINE,"Sreal")
     call assert_shape(Greal,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal],FROUTINE,"Greal")
     call assert_shape(Freal,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal],FROUTINE,"Freal")
@@ -3093,7 +3105,7 @@ contains
     call start_timer
     Greal=zero
     do ik=1,Lk
-       call invert_gk_superc_gij(zeta_real,Hk(:,:,ik),hk_symm_(ik),Gkreal,Fkreal)
+       call invert_gk_superc_gij(zeta_real,Hk(:,:,:,ik),hk_symm_(ik),Gkreal,Fkreal)
        Greal = Greal + Gkreal*Wtk(ik)
        Freal = Freal + Fkreal*Wtk(ik)
        call eta(ik,Lk)
@@ -3108,15 +3120,15 @@ contains
 #define FROUTINE 'dmft_get_gloc_realaxis_superc_main_mpi'
   subroutine dmft_get_gloc_realaxis_superc_main_mpi(MpiComm,Hk,Wtk,Greal,Sreal,iprint,mpi_split,hk_symm)
     integer                                         :: MpiComm
-    complex(8),dimension(:,:,:),intent(in)          :: Hk        ![Nspin*Norb][Nspin*Norb][Nk]
-    real(8),dimension(size(Hk,3)),intent(in)        :: Wtk       ![Nk]
+    complex(8),dimension(:,:,:,:),intent(in)          :: Hk        ![2][Nspin*Norb][Nspin*Norb][Nk]
+    real(8),dimension(size(Hk,4)),intent(in)        :: Wtk       ![Nk]
     complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sreal     ![2][Nspin][Nspin][Norb][Norb][Lreal]
     complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Greal     !as Sreal
     integer,intent(in)                              :: iprint
     character(len=*),optional                       :: mpi_split  
     character(len=1)                                :: mpi_split_ 
-    logical,dimension(size(Hk,3)),optional          :: hk_symm   ![Nk]
-    logical,dimension(size(Hk,3))                   :: hk_symm_  ![Nk]
+    logical,dimension(size(Hk,4)),optional          :: hk_symm   ![Nk]
+    logical,dimension(size(Hk,4))                   :: hk_symm_  ![Nk]
     !allocatable arrays
     complex(8),dimension(:,:,:,:,:,:),allocatable   :: Gkreal    !as Sreal
     complex(8),dimension(:,:,:,:,:,:),allocatable   :: Gtmp    !as Sreal
@@ -3141,10 +3153,10 @@ contains
     Nspin = size(Sreal,2)
     Norb  = size(Sreal,4)
     Lreal = size(Sreal,6)
-    Lk    = size(Hk,3)
+    Lk    = size(Hk,4)
     Nso   = Nspin*Norb
     !Testing part:
-    call assert_shape(Hk,[Nso,Nso,Lk],FROUTINE,"Hk")
+    call assert_shape(Hk,[2,Nso,Nso,Lk],FROUTINE,"Hk")
     call assert_shape(Sreal,[2,Nspin,Nspin,Norb,Norb,Lreal],FROUTINE,"Sreal")
     call assert_shape(Greal,[2,Nspin,Nspin,Norb,Norb,Lreal],FROUTINE,"Greal")
     !
@@ -3174,7 +3186,7 @@ contains
        !
     case ('w')
        do ik=1,Lk
-          call invert_gk_superc_mpi(MpiComm,zeta_real,Hk(:,:,ik),hk_symm_(ik),Gkreal)
+          call invert_gk_superc_mpi(MpiComm,zeta_real,Hk(:,:,:,ik),hk_symm_(ik),Gkreal)
           Greal = Greal + Gkreal*Wtk(ik)
           if(mpi_master)call eta(ik,Lk)
        end do
@@ -3182,7 +3194,7 @@ contains
     case ('k')
        allocate(Gtmp(2,Nspin,Nspin,Norb,Norb,Lreal))
        do ik=1+mpi_rank,Lk,mpi_size
-          call invert_gk_superc(zeta_real,Hk(:,:,ik),hk_symm_(ik),Gkreal)
+          call invert_gk_superc(zeta_real,Hk(:,:,:,ik),hk_symm_(ik),Gkreal)
           Gtmp = Gtmp + Gkreal*Wtk(ik)
           if(mpi_master)call eta(ik,Lk)
        end do
@@ -3199,15 +3211,15 @@ contains
 #define FROUTINE 'dmft_get_gloc_realaxis_superc_lattice_main_mpi'
   subroutine dmft_get_gloc_realaxis_superc_lattice_main_mpi(MpiComm,Hk,Wtk,Greal,Sreal,iprint,mpi_split,hk_symm)
     integer                                           :: MpiComm
-    complex(8),dimension(:,:,:),intent(in)            :: Hk        ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Nk]
-    real(8),dimension(size(Hk,3)),intent(in)          :: Wtk       ![Nk]
+    complex(8),dimension(:,:,:,:),intent(in)            :: Hk        ![2][Nlat*Nspin*Norb][Nlat*Nspin*Norb][Nk]
+    real(8),dimension(size(Hk,4)),intent(in)          :: Wtk       ![Nk]
     complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Sreal     ![2][Nlat][Nspin][Nspin][Norb][Norb][Lreal]
     complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Greal     !as Sreal
     integer,intent(in)                                :: iprint
     character(len=*),optional                         :: mpi_split  
     character(len=1)                                  :: mpi_split_ 
-    logical,dimension(size(Hk,3)),optional            :: hk_symm   ![Nk]
-    logical,dimension(size(Hk,3))                     :: hk_symm_  ![Nk]
+    logical,dimension(size(Hk,4)),optional            :: hk_symm   ![Nk]
+    logical,dimension(size(Hk,4))                     :: hk_symm_  ![Nk]
     !allocatable arrays
     complex(8),dimension(:,:,:,:,:,:,:),allocatable   :: Gkreal    !as Sreal
     complex(8),dimension(:,:,:,:,:,:,:),allocatable   :: Gtmp    !as Sreal
@@ -3233,11 +3245,11 @@ contains
     Nspin = size(Sreal,3)
     Norb  = size(Sreal,5)
     Lreal = size(Sreal,7)
-    Lk    = size(Hk,3)
+    Lk    = size(Hk,4)
     Nso   = Nspin*Norb
     Nlso  = Nlat*Nspin*Norb
     !Testing part:
-    call assert_shape(Hk,[Nlso,Nlso,Lk],FROUTINE,"Hk")
+    call assert_shape(Hk,[2,Nlso,Nlso,Lk],FROUTINE,"Hk")
     call assert_shape(Sreal,[2,Nlat,Nspin,Nspin,Norb,Norb,Lreal],FROUTINE,"Sreal")
     call assert_shape(Greal,[2,Nlat,Nspin,Nspin,Norb,Norb,Lreal],FROUTINE,"Greal")
     !
@@ -3273,7 +3285,7 @@ contains
        !
     case ('w')
        do ik=1,Lk
-          call invert_gk_superc_lattice_mpi(MpiComm,zeta_real,Hk(:,:,ik),hk_symm_(ik),Gkreal)
+          call invert_gk_superc_lattice_mpi(MpiComm,zeta_real,Hk(:,:,:,ik),hk_symm_(ik),Gkreal)
           Greal = Greal + Gkreal*Wtk(ik)
           if(mpi_master)call eta(ik,Lk)
        end do
@@ -3281,7 +3293,7 @@ contains
     case ('k')
        allocate(Gtmp(2,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
        do ik=1+mpi_rank,Lk,mpi_size
-          call invert_gk_superc_lattice(zeta_real,Hk(:,:,ik),hk_symm_(ik),Gkreal)
+          call invert_gk_superc_lattice(zeta_real,Hk(:,:,:,ik),hk_symm_(ik),Gkreal)
           Gtmp = Gtmp + Gkreal*Wtk(ik)
           if(mpi_master)call eta(ik,Lk)
        end do
@@ -3298,16 +3310,16 @@ contains
 #define FROUTINE 'dmft_get_gloc_realaxis_superc_main_gij_mpi'
   subroutine dmft_get_gloc_realaxis_superc_gij_main_mpi(MpiComm,Hk,Wtk,Greal,Freal,Sreal,iprint,mpi_split,hk_symm)
     integer                                           :: MpiComm
-    complex(8),dimension(:,:,:)                       :: Hk              ![Nlat*Norb*Nspin][Nlat*Norb*Nspin][Nk]
-    real(8)                                           :: Wtk(size(Hk,3)) ![Nk]
+    complex(8),dimension(:,:,:,:)                       :: Hk              ![2][Nlat*Norb*Nspin][Nlat*Norb*Nspin][Nk]
+    real(8)                                           :: Wtk(size(Hk,4)) ![Nk]
     complex(8),intent(inout),dimension(:,:,:,:,:,:,:) :: Greal           ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lreal]
     complex(8),intent(inout),dimension(:,:,:,:,:,:,:) :: Freal           ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lreal]
     complex(8),intent(inout),dimension(:,:,:,:,:,:,:) :: Sreal           ![2][Nlat][Nspin][Nspin][Norb][Norb][Lreal]
     integer                                           :: iprint
     character(len=*),optional                         :: mpi_split  
     character(len=1)                                  :: mpi_split_ 
-    logical,optional                                  :: hk_symm(size(Hk,3))
-    logical                                           :: hk_symm_(size(Hk,3))
+    logical,optional                                  :: hk_symm(size(Hk,4))
+    logical                                           :: hk_symm_(size(Hk,4))
     !
     complex(8),dimension(:,:,:,:,:,:),allocatable     :: zeta_real       ![2][2][Nlat][Nspin*Norb][Nspin*Norb][Lreal]
     complex(8),dimension(:,:,:,:,:,:,:),allocatable   :: Gkreal,Gtmp          ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lreal]
@@ -3331,11 +3343,11 @@ contains
     Nspin = size(Sreal,3)
     Norb  = size(Sreal,5)
     Lreal = size(Sreal,7)
-    Lk    = size(Hk,3)
+    Lk    = size(Hk,4)
     Nso   = Nspin*Norb
     Nlso  = Nlat*Nspin*Norb
     !Testing part:
-    call assert_shape(Hk,[Nlso,Nlso,Lk],FROUTINE,"Hk")
+    call assert_shape(Hk,[2,Nlso,Nlso,Lk],FROUTINE,"Hk")
     call assert_shape(Sreal,[2,Nlat,Nspin,Nspin,Norb,Norb,Lreal],FROUTINE,"Sreal")
     call assert_shape(Greal,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal],FROUTINE,"Greal")
     call assert_shape(Freal,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal],FROUTINE,"Freal")
@@ -3391,7 +3403,7 @@ contains
        !
     case ('w')
        do ik=1,Lk
-          call invert_gk_superc_gij_mpi(MpiComm,zeta_real,Hk(:,:,ik),hk_symm_(ik),Gkreal,Fkreal)
+          call invert_gk_superc_gij_mpi(MpiComm,zeta_real,Hk(:,:,:,ik),hk_symm_(ik),Gkreal,Fkreal)
           Greal = Greal + Gkreal*Wtk(ik)
           Freal = Freal + Fkreal*Wtk(ik)
           if(mpi_master)call eta(ik,Lk)
@@ -3401,7 +3413,7 @@ contains
        allocate(Gtmp(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal));Gtmp=zero
        allocate(Ftmp(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal));Ftmp=zero
        do ik=1,Lk
-          call invert_gk_superc_gij(zeta_real,Hk(:,:,ik),hk_symm_(ik),Gkreal,Fkreal)
+          call invert_gk_superc_gij(zeta_real,Hk(:,:,:,ik),hk_symm_(ik),Gkreal,Fkreal)
           Gtmp = Gtmp + Gkreal*Wtk(ik)
           Ftmp = Ftmp + Fkreal*Wtk(ik)
           if(mpi_master)call eta(ik,Lk)
@@ -3428,21 +3440,21 @@ contains
 
 #define FROUTINE 'dmft_get_gloc_realaxis_superc_1band'
   subroutine dmft_get_gloc_realaxis_superc_1band(Hk,Wtk,Greal,Sreal,iprint,hk_symm)
-    complex(8),dimension(:),intent(in)            :: Hk              ![Nk]
-    real(8),intent(in)                            :: Wtk(size(Hk))   ![Nk]
+    complex(8),dimension(:,:),intent(in)            :: Hk              ![2][Nk]
+    real(8),intent(in)                            :: Wtk(size(Hk,2))   ![Nk]
     complex(8),intent(in)                         :: Sreal(:,:)
     complex(8),intent(inout)                      :: Greal(2,size(Sreal,2))
-    logical,optional                              :: hk_symm(size(Hk,1))
-    logical                                       :: hk_symm_(size(Hk,1))
+    logical,optional                              :: hk_symm(size(Hk,2))
+    logical                                       :: hk_symm_(size(Hk,2))
     integer                                       :: iprint
     !
-    complex(8),dimension(1,1,size(Hk))            :: Hk_             ![Norb*Nspin][Norb*Nspin][Nk]
+    complex(8),dimension(2,1,1,size(Hk,2))            :: Hk_             ![2][Norb*Nspin][Norb*Nspin][Nk]
     complex(8),dimension(2,1,1,1,1,size(Sreal,2)) :: Greal_
     complex(8),dimension(2,1,1,1,1,size(Sreal,2)) :: Sreal_
     !
     call assert_shape(Sreal,[2,size(Sreal,2)],FROUTINE,"Sreal")
     !
-    Hk_(1,1,:)          = Hk
+    Hk_(:,1,1,:)          = Hk
     Sreal_(:,1,1,1,1,:) = Sreal(:,:)
     hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
     call dmft_get_gloc_realaxis_superc_main(Hk_,Wtk,Greal_,Sreal_,iprint,hk_symm_)
@@ -3452,19 +3464,19 @@ contains
 
 #define FROUTINE 'dmft_get_gloc_realaxis_superc_lattice_1band'
   subroutine dmft_get_gloc_realaxis_superc_lattice_1band(Hk,Wtk,Greal,Sreal,iprint,hk_symm)
-    complex(8),dimension(:,:,:),intent(in)                   :: Hk              ![Nlat*Norb*Nspin][Nlat*Norb*Nspin][Nk]
-    real(8),intent(in)                                       :: Wtk(size(Hk,3)) ![Nk]
+    complex(8),dimension(:,:,:,:),intent(in)                   :: Hk              ![2][Nlat*Norb*Nspin][Nlat*Norb*Nspin][Nk]
+    real(8),intent(in)                                       :: Wtk(size(Hk,4)) ![Nk]
     complex(8),intent(in)                                    :: Sreal(:,:,:)
-    complex(8),intent(inout)                                 :: Greal(2,size(Hk,1),size(Sreal,3))
-    logical,optional                                         :: hk_symm(size(Hk,1))
-    logical                                                  :: hk_symm_(size(Hk,1))
+    complex(8),intent(inout)                                 :: Greal(2,size(Hk,2),size(Sreal,3))
+    logical,optional                                         :: hk_symm(size(Hk,4))
+    logical                                                  :: hk_symm_(size(Hk,4))
     integer                                                  :: iprint
     !
-    complex(8),dimension(2,size(Hk,1),1,1,1,1,size(Sreal,3)) :: Greal_
-    complex(8),dimension(2,size(Hk,1),1,1,1,1,size(Sreal,3)) :: Sreal_
+    complex(8),dimension(2,size(Hk,2),1,1,1,1,size(Sreal,3)) :: Greal_
+    complex(8),dimension(2,size(Hk,2),1,1,1,1,size(Sreal,3)) :: Sreal_
     !
-    call assert_shape(Hk,[size(Hk,1),size(Hk,1),size(Hk,3)],FROUTINE,"Hk")
-    call assert_shape(Sreal,[2,size(Hk,1),size(Sreal,3)],FROUTINE,"Sreal")
+    call assert_shape(Hk,[2,size(Hk,2),size(Hk,2),size(Hk,4)],FROUTINE,"Hk")
+    call assert_shape(Sreal,[2,size(Hk,2),size(Sreal,3)],FROUTINE,"Sreal")
     !
     Sreal_(:,:,1,1,1,1,:) = Sreal(:,:,:)
     hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
@@ -3477,23 +3489,23 @@ contains
 #define FROUTINE 'dmft_get_gloc_realaxis_superc_1band_mpi'
   subroutine dmft_get_gloc_realaxis_superc_1band_mpi(MpiComm,Hk,Wtk,Greal,Sreal,iprint,mpi_split,hk_symm)
     integer                                       :: MpiComm
-    complex(8),dimension(:),intent(in)            :: Hk              ![Nk]
-    real(8),intent(in)                            :: Wtk(size(Hk))   ![Nk]
+    complex(8),dimension(:,:),intent(in)            :: Hk              ![2][Nk]
+    real(8),intent(in)                            :: Wtk(size(Hk,2))   ![Nk]
     complex(8),intent(in)                         :: Sreal(:,:)
     complex(8),intent(inout)                      :: Greal(2,size(Sreal,2))
-    logical,optional                              :: hk_symm(size(Hk,1))
-    logical                                       :: hk_symm_(size(Hk,1))
+    logical,optional                              :: hk_symm(size(Hk,2))
+    logical                                       :: hk_symm_(size(Hk,2))
     integer                                       :: iprint
     character(len=*),optional                     :: mpi_split  
     character(len=1)                              :: mpi_split_ 
     !
-    complex(8),dimension(1,1,size(Hk))            :: Hk_             ![Norb*Nspin][Norb*Nspin][Nk]
+    complex(8),dimension(2,1,1,size(Hk,2))            :: Hk_             ![Norb*Nspin][Norb*Nspin][Nk]
     complex(8),dimension(2,1,1,1,1,size(Sreal,2)) :: Greal_
     complex(8),dimension(2,1,1,1,1,size(Sreal,2)) :: Sreal_
     !
     call assert_shape(Sreal,[2,size(Sreal,2)],FROUTINE,"Sreal")
     !
-    Hk_(1,1,:)          = Hk
+    Hk_(:,1,1,:)          = Hk
     Sreal_(:,1,1,1,1,:) = Sreal(:,:)
     mpi_split_='w'    ;if(present(mpi_split)) mpi_split_=mpi_split
     hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
@@ -3505,21 +3517,21 @@ contains
 #define FROUTINE 'dmft_get_gloc_realaxis_superc_lattice_1band_mpi'
   subroutine dmft_get_gloc_realaxis_superc_lattice_1band_mpi(MpiComm,Hk,Wtk,Greal,Sreal,iprint,mpi_split,hk_symm)
     integer                                                  :: MpiComm
-    complex(8),dimension(:,:,:),intent(in)                   :: Hk              ![Nlat*Norb*Nspin][Nlat*Norb*Nspin][Nk]
-    real(8),intent(in)                                       :: Wtk(size(Hk,3)) ![Nk]
+    complex(8),dimension(:,:,:,:),intent(in)                   :: Hk              ![2][Nlat*Norb*Nspin][Nlat*Norb*Nspin][Nk]
+    real(8),intent(in)                                       :: Wtk(size(Hk,4)) ![Nk]
     complex(8),intent(in)                                    :: Sreal(:,:,:)
-    complex(8),intent(inout)                                 :: Greal(2,size(Hk,1),size(Sreal,3))
-    logical,optional                                         :: hk_symm(size(Hk,1))
-    logical                                                  :: hk_symm_(size(Hk,1))
+    complex(8),intent(inout)                                 :: Greal(2,size(Hk,2),size(Sreal,3))
+    logical,optional                                         :: hk_symm(size(Hk,4))
+    logical                                                  :: hk_symm_(size(Hk,4))
     integer                                                  :: iprint
     character(len=*),optional                                :: mpi_split  
     character(len=1)                                         :: mpi_split_ 
     !
-    complex(8),dimension(2,size(Hk,1),1,1,1,1,size(Sreal,3)) :: Greal_
-    complex(8),dimension(2,size(Hk,1),1,1,1,1,size(Sreal,3)) :: Sreal_
+    complex(8),dimension(2,size(Hk,2),1,1,1,1,size(Sreal,3)) :: Greal_
+    complex(8),dimension(2,size(Hk,2),1,1,1,1,size(Sreal,3)) :: Sreal_
     !
-    call assert_shape(Hk,[size(Hk,1),size(Hk,1),size(Hk,3)],FROUTINE,"Hk")
-    call assert_shape(Sreal,[2,size(Hk,1),size(Sreal,3)],FROUTINE,"Sreal")
+    call assert_shape(Hk,[2,size(Hk,2),size(Hk,2),size(Hk,4)],FROUTINE,"Hk")
+    call assert_shape(Sreal,[2,size(Hk,2),size(Sreal,3)],FROUTINE,"Sreal")
     !
     Sreal_(:,:,1,1,1,1,:) = Sreal(:,:,:)
     hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
@@ -3541,12 +3553,12 @@ contains
 
 #define FROUTINE 'dmft_get_gloc_realaxis_superc_Nband'
   subroutine dmft_get_gloc_realaxis_superc_Nband(Hk,Wtk,Greal,Sreal,iprint,hk_symm)
-    complex(8),dimension(:,:,:),intent(in)                          :: Hk              ![Norb][Norb][Nk]
-    real(8),intent(in)                                              :: Wtk(size(Hk,3)) ![Nk]
+    complex(8),dimension(:,:,:,:),intent(in)                          :: Hk              ![2][Norb][Norb][Nk]
+    real(8),intent(in)                                              :: Wtk(size(Hk,4)) ![Nk]
     complex(8),intent(in)                                           :: Sreal(:,:,:,:)  ![2][Norb][Norb][Lreal]
     complex(8),intent(inout)                                        :: Greal(:,:,:,:)  !as Sreal
-    logical,optional                                                :: hk_symm(size(Hk,3))
-    logical                                                         :: hk_symm_(size(Hk,3))
+    logical,optional                                                :: hk_symm(size(Hk,4))
+    logical                                                         :: hk_symm_(size(Hk,4))
     integer                                                         :: iprint
     !
     complex(8),&
@@ -3559,7 +3571,7 @@ contains
     Norb  = size(Sreal,2)
     Lreal = size(Sreal,4)
     Nso   = Nspin*Norb
-    call assert_shape(Hk,[Nso,Nso,size(Hk,3)],FROUTINE,"Hk")
+    call assert_shape(Hk,[2,Nso,Nso,size(Hk,4)],FROUTINE,"Hk")
     call assert_shape(Sreal,[2,Norb,Norb,Lreal],FROUTINE,"Sreal")
     call assert_shape(Greal,[2,Norb,Norb,Lreal],FROUTINE,"Greal")
     !
@@ -3572,12 +3584,12 @@ contains
 
 #define FROUTINE 'dmft_get_gloc_realaxis_superc_lattice_Nband'
   subroutine dmft_get_gloc_realaxis_superc_lattice_Nband(Hk,Wtk,Greal,Sreal,iprint,hk_symm)
-    complex(8),dimension(:,:,:),intent(in)                                        :: Hk               ![Nlat*Norb][Nlat*Norb][Nk]
-    real(8),intent(in)                                                            :: Wtk(size(Hk,3))  ![Nk]
+    complex(8),dimension(:,:,:,:),intent(in)                                        :: Hk               ![2][Nlat*Norb][Nlat*Norb][Nk]
+    real(8),intent(in)                                                            :: Wtk(size(Hk,4))  ![Nk]
     complex(8),intent(in)                                                         :: Sreal(:,:,:,:,:) ![2][Nlat][Norb][Norb][Lreal]
     complex(8),intent(inout)                                                      :: Greal(:,:,:,:,:) ![2][Nlat][Norb][Norb][Lreal]
-    logical,optional                                                              :: hk_symm(size(Hk,3))
-    logical                                                                       :: hk_symm_(size(Hk,3))
+    logical,optional                                                              :: hk_symm(size(Hk,4))
+    logical                                                                       :: hk_symm_(size(Hk,4))
     integer                                                                       :: iprint
     !
     complex(8),&
@@ -3594,7 +3606,7 @@ contains
     Lreal = size(Sreal,5)
     Nso   = Nspin*Norb
     Nlso  = Nlat*Nspin*Norb
-    call assert_shape(Hk,[Nlso,Nlso,size(Hk,3)],FROUTINE,"Hk")
+    call assert_shape(Hk,[2,Nlso,Nlso,size(Hk,4)],FROUTINE,"Hk")
     call assert_shape(Sreal,[2,Nlat,Norb,Norb,Lreal],FROUTINE,"Sreal")
     call assert_shape(Greal,[2,Nlat,Norb,Norb,Lreal],FROUTINE,"Greal")
     !
@@ -3608,12 +3620,12 @@ contains
 #define FROUTINE 'dmft_get_gloc_realaxis_superc_Nband_mpi'
   subroutine dmft_get_gloc_realaxis_superc_Nband_mpi(MpiComm,Hk,Wtk,Greal,Sreal,iprint,mpi_split,hk_symm)
     integer                                                         :: MpiComm
-    complex(8),dimension(:,:,:),intent(in)                          :: Hk              ![Norb][Norb][Nk]
-    real(8),intent(in)                                              :: Wtk(size(Hk,3)) ![Nk]
+    complex(8),dimension(:,:,:,:),intent(in)                          :: Hk              ![2][Norb][Norb][Nk]
+    real(8),intent(in)                                              :: Wtk(size(Hk,4)) ![Nk]
     complex(8),intent(in)                                           :: Sreal(:,:,:,:)  ![2][Norb][Norb][Lreal]
     complex(8),intent(inout)                                        :: Greal(:,:,:,:)  !as Sreal
-    logical,optional                                                :: hk_symm(size(Hk,3))
-    logical                                                         :: hk_symm_(size(Hk,3))
+    logical,optional                                                :: hk_symm(size(Hk,4))
+    logical                                                         :: hk_symm_(size(Hk,4))
     integer                                                         :: iprint
     character(len=*),optional                                       :: mpi_split  
     character(len=1)                                                :: mpi_split_ 
@@ -3631,7 +3643,7 @@ contains
     Norb  = size(Sreal,2)
     Lreal = size(Sreal,4)
     Nso   = Nspin*Norb
-    call assert_shape(Hk,[Nso,Nso,size(Hk,3)],FROUTINE,"Hk")
+    call assert_shape(Hk,[2,Nso,Nso,size(Hk,4)],FROUTINE,"Hk")
     call assert_shape(Sreal,[2,Norb,Norb,Lreal],FROUTINE,"Sreal")
     call assert_shape(Greal,[2,Norb,Norb,Lreal],FROUTINE,"Greal")
     !
@@ -3644,12 +3656,12 @@ contains
 #define FROUTINE 'dmft_get_gloc_realaxis_superc_lattice_Nband_mpi'
   subroutine dmft_get_gloc_realaxis_superc_lattice_Nband_mpi(MpiComm,Hk,Wtk,Greal,Sreal,iprint,mpi_split,hk_symm)
     integer                                                                       :: MpiComm
-    complex(8),dimension(:,:,:),intent(in)                                        :: Hk               ![Nlat*Norb][Nlat*Norb][Nk]
-    real(8),intent(in)                                                            :: Wtk(size(Hk,3))  ![Nk]
+    complex(8),dimension(:,:,:,:),intent(in)                                        :: Hk               ![2][Nlat*Norb][Nlat*Norb][Nk]
+    real(8),intent(in)                                                            :: Wtk(size(Hk,4))  ![Nk]
     complex(8),intent(in)                                                         :: Sreal(:,:,:,:,:) ![2][Nlat][Norb][Norb][Lreal]
     complex(8),intent(inout)                                                      :: Greal(:,:,:,:,:) ![2][Nlat][Norb][Norb][Lreal]
-    logical,optional                                                              :: hk_symm(size(Hk,3))
-    logical                                                                       :: hk_symm_(size(Hk,3))
+    logical,optional                                                              :: hk_symm(size(Hk,4))
+    logical                                                                       :: hk_symm_(size(Hk,4))
     integer                                                                       :: iprint
     character(len=*),optional                                                     :: mpi_split  
     character(len=1)                                                              :: mpi_split_ 
@@ -3669,7 +3681,7 @@ contains
     Lreal = size(Sreal,5)
     Nso   = Nspin*Norb
     Nlso  = Nlat*Nspin*Norb
-    call assert_shape(Hk,[Nlso,Nlso,size(Hk,3)],FROUTINE,"Hk")
+    call assert_shape(Hk,[2,Nlso,Nlso,size(Hk,4)],FROUTINE,"Hk")
     call assert_shape(Sreal,[2,Nlat,Norb,Norb,Lreal],FROUTINE,"Sreal")
     call assert_shape(Greal,[2,Nlat,Norb,Norb,Lreal],FROUTINE,"Greal")
     !
@@ -4263,7 +4275,7 @@ contains
   !SERIAL (OR PARALLEL ON K):
   subroutine invert_gk_superc(zeta,Hk,hk_symm,Gkout)
     complex(8),dimension(:,:,:,:,:),intent(in)      :: zeta    ![2][2][Nspin*Norb][Nspin*Norb][Lfreq]
-    complex(8),dimension(:,:),intent(in)            :: Hk      ![Nspin*Norb][Nspin*Norb]
+    complex(8),dimension(:,:,:),intent(in)            :: Hk      ![2][Nspin*Norb][Nspin*Norb]
     logical,intent(in)                              :: hk_symm !
     complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gkout   ![2][Nspin][Nspin][Norb][Norb][Lfreq]
     complex(8),dimension(:,:,:,:,:,:),allocatable   :: Gktmp   ![2][Nspin][Nspin][Norb][Norb][Lfreq]
@@ -4276,7 +4288,7 @@ contains
     Lfreq = size(zeta,5)
     Nso   = Nspin*Norb
     call assert_shape(zeta,[2,2,Nso,Nso,Lfreq],"invert_gk_superc","zeta")
-    call assert_shape(Hk,[Nso,Nso],"invert_gk_superc","Hk")
+    call assert_shape(Hk,[2,Nso,Nso],"invert_gk_superc","Hk")
     call assert_shape(Gkout,[2,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_superc","Gkout")
     !
     allocate(Gktmp(2,Nspin,Nspin,Norb,Norb,Lfreq))
@@ -4285,10 +4297,10 @@ contains
     Gktmp = zero
     do i=1,Lfreq
        Gmatrix  = zero
-       Gmatrix(1:Nso,1:Nso)             = zeta(1,1,:,:,i) - Hk
+       Gmatrix(1:Nso,1:Nso)             = zeta(1,1,:,:,i) - Hk(1,:,:)
        Gmatrix(1:Nso,Nso+1:2*Nso)       = zeta(1,2,:,:,i)
        Gmatrix(Nso+1:2*Nso,1:Nso)       = zeta(2,1,:,:,i)
-       Gmatrix(Nso+1:2*Nso,Nso+1:2*Nso) = zeta(2,2,:,:,i) + Hk
+       Gmatrix(Nso+1:2*Nso,Nso+1:2*Nso) = zeta(2,2,:,:,i) - Hk(2,:,:) !+ Hk
        if(hk_symm) then
           call inv_sym(Gmatrix)
        else
@@ -4316,7 +4328,7 @@ contains
   subroutine invert_gk_superc_mpi(MpiComm,zeta,Hk,hk_symm,Gkout)
     integer                                         :: MpiComm
     complex(8),dimension(:,:,:,:,:),intent(in)      :: zeta    ![2][2][Nspin*Norb][Nspin*Norb][Lfreq]
-    complex(8),dimension(:,:),intent(in)            :: Hk      ![Nspin*Norb][Nspin*Norb]
+    complex(8),dimension(:,:,:),intent(in)            :: Hk      ![2][Nspin*Norb][Nspin*Norb]
     logical,intent(in)                              :: hk_symm !
     complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gkout   ![2][Nspin][Nspin][Norb][Norb][Lfreq]
     complex(8),dimension(:,:,:,:,:,:),allocatable   :: Gktmp   ![2][Nspin][Nspin][Norb][Norb][Lfreq]
@@ -4334,7 +4346,7 @@ contains
     Lfreq = size(zeta,5)
     Nso   = Nspin*Norb
     call assert_shape(zeta,[2,2,Nso,Nso,Lfreq],"invert_gk_superc_mpi","zeta")
-    call assert_shape(Hk,[Nso,Nso],"invert_gk_superc_mpi","Hk")
+    call assert_shape(Hk,[2,Nso,Nso],"invert_gk_superc_mpi","Hk")
     call assert_shape(Gkout,[2,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_superc_mpi","Gkout")
     !
     allocate(Gktmp(2,Nspin,Nspin,Norb,Norb,Lfreq))
@@ -4343,10 +4355,10 @@ contains
     Gktmp = zero
     do i=1+mpi_rank,Lfreq,mpi_size
        Gmatrix  = zero
-       Gmatrix(1:Nso,1:Nso)             = zeta(1,1,:,:,i) - Hk
+       Gmatrix(1:Nso,1:Nso)             = zeta(1,1,:,:,i) - Hk(1,:,:)
        Gmatrix(1:Nso,Nso+1:2*Nso)       = zeta(1,2,:,:,i)
        Gmatrix(Nso+1:2*Nso,1:Nso)       = zeta(2,1,:,:,i)
-       Gmatrix(Nso+1:2*Nso,Nso+1:2*Nso) = zeta(2,2,:,:,i) + Hk
+       Gmatrix(Nso+1:2*Nso,Nso+1:2*Nso) = zeta(2,2,:,:,i) - Hk(2,:,:) !+ Hk
        if(hk_symm) then
           call inv_sym(Gmatrix)
        else
@@ -4380,7 +4392,7 @@ contains
   !SERIAL (OR PARALLEL ON K)
   subroutine invert_gk_superc_lattice(zeta,Hk,hk_symm,Gkout)
     complex(8),dimension(:,:,:,:,:,:),intent(in)      :: zeta    ![2][2][Nlat][Nspin*Norb][Nspin*Norb][Lfreq]
-    complex(8),dimension(:,:),intent(in)              :: Hk      ![Nlat*Nspin*Norb][Nlat*Nspin*Norb]
+    complex(8),dimension(:,:,:),intent(in)              :: Hk      ![2][Nlat*Nspin*Norb][Nlat*Nspin*Norb]
     logical,intent(in)                                :: hk_symm !
     complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gkout   ![2][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
     complex(8),dimension(:,:,:,:,:,:,:),allocatable   :: Gktmp   ![2][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
@@ -4395,7 +4407,7 @@ contains
     Nso   = Nspin*Norb
     Nlso  = Nlat*Nspin*Norb
     call assert_shape(zeta,[2,2,Nlat,Nso,Nso,Lfreq],"invert_gk_superc_lattice","zeta")
-    call assert_shape(Hk,[Nlso,Nlso],"invert_gk_superc_lattice","Hk")
+    call assert_shape(Hk,[2,Nlso,Nlso],"invert_gk_superc_lattice","Hk")
     call assert_shape(Gkout,[2,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_superc_lattice","Gkout")
     !
     allocate(Gktmp(2,Nlat,Nspin,Nspin,Norb,Norb,Lfreq))
@@ -4404,10 +4416,10 @@ contains
     Gktmp = zero
     do i=1,Lfreq
        Gmatrix  = zero
-       Gmatrix(1:Nlso,1:Nlso)        = blocks_to_matrix(zeta(1,1,:,:,:,i),Nlat,Nso) - Hk
+       Gmatrix(1:Nlso,1:Nlso)        = blocks_to_matrix(zeta(1,1,:,:,:,i),Nlat,Nso) - Hk(1,:,:)
        Gmatrix(1:Nlso,Nlso+1:2*Nlso) = blocks_to_matrix(zeta(1,2,:,:,:,i),Nlat,Nso)
        Gmatrix(Nlso+1:2*Nlso,1:Nlso) = blocks_to_matrix(zeta(2,1,:,:,:,i),Nlat,Nso)
-       Gmatrix(Nlso+1:2*Nlso,Nlso+1:2*Nlso) = blocks_to_matrix(zeta(2,2,:,:,:,i),Nlat,Nso) + Hk
+       Gmatrix(Nlso+1:2*Nlso,Nlso+1:2*Nlso) = blocks_to_matrix(zeta(2,2,:,:,:,i),Nlat,Nso) - Hk(2,:,:)!+ Hk
        if(hk_symm) then
           call inv_sym(Gmatrix)
        else
@@ -4438,7 +4450,7 @@ contains
   subroutine invert_gk_superc_lattice_mpi(MpiComm,zeta,Hk,hk_symm,Gkout)
     integer                                           :: MpiComm
     complex(8),dimension(:,:,:,:,:,:),intent(in)      :: zeta    ![2][2][Nlat][Nspin*Norb][Nspin*Norb][Lfreq]
-    complex(8),dimension(:,:),intent(in)              :: Hk      ![Nlat*Nspin*Norb][Nlat*Nspin*Norb]
+    complex(8),dimension(:,:,:),intent(in)              :: Hk      ![2][Nlat*Nspin*Norb][Nlat*Nspin*Norb]
     logical,intent(in)                                :: hk_symm !
     complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gkout   ![2][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
     complex(8),dimension(:,:,:,:,:,:,:),allocatable   :: Gktmp   ![2][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
@@ -4458,7 +4470,7 @@ contains
     Nso   = Nspin*Norb
     Nlso  = Nlat*Nspin*Norb
     call assert_shape(zeta,[2,2,Nlat,Nso,Nso,Lfreq],"invert_gk_superc_lattice_mpi","zeta")
-    call assert_shape(Hk,[Nlso,Nlso],"invert_gk_superc_lattice_mpi","Hk")
+    call assert_shape(Hk,[2,Nlso,Nlso],"invert_gk_superc_lattice_mpi","Hk")
     call assert_shape(Gkout,[2,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_superc_lattice_mpi","Gkout")
     !
     allocate(Gktmp(2,Nlat,Nspin,Nspin,Norb,Norb,Lfreq))
@@ -4467,10 +4479,10 @@ contains
     Gktmp = zero
     do i=1+mpi_rank,Lfreq,mpi_size
        Gmatrix  = zero
-       Gmatrix(1:Nlso,1:Nlso)        = blocks_to_matrix(zeta(1,1,:,:,:,i),Nlat,Nso) - Hk
+       Gmatrix(1:Nlso,1:Nlso)        = blocks_to_matrix(zeta(1,1,:,:,:,i),Nlat,Nso) - Hk(1,:,:)
        Gmatrix(1:Nlso,Nlso+1:2*Nlso) = blocks_to_matrix(zeta(1,2,:,:,:,i),Nlat,Nso)
        Gmatrix(Nlso+1:2*Nlso,1:Nlso) = blocks_to_matrix(zeta(2,1,:,:,:,i),Nlat,Nso)
-       Gmatrix(Nlso+1:2*Nlso,Nlso+1:2*Nlso) = blocks_to_matrix(zeta(2,2,:,:,:,i),Nlat,Nso) + Hk
+       Gmatrix(Nlso+1:2*Nlso,Nlso+1:2*Nlso) = blocks_to_matrix(zeta(2,2,:,:,:,i),Nlat,Nso) - Hk(2,:,:) !+ Hk
        if(hk_symm) then
           call inv_sym(Gmatrix)
        else
@@ -4502,7 +4514,7 @@ contains
 
   subroutine invert_gk_superc_gij(zeta,Hk,hk_symm,Gkout,Fkout)
     complex(8)                                        :: zeta(:,:,:,:,:,:)              ![2][2][Nlat][Nspin*Norb][Nspin*Norb][Lfreq]
-    complex(8)                                        :: Hk(Nlat*Nspin*Norb,Nlat*Nspin*Norb) 
+    complex(8)                                        :: Hk(2,Nlat*Nspin*Norb,Nlat*Nspin*Norb) 
     logical                                           :: hk_symm                
     !output:
     complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gkout   ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
@@ -4519,7 +4531,7 @@ contains
     Nso   = Nspin*Norb
     Nlso  = Nlat*Nspin*Norb
     call assert_shape(zeta,[2,2,Nlat,Nso,Nso,Lfreq],"invert_gk_superc_gij","zeta")
-    call assert_shape(Hk,[Nlso,Nlso],"invert_gk_superc_gij","Hk")
+    call assert_shape(Hk,[2,Nlso,Nlso],"invert_gk_superc_gij","Hk")
     call assert_shape(Gkout,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_superc_gij","Gkout")
     call assert_shape(Fkout,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_superc_gij","Fkout")
     !
@@ -4532,10 +4544,10 @@ contains
     Fktmp = zero
     do i=1,Lfreq
        Gmatrix  = zero
-       Gmatrix(1:Nlso,1:Nlso)        = blocks_to_matrix(zeta(1,1,:,:,:,i),Nlat,Nso) - Hk
+       Gmatrix(1:Nlso,1:Nlso)        = blocks_to_matrix(zeta(1,1,:,:,:,i),Nlat,Nso) - Hk(1,:,:)
        Gmatrix(1:Nlso,Nlso+1:2*Nlso) = blocks_to_matrix(zeta(1,2,:,:,:,i),Nlat,Nso)
        Gmatrix(Nlso+1:2*Nlso,1:Nlso) = blocks_to_matrix(zeta(2,1,:,:,:,i),Nlat,Nso)
-       Gmatrix(Nlso+1:2*Nlso,Nlso+1:2*Nlso) = blocks_to_matrix(zeta(2,2,:,:,:,i),Nlat,Nso) + Hk
+       Gmatrix(Nlso+1:2*Nlso,Nlso+1:2*Nlso) = blocks_to_matrix(zeta(2,2,:,:,:,i),Nlat,Nso) - Hk(2,:,:) !+ Hk
        if(hk_symm) then
           call inv_sym(Gmatrix)
        else
@@ -4568,7 +4580,7 @@ contains
   subroutine invert_gk_superc_gij_mpi(MpiComm,zeta,Hk,hk_symm,Gkout,Fkout)
     integer                                           :: MpiComm
     complex(8)                                        :: zeta(:,:,:,:,:,:)              ![2][2][Nlat][Nspin*Norb][Nspin*Norb][Lfreq]
-    complex(8)                                        :: Hk(Nlat*Nspin*Norb,Nlat*Nspin*Norb) 
+    complex(8)                                        :: Hk(2,Nlat*Nspin*Norb,Nlat*Nspin*Norb) 
     logical                                           :: hk_symm                
     !output:
     complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gkout   ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
@@ -4590,7 +4602,7 @@ contains
     Nso   = Nspin*Norb
     Nlso  = Nlat*Nspin*Norb
     call assert_shape(zeta,[2,2,Nlat,Nso,Nso,Lfreq],"invert_gk_superc_gij","zeta")
-    call assert_shape(Hk,[Nlso,Nlso],"invert_gk_superc_gij","Hk")
+    call assert_shape(Hk,[2,Nlso,Nlso],"invert_gk_superc_gij","Hk")
     call assert_shape(Gkout,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_superc_gij","Gkout")
     call assert_shape(Fkout,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_superc_gij","Fkout")
     !
@@ -4601,10 +4613,10 @@ contains
     Fktmp = zero
     do i=1+mpi_rank,Lfreq,mpi_size
        Gmatrix  = zero
-       Gmatrix(1:Nlso,1:Nlso)        = blocks_to_matrix(zeta(1,1,:,:,:,i),Nlat,Nso) - Hk
+       Gmatrix(1:Nlso,1:Nlso)        = blocks_to_matrix(zeta(1,1,:,:,:,i),Nlat,Nso) - Hk(1,:,:)
        Gmatrix(1:Nlso,Nlso+1:2*Nlso) = blocks_to_matrix(zeta(1,2,:,:,:,i),Nlat,Nso)
        Gmatrix(Nlso+1:2*Nlso,1:Nlso) = blocks_to_matrix(zeta(2,1,:,:,:,i),Nlat,Nso)
-       Gmatrix(Nlso+1:2*Nlso,Nlso+1:2*Nlso) = blocks_to_matrix(zeta(2,2,:,:,:,i),Nlat,Nso) + Hk
+       Gmatrix(Nlso+1:2*Nlso,Nlso+1:2*Nlso) = blocks_to_matrix(zeta(2,2,:,:,:,i),Nlat,Nso) - Hk(2,:,:) !+ Hk
        if(hk_symm) then
           call inv_sym(Gmatrix)
        else

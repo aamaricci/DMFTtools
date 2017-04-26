@@ -32,8 +32,7 @@ subroutine solve_Hk_along_BZpath(hk_model,Norb,kpath,Nk,colors_name,points_name,
   !
   write(*,*)"Solving model along the path:"
   do ipts=1,Npts
-     write(*,"(A,10(A6,2x),A1)")"Point"//reg(str(ipts))//": [",&
-          (reg(str(kpath(ipts,ic))),ic=1,size(kpath,2)-1),reg(str(kpath(ipts,size(kpath,2))))//"]"
+     write(*,"(A,10(A,2x),A1)")"Point"//reg(str(ipts))//": [",(reg(str(kpath(ipts,ic))),ic=1,size(kpath,2)),"]"
   enddo
   !
   ic = 0
