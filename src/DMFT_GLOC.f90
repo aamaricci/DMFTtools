@@ -4666,6 +4666,7 @@ contains
     call assert_shape(Gamma_mats,[Nlso,Nlso,Lmats],"dmft_set_Gamma_matsubara_lattice","Gamma_mats")
     !
     if(allocated(lattice_Gamma_mats))deallocate(lattice_Gamma_mats)
+    if(allocated(lattice_Gamma_real))deallocate(lattice_Gamma_real)
     allocate(lattice_Gamma_mats(Nlso,Nlso,Lmats))
     !
     write(*,"(A)")"Set lattice Gamma_mats"
@@ -4682,6 +4683,7 @@ contains
     !Testing part:
     call assert_shape(Gamma_mats,[Nlat,Nso,Nso,Lmats],"dmft_set_Gamma_matsubara_local","Gamma_mats")         
     if(allocated(local_Gamma_mats))deallocate(local_Gamma_mats)
+    if(allocated(local_Gamma_real))deallocate(local_Gamma_real)
     allocate(local_Gamma_mats(Nlat,Nso,Nso,Lmats))
     !
     write(*,"(A)")"Set local Gamma_mats"
@@ -4696,6 +4698,7 @@ contains
     !Testing part:
     call assert_shape(Gamma_real,[Nlso,Nlso,Lreal],"dmft_set_Gamma_realaxis_lattice","Gamma_real")
     !
+    if(allocated(lattice_Gamma_mats))deallocate(lattice_Gamma_mats)
     if(allocated(lattice_Gamma_real))deallocate(lattice_Gamma_real)
     allocate(lattice_Gamma_real(Nlso,Nlso,Lreal))
     !
@@ -4712,6 +4715,7 @@ contains
     Lreal = size(Gamma_real,4)
     !Testing part:
     call assert_shape(Gamma_real,[Nlat,Nso,Nso,Lreal],"dmft_set_Gamma_realaxis_local","Gamma_real")         
+    if(allocated(local_Gamma_mats))deallocate(local_Gamma_mats)
     if(allocated(local_Gamma_real))deallocate(local_Gamma_real)
     allocate(local_Gamma_real(Nlat,Nso,Nso,Lreal))
     !
