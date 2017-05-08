@@ -1,13 +1,18 @@
 ##################################################
-# SCIFOR PROJECT (TEST CMAKE(
+# DMFT_TOOLS PROJECT
 ##################################################
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0.2)
 PROJECT(dmft_tools Fortran)
-SET(VERSION 0.7.0)
-SET(CMAKE_BUILD_TYPE TESTING)
+SET(VERSION 0.7.1)
+
+SET(BUILD_TYPE "RELEASE" CACHE STRING "Build type")
+MESSAGE(STATUS "BUILD_TYPE=${BUILD_TYPE}")
+SET(CMAKE_BUILD_TYPE ${BUILD_TYPE} CACHE INTERNAL "Build type" FORCE)
 
 # Add our local CMAKE modules to the module path
 SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
+
+INCLUDE(${CMAKE_MODULE_PATH}/ColorsMsg.cmake)
 
 # Check that Fortran 90 is supported
 IF(NOT CMAKE_Fortran_COMPILER_SUPPORTS_F90)
@@ -23,7 +28,7 @@ IF(USE_MPI)
   FIND_PACKAGE(MPI REQUIRED)
   SET(CMAKE_Fortran_COMPILER ${MPI_Fortran_COMPILER})
   SET(MPI_CPP "MPI")
-  MESSAGE("-+ Set Fortran compiler FC to ${CMAKE_Fortran_COMPILER}")
+  MESSAGE(STATUS "${Yellow}Set Fortran compiler FC to ${ColourReset}${CMAKE_Fortran_COMPILER}")
 ELSE(USE_MPI)
   SET(MPI_CPP "")
 ENDIF(USE_MPI)
@@ -35,16 +40,31 @@ ELSE(VERBOSE)
   SET(CMAKE_VERBOSE_MAKEFILE OFF)
 ENDIF(VERBOSE)
 
-# This executes code that sets the compile flags for DEBUG, RELEASE, and TESTING.  
+# This executes code that sets the compile flags for DEBUG, RELEASE, and TESTING.
 INCLUDE(${CMAKE_MODULE_PATH}/SetFortranFlags.cmake)
 
-#workaround to set the Module directory output flag for the Intel Fortran
-#compiler which should not be -J but -module (with a blank space at the end).
-#soon enough I will find a more elegant solution.
-IF(${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel")
-  SET(CMAKE_Fortran_MODDIR_FLAG "-module ")
-ENDIF()
-MESSAGE("CMAKE_Fortran_MODDIR_FLAG:${CMAKE_Fortran_MODDIR_FLAG}")
+
+#Check for .git and extract the current SHA1 revision.
+#create the current scifor_version.inc file
+IF(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git)
+  FIND_PACKAGE(Git)
+  IF(GIT_FOUND)
+    EXECUTE_PROCESS(
+      COMMAND ${GIT_EXECUTABLE} rev-parse HEAD
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+      OUTPUT_VARIABLE GIT_SHA1
+      ERROR_QUIET
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    MESSAGE( STATUS "${Yellow}Git version: ${ColourReset}${GIT_SHA1}" )
+  ELSE(GIT_FOUND)
+    SET(GIT_SHA1 0)
+  ENDIF(GIT_FOUND)
+ENDIF(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git)
+SET(DT_VERSION_FILE ${CMAKE_CURRENT_SOURCE_DIR}/src/${PROJECT_NAME}_version.inc)
+FILE(WRITE  ${DT_VERSION_FILE}
+  "character(len=41),parameter,public :: ${PROJECT_NAME}_version_sha1 = \"${GIT_SHA1}\"\n")
+
+
 #set MPI preprocessing defition:
 IF(USE_MPI)
   ADD_DEFINITIONS(-D_MPI)
@@ -53,13 +73,22 @@ ELSE(USE_MPI)
 ENDIF(USE_MPI)
 
 
+
 ############################################################
 # Define the actual files and folders that make up the build
 ############################################################
 SET(USER_HOME $ENV{HOME})
-SET(SF_ROOT $ENV{SFROOT})
-IF(NOT EXISTS ${SF_ROOT})
-  message( FATAL_ERROR "Can not locate SciFortran. Check environment variable SF_ROOT or specify it to cmake using -DSF_ROOT=path-to-scifor-root" )
+SET(USER $ENV{USER})
+
+FIND_PACKAGE(PkgConfig)
+PKG_SEARCH_MODULE(SCIFOR REQUIRED scifor)
+IF(${SCIFOR_FOUND})
+  MESSAGE(STATUS "${Yellow}Scifor found at: ${ColourReset}${SCIFOR_PREFIX}")
+ELSE()
+  MESSAGE( FATAL_ERROR "
+${Red}Can not find SciFortran in this system. Check SciFor installation. Try adding the provided PKG-CONFIG file (usually in the path-to-scifor/etc) to the environment variable PKG_CONFIG_PATH:${ColourReset}
+$ export PKG_CONFIG_PATH=<path_to_scifor_dir>/etc:$PKG_CONFIG_PATH"
+    )
 ENDIF()
 
 #make sure FC_PLAT is lowecase
@@ -88,7 +117,7 @@ SET(DT_TARGET_BIN ${CMAKE_INSTALL_PREFIX}/bin)
 # Have the .mod files placed in the INC folder
 SET(CMAKE_Fortran_MODULE_DIRECTORY ${DT_TMP_INC})
 INCLUDE_DIRECTORIES(BEFORE ${CMAKE_Fortran_MODULE_DIRECTORY})
-INCLUDE_DIRECTORIES(BEFORE ${SF_ROOT}/include)
+INCLUDE_DIRECTORIES(BEFORE ${SCIFOR_INCLUDE_DIRS})
 
 ADD_SUBDIRECTORY(${DT_SRC})
 
@@ -103,21 +132,49 @@ ADD_CUSTOM_TARGET(distclean
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_SOURCE_DIR}/distclean.cmake
 )
 
+
+
+
+SET(PERMISSION_777
+  OWNER_WRITE OWNER_READ OWNER_EXECUTE
+  GROUP_WRITE GROUP_READ GROUP_EXECUTE
+  WORLD_WRITE WORLD_READ WORLD_EXECUTE)
+
+
 INCLUDE(${CMAKE_MODULE_PATH}/PostBuildDmftTools.cmake)
 
-SET(DT_TMP_ENV_MODULE_FILE ${DT_TMP_ETC}/modules/${PROJECT_NAME}/${FC_PLAT})
-BUILD_DT_ENV_MODULE(${DT_TMP_ENV_MODULE_FILE})
-SET(DT_TMP_CONFIGVARS_FILE ${DT_TMP_BIN}/configvars.sh)
-BUILD_DT_CONFIGVARS(${DT_TMP_CONFIGVARS_FILE})
+SET(TMP_ENV_MODULE_FILE ${DT_TMP_ETC}/modules/${PROJECT_NAME}/${FC_PLAT})
+BUILD_ENV_MODULE(${TMP_ENV_MODULE_FILE})
+
+SET(TMP_CONFIGVARS_FILE ${DT_TMP_BIN}/configvars.sh)
+BUILD_CONFIGVARS(${TMP_CONFIGVARS_FILE})
+
+SET(TMP_PKCONFIG_FILE ${DT_TMP_ETC}/${PROJECT_NAME}.pc)
+BUILD_PKCONFIG(${TMP_PKCONFIG_FILE})
+
 
 INSTALL(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}/ DESTINATION ${DT_TARGET_INC})
+
 
 INSTALL(TARGETS dmft_tools DESTINATION ${DT_TARGET_LIB})
 
 INSTALL(DIRECTORY ${DT_TMP_ETC}/ DESTINATION ${DT_TARGET_ETC})
 
-INSTALL(FILES ${DT_TMP_CONFIGVARS_FILE} DESTINATION ${DT_TARGET_BIN}/
-  PERMISSIONS
-  OWNER_WRITE OWNER_READ OWNER_EXECUTE
-  GROUP_READ GROUP_WRITE GROUP_EXECUTE
-  WORLD_READ WORLD_WRITE WORLD_EXECUTE)
+INSTALL(FILES ${TMP_CONFIGVARS_FILE} DESTINATION ${DT_TARGET_BIN}/
+  PERMISSIONS ${PERMISSION_777} SETUID)
+
+MESSAGE( STATUS "${Yellow}To conclude installation:${ColourReset} 
+$ make
+$ make install
+$ make post-install
+")
+
+
+ADD_CUSTOM_TARGET(
+  post-install
+  COMMAND "${CMAKE_COMMAND}" -P ${CMAKE_MODULE_PATH}/HomeInstall.cmake ${CMAKE_SOURCE_DIR} ${CMAKE_INSTALL_PREFIX} ${PROJECT_NAME}
+  WORKING_DIRECTORY
+  "${CMAKE_BINARY_DIR}"
+)
+
+
