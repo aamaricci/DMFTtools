@@ -3,8 +3,8 @@
 ##################################################
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0.2)
 PROJECT(dmft_tools Fortran)
-SET(VERSION 0.7.0)
-SET(CMAKE_BUILD_TYPE TESTING)
+SET(VERSION 0.7.1)
+SET(CMAKE_BUILD_TYPE RELEASE)
 
 # Add our local CMAKE modules to the module path
 SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
@@ -23,7 +23,7 @@ IF(USE_MPI)
   FIND_PACKAGE(MPI REQUIRED)
   SET(CMAKE_Fortran_COMPILER ${MPI_Fortran_COMPILER})
   SET(MPI_CPP "MPI")
-  MESSAGE("-+ Set Fortran compiler FC to ${CMAKE_Fortran_COMPILER}")
+  MESSAGE(STATUS "Set Fortran compiler FC to ${CMAKE_Fortran_COMPILER}")
 ELSE(USE_MPI)
   SET(MPI_CPP "")
 ENDIF(USE_MPI)
@@ -35,16 +35,32 @@ ELSE(VERBOSE)
   SET(CMAKE_VERBOSE_MAKEFILE OFF)
 ENDIF(VERBOSE)
 
-# This executes code that sets the compile flags for DEBUG, RELEASE, and TESTING.  
+# This executes code that sets the compile flags for DEBUG, RELEASE, and TESTING.
+INCLUDE(${CMAKE_MODULE_PATH}/ColorsMsg.cmake)
 INCLUDE(${CMAKE_MODULE_PATH}/SetFortranFlags.cmake)
 
-#workaround to set the Module directory output flag for the Intel Fortran
-#compiler which should not be -J but -module (with a blank space at the end).
-#soon enough I will find a more elegant solution.
-IF(${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel")
-  SET(CMAKE_Fortran_MODDIR_FLAG "-module ")
-ENDIF()
-MESSAGE("CMAKE_Fortran_MODDIR_FLAG:${CMAKE_Fortran_MODDIR_FLAG}")
+
+#Check for .git and extract the current SHA1 revision.
+#create the current scifor_version.inc file
+IF(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git)
+  FIND_PACKAGE(Git)
+  IF(GIT_FOUND)
+    EXECUTE_PROCESS(
+      COMMAND ${GIT_EXECUTABLE} rev-parse HEAD
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+      OUTPUT_VARIABLE GIT_SHA1
+      ERROR_QUIET
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    MESSAGE( STATUS "${Magenta}Git version: ${GIT_SHA1}${ColourReset}" )
+  ELSE(GIT_FOUND)
+    SET(GIT_SHA1 0)
+  ENDIF(GIT_FOUND)
+ENDIF(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git)
+SET(DT_VERSION_FILE ${CMAKE_CURRENT_SOURCE_DIR}/src/${PROJECT_NAME}_version.inc)
+FILE(WRITE  ${DT_VERSION_FILE}
+  "character(len=41),parameter,public :: ${PROJECT_NAME}_version_sha1 = \"${GIT_SHA1}\"\n")
+
+
 #set MPI preprocessing defition:
 IF(USE_MPI)
   ADD_DEFINITIONS(-D_MPI)
@@ -53,10 +69,14 @@ ELSE(USE_MPI)
 ENDIF(USE_MPI)
 
 
+
 ############################################################
 # Define the actual files and folders that make up the build
 ############################################################
 SET(USER_HOME $ENV{HOME})
+SET(USER $ENV{USER})
+
+
 SET(SF_ROOT $ENV{SFROOT})
 IF(NOT EXISTS ${SF_ROOT})
   message( FATAL_ERROR "Can not locate SciFortran. Check environment variable SF_ROOT or specify it to cmake using -DSF_ROOT=path-to-scifor-root" )
@@ -103,21 +123,65 @@ ADD_CUSTOM_TARGET(distclean
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_SOURCE_DIR}/distclean.cmake
 )
 
+
+
+
+SET(PERMISSION_777
+  OWNER_WRITE OWNER_READ OWNER_EXECUTE
+  GROUP_WRITE GROUP_READ GROUP_EXECUTE
+  WORLD_WRITE WORLD_READ WORLD_EXECUTE)
+
+SET(PERMISSION_733
+  OWNER_WRITE OWNER_READ OWNER_EXECUTE
+  GROUP_READ GROUP_EXECUTE
+  WORLD_READ WORLD_EXECUTE)
+
 INCLUDE(${CMAKE_MODULE_PATH}/PostBuildDmftTools.cmake)
 
-SET(DT_TMP_ENV_MODULE_FILE ${DT_TMP_ETC}/modules/${PROJECT_NAME}/${FC_PLAT})
-BUILD_DT_ENV_MODULE(${DT_TMP_ENV_MODULE_FILE})
-SET(DT_TMP_CONFIGVARS_FILE ${DT_TMP_BIN}/configvars.sh)
-BUILD_DT_CONFIGVARS(${DT_TMP_CONFIGVARS_FILE})
+SET(TMP_ENV_MODULE_FILE ${DT_TMP_ETC}/modules/${PROJECT_NAME}/${FC_PLAT})
+BUILD_ENV_MODULE(${TMP_ENV_MODULE_FILE})
+
+SET(TMP_CONFIGVARS_FILE ${DT_TMP_BIN}/configvars.sh)
+BUILD_CONFIGVARS(${TMP_CONFIGVARS_FILE})
+
+SET(TMP_PKCONFIG_FILE ${DT_TMP_ETC}/${PROJECT_NAME}.pc)
+BUILD_PKCONFIG(${TMP_PKCONFIG_FILE})
+
 
 INSTALL(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}/ DESTINATION ${DT_TARGET_INC})
+
 
 INSTALL(TARGETS dmft_tools DESTINATION ${DT_TARGET_LIB})
 
 INSTALL(DIRECTORY ${DT_TMP_ETC}/ DESTINATION ${DT_TARGET_ETC})
 
-INSTALL(FILES ${DT_TMP_CONFIGVARS_FILE} DESTINATION ${DT_TARGET_BIN}/
-  PERMISSIONS
-  OWNER_WRITE OWNER_READ OWNER_EXECUTE
-  GROUP_READ GROUP_WRITE GROUP_EXECUTE
-  WORLD_READ WORLD_WRITE WORLD_EXECUTE)
+INSTALL(FILES ${TMP_CONFIGVARS_FILE} DESTINATION ${DT_TARGET_BIN}/
+  PERMISSIONS ${PERMISSION_777} SETUID)
+
+# INSTALL(DIRECTORY  ${DT_TMP_ETC}/modules/ DESTINATION $ENV{HOME}/.modules.d/libraries/
+#   USE_SOURCE_PERMISSIONS
+#   FILE_PERMISSIONS ${PERMISSION_777} SETUID)
+
+# INSTALL(FILES  ${TMP_PKCONFIG_FILE} DESTINATION $ENV{HOME}/.pkgconfig.d/
+#   PERMISSIONS ${PERMISSION_733} SETUID)
+
+
+MESSAGE( STATUS "After installation usage options:")
+MESSAGE( STATUS
+  "Pick one choice (put it in your bash profile file to make it permanent):
+${Magenta}A. source the file: ${SF_TARGET_BIN}/configvars.sh ${ColourReset}
+i.e.
+$ source ${SF_TARGET_BIN}/configvars.sh
+
+${Magenta}B. use the provided ${PROJECT_NAME} environment module in ${DT_TARGET_ETC}:${ColourReset}
+i.e.
+$ mkdir -p $HOME/.modules.d
+$ module use $HOME/.modules.d
+$ cp -r ${DT_TARGET_ETC}/modules $HOME/.modules.d
+$ module load ${PROJECT_NAME}/${FC_PLAT}
+
+${Magenta}C. use pkg-config with the provided ${PROJECT_NAME}.pc in ${DT_TARGET_ETC}: ${ColourReset}
+i.e.
+$ export PKG_CONFIG_PATH=${DT_TARGET_ETC}/:$PKG_CONFIG_PATH
+$ pkg-config --cflags --libs ${PROJECT_NAME} (to get lib info)
+")
