@@ -683,7 +683,7 @@ contains
        A_ = spline_matrix_A_natural(N-2)
        b_ = spline_term_B_natural(N,y)*6d0/h**2
     endif
-    call solve_linear_system(A_,b_)
+    call solve(A_,b_)
     if(bcflag_)then
        dy2(1)     = 1d0/4*( 6d0/h**2*(y(N)-y(N-1) + y(2)-y(1)) - b_(2)+b_(N-1))
        dy2(2:N-1) = b_
