@@ -113,8 +113,8 @@ subroutine solve_HkR_along_BZpath(hkr_model,Nlat,Nso,kpath,Nkpath,colors_name,po
   character(len=*),optional                    :: file
   logical                                      :: pbc
   character(len=256)                           :: file_,xtics
-  integer                                      :: Npts,units(Nlat*Nso)
-  integer                                      :: ipts,ik,ic,unit,iorb,ilat,io,nrot,u1,u2
+  integer                                      :: Npts!,units(Nlat*Nso)
+  integer                                      :: ipts,ik,ic,unit,unit_,iorb,ilat,io,nrot,u1,u2
   real(8)                                      :: coeff(Nlat*Nso)
   type(rgb_color)                              :: corb(Nlat*Nso),c(Nlat*Nso)
   real(8),dimension(size(kpath,2))             :: kstart,kstop,kpoint,kdiff
@@ -136,12 +136,13 @@ subroutine solve_HkR_along_BZpath(hkr_model,Nlat,Nso,kpath,Nkpath,colors_name,po
   !
   write(*,*)"Solving model along the path:"
   do ipts=1,Npts
-     write(*,"(A,10(A,1x),A1)")"Point"//reg(str(ipts))//": [",(reg(str(kpath(ipts,ic))),ic=1,size(kpath,2)),"]"
+     write(*,"(A,10(A,1x),A1)")"Point"//str(ipts)//": [",(str(kpath(ipts,ic)),ic=1,size(kpath,2)),"]"
   enddo
   !
-  units=free_units(Nlso)
   do io=1,Nlso
-     open(units(io),file="site_"//reg(txtfy(io,4))//"_"//reg(file_))
+     open(free_unit(unit_),file="site_"//str(io,4)//"_"//str(file_))
+     rewind(unit_)
+     close(unit_)
   enddo
   open(free_unit(unit),file=reg(file_))
   !
@@ -158,15 +159,15 @@ subroutine solve_HkR_along_BZpath(hkr_model,Nlat,Nso,kpath,Nkpath,colors_name,po
         do io=1,Nlso
            coeff(:)=h(:,io)*conjg(h(:,io))
            c(io) = coeff.dot.corb
-           write(units(io),"(I12,F18.12,I18)")ic,Eval(io),rgb(c(io))
+           open(free_unit(unit_),file="site_"//str(io,4)//"_"//str(file_),position="append")
+           write(unit_,"(I12,F18.12,I18)")ic,Eval(io),rgb(c(io))
+           close(unit_)
         enddo
         write(unit,fmt)ic,(Eval(io),rgb(c(io)),io=1,Nlso)
      enddo
   enddo
   close(unit)
-  do io=1,Nlso
-     close(units(io))
-  enddo
+  !
   xtics="'"//reg(points_name(1))//"'1,"
   do ipts=2,Npts-1
      xtics=reg(xtics)//"'"//reg(points_name(ipts))//"'"//reg(txtfy((ipts-1)*Nkpath+1))//","
