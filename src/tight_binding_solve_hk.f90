@@ -19,6 +19,7 @@ subroutine solve_Hk_along_BZpath(hk_model,Norb,kpath,Nk,colors_name,points_name,
   real(8)                                   :: eval(Norb),coeff(Norb)
   complex(8)                                :: h(Norb,Norb),u(Norb,Norb)
   type(rgb_color)                           :: corb(Norb),c(Norb)
+  character(len=10)                         :: chpoint
   !
 
   !
@@ -32,7 +33,7 @@ subroutine solve_Hk_along_BZpath(hk_model,Norb,kpath,Nk,colors_name,points_name,
   !
   write(*,*)"Solving model along the path:"
   do ipts=1,Npts
-     write(*,"(A,10(A,2x),A1)")"Point"//reg(str(ipts))//": [",(reg(str(kpath(ipts,ic))),ic=1,size(kpath,2)),"]"
+     write(*,"(A,3F9.5,A1)")"Point"//str(ipts)//": [",(kpath(ipts,ic),ic=1,size(kpath,2)),"]"
   enddo
   !
   ic = 0
@@ -73,8 +74,9 @@ subroutine solve_Hk_along_BZpath(hk_model,Norb,kpath,Nk,colors_name,points_name,
   write(unit,*)"set grid noytics xtics"
   !
   do iorb=1,Norb
-     write(unit,"(A)")reg("set label 'Orb "//reg(str(iorb))//"' tc rgb "//reg(str(rgb(corb(iorb))))//&
-          " at graph 0.9,"//reg(str(0.95d0-(iorb-1)*0.05d0))//" font 'Times-Italic,11'")
+     chpoint=str(0.95d0-(iorb-1)*0.05d0)
+     write(unit,"(A)")str("set label 'Orb "//str(iorb)//"' tc rgb "//str(rgb(corb(iorb)))//&
+          " at graph 0.9,"//reg(chpoint)//" font 'Times-Italic,11'")
   enddo
   !
   write(unit,*)"plot '"//reg(file_)//"' u 1:2:3 w l lw 3 lc rgb variable,\"
