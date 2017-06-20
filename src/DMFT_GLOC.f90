@@ -1,7 +1,7 @@
 module DMFT_GLOC
   USE SF_TIMER
   USE SF_CONSTANTS, only: one,xi,zero,pi
-  USE SF_IOTOOLS,   only: reg,txtfy,splot,store_data
+  USE SF_IOTOOLS,   only: reg,txtfy,splot,file_gzip
   USE SF_LINALG,    only: eye,inv,inv_sym,inv_tridiag,get_tridiag
   USE SF_ARRAYS,    only: linspace,arange
   USE SF_MISC,      only: assert_shape
@@ -1437,7 +1437,8 @@ contains
                   "_l"//reg(txtfy(iorb))//&
                   "_s"//reg(txtfy(ispin))//&
                   "_iw"//reg(gloc_suffix)
-             call store_data(reg(suffix),Gmats(:,ispin,ispin,iorb,iorb,:),w)
+             call splot(reg(suffix),w,Gmats(:,ispin,ispin,iorb,iorb,:))
+             call file_gzip(reg(suffix))
           enddo
        enddo
        !
@@ -1450,7 +1451,8 @@ contains
                      "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                      "_s"//reg(txtfy(ispin))//&
                      "_iw"//reg(gloc_suffix)
-                call store_data(reg(suffix),Gmats(:,ispin,ispin,iorb,jorb,:),w)
+                call splot(reg(suffix),w,Gmats(:,ispin,ispin,iorb,jorb,:))
+                call file_gzip(reg(suffix))
              enddo
           enddo
        enddo
@@ -1465,7 +1467,8 @@ contains
                         "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                         "_s"//reg(txtfy(ispin))//reg(txtfy(jspin))//&
                         "_iw"//reg(gloc_suffix)
-                   call store_data(reg(suffix),Gmats(:,ispin,jspin,iorb,jorb,:),w)
+                   call splot(reg(suffix),w,Gmats(:,ispin,jspin,iorb,jorb,:))
+                   call file_gzip(reg(suffix))
                 enddo
              enddo
           enddo
@@ -1545,7 +1548,8 @@ contains
                   "_l"//reg(txtfy(iorb))//&
                   "_s"//reg(txtfy(ispin))//&
                   "_realw"//reg(gloc_suffix)
-             call store_data(reg(suffix),Greal(:,ispin,ispin,iorb,iorb,:),w)
+             call splot(reg(suffix),w,Greal(:,ispin,ispin,iorb,iorb,:))
+             call file_gzip(reg(suffix))
           enddo
        enddo
        !
@@ -1558,7 +1562,8 @@ contains
                      "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                      "_s"//reg(txtfy(ispin))//&
                      "_realw"//reg(gloc_suffix)
-                call store_data(reg(suffix),Greal(:,ispin,ispin,iorb,jorb,:),w)
+                call splot(reg(suffix),w,Greal(:,ispin,ispin,iorb,jorb,:))
+                call file_gzip(reg(suffix))
              enddo
           enddo
        enddo
@@ -1573,7 +1578,8 @@ contains
                         "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                         "_s"//reg(txtfy(ispin))//reg(txtfy(jspin))//&
                         "_realw"//reg(gloc_suffix)
-                   call store_data(reg(suffix),Greal(:,ispin,jspin,iorb,jorb,:),w)
+                   call splot(reg(suffix),w,Greal(:,ispin,jspin,iorb,jorb,:))
+                   call file_gzip(reg(suffix))
                 enddo
              enddo
           enddo
@@ -1654,7 +1660,8 @@ contains
                   "_l"//reg(txtfy(iorb))//&
                   "_s"//reg(txtfy(ispin))//&
                   "_iw"//reg(gloc_suffix)
-             call store_data(reg(suffix),Gmats(:,:,ispin,ispin,iorb,iorb,:),w)
+             call splot(reg(suffix),w,Gmats(:,:,ispin,ispin,iorb,iorb,:))
+             call file_gzip(reg(suffix))
           enddo
        enddo
     case(2)                  !print spin-diagonal, all orbitals 
@@ -1666,7 +1673,8 @@ contains
                      "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                      "_s"//reg(txtfy(ispin))//&
                      "_iw"//reg(gloc_suffix)
-                call store_data(reg(suffix),Gmats(:,:,ispin,ispin,iorb,jorb,:),w)
+                call splot(reg(suffix),w,Gmats(:,:,ispin,ispin,iorb,jorb,:))
+                call file_gzip(reg(suffix))
              enddo
           enddo
        enddo
@@ -1680,7 +1688,8 @@ contains
                         "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                         "_s"//reg(txtfy(ispin))//reg(txtfy(jspin))//&
                         "_iw"//reg(gloc_suffix)
-                   call store_data(reg(suffix),Gmats(:,:,ispin,jspin,iorb,jorb,:),w)
+                   call splot(reg(suffix),w,Gmats(:,:,ispin,jspin,iorb,jorb,:))
+                   call file_gzip(reg(suffix))
                 enddo
              enddo
           enddo
@@ -1711,7 +1720,8 @@ contains
                   "_l"//reg(txtfy(iorb))//&
                   "_s"//reg(txtfy(ispin))//&
                   "_realw"//reg(gloc_suffix)
-             call store_data(reg(suffix),Greal(:,:,ispin,ispin,iorb,iorb,:),w)
+             call splot(reg(suffix),w,Greal(:,:,ispin,ispin,iorb,iorb,:))
+             call file_gzip(reg(suffix))
           enddo
        enddo
     case(2)                  !print spin-diagonal, all orbitals 
@@ -1723,7 +1733,8 @@ contains
                      "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                      "_s"//reg(txtfy(ispin))//&
                      "_realw"//reg(gloc_suffix)
-                call store_data(reg(suffix),Greal(:,:,ispin,ispin,iorb,jorb,:),w)
+                call splot(reg(suffix),w,Greal(:,:,ispin,ispin,iorb,jorb,:))
+                call file_gzip(reg(suffix))
              enddo
           enddo
        enddo
@@ -1737,7 +1748,8 @@ contains
                         "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                         "_s"//reg(txtfy(ispin))//reg(txtfy(jspin))//&
                         "_realw"//reg(gloc_suffix)
-                   call store_data(reg(suffix),Greal(:,:,ispin,jspin,iorb,jorb,:),w)
+                   call splot(reg(suffix),w,Greal(:,:,ispin,jspin,iorb,jorb,:))
+                   call file_gzip(reg(suffix))
                 enddo
              enddo
           enddo
