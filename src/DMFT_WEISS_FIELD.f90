@@ -1,7 +1,7 @@
 module DMFT_WEISS_FIELD
   USE SF_TIMER
   USE SF_CONSTANTS, only: one,xi,zero,pi
-  USE SF_IOTOOLS,   only:reg,txtfy,splot,store_data
+  USE SF_IOTOOLS,   only:reg,txtfy,splot,file_gzip
   USE SF_ARRAYS,    only:arange
   USE SF_LINALG,    only:eye,inv
   USE SF_MISC,      only:assert_shape
@@ -2104,7 +2104,8 @@ contains
                   "_l"//reg(txtfy(iorb))//&
                   "_s"//reg(txtfy(ispin))//&
                   "_iw"//reg(weiss_suffix)
-             call store_data(reg(suffix),Green(:,ispin,ispin,iorb,iorb,:),w)
+             call splot(reg(suffix),w,Green(:,ispin,ispin,iorb,iorb,:))
+             call file_gzip(reg(suffix))
           enddo
        enddo
        !
@@ -2117,7 +2118,8 @@ contains
                      "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                      "_s"//reg(txtfy(ispin))//&
                      "_iw"//reg(weiss_suffix)
-                call store_data(reg(suffix),Green(:,ispin,ispin,iorb,jorb,:),w)
+                call splot(reg(suffix),w,Green(:,ispin,ispin,iorb,jorb,:))
+                call file_gzip(reg(suffix))
              enddo
           enddo
        enddo
@@ -2132,7 +2134,8 @@ contains
                         "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                         "_s"//reg(txtfy(ispin))//reg(txtfy(jspin))//&
                         "_iw"//reg(weiss_suffix)
-                   call store_data(reg(suffix),Green(:,ispin,jspin,iorb,jorb,:),w)
+                   call splot(reg(suffix),w,Green(:,ispin,jspin,iorb,jorb,:))
+                   call file_gzip(reg(suffix))
                 enddo
              enddo
           enddo
