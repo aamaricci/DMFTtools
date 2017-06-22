@@ -51,7 +51,7 @@ subroutine dmft_get_gloc_realaxis_superc_main(Hk,Wtk,Greal,Sreal,iprint,hk_symm)
   enddo
   !
   !invert (Z-Hk) for each k-point
-  write(*,"(A)")"Get local Green's function (print mode:"//reg(txtfy(iprint))//")"
+  write(*,"(A)")"Get local Realaxis Superc Green's function (print mode:"//reg(txtfy(iprint))//")"
   call start_timer
   Greal=zero
   do ik=1,Lk
@@ -104,7 +104,7 @@ subroutine dmft_get_gloc_realaxis_superc_lattice_main(Hk,Wtk,Greal,Sreal,iprint,
   call assert_shape(Sreal,[2,Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_superc_lattice_main',"Sreal")
   call assert_shape(Greal,[2,Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_superc_lattice_main',"Greal")
   !
-  write(*,"(A)")"Get local Green's function (print mode:"//reg(txtfy(iprint))//")"
+  write(*,"(A)")"Get local Realaxis Superc Green's function (print mode:"//reg(txtfy(iprint))//")"
   !
   allocate(Gkreal(2,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
   allocate(zeta_real(2,2,Nlat,Nso,Nso,Lreal))

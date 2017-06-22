@@ -46,7 +46,7 @@ subroutine dmft_get_gloc_matsubara_normal_main_mpi(MpiComm,Hk,Wtk,Gmats,Smats,ip
   enddo
   !
   !invert (Z-Hk) for each k-point
-  if(mpi_master)write(*,"(A)")"Get local Green's function (print mode:"//reg(txtfy(iprint))//")"
+  if(mpi_master)write(*,"(A)")"Get local Matsubara Green's function (print mode:"//reg(txtfy(iprint))//")"
   if(mpi_master)call start_timer
   Gmats=zero
   select case(mpi_split_)
@@ -121,7 +121,7 @@ subroutine dmft_get_gloc_matsubara_normal_dos_main_mpi(MpiComm,Ebands,Dbands,Hlo
   enddo
   !
   !invert (Z-Hk) for each k-point
-  if(mpi_master)write(*,"(A)")"Get local Green's function (print mode:"//reg(txtfy(iprint))//")"
+  if(mpi_master)write(*,"(A)")"Get local Matsubara Green's function (print mode:"//reg(txtfy(iprint))//")"
   if(mpi_master)call start_timer
   Gmats=zero
   allocate(Gtmp(Nspin,Nspin,Norb,Norb,Lmats));Gtmp=zero
@@ -205,7 +205,7 @@ subroutine dmft_get_gloc_matsubara_normal_lattice_main_mpi(MpiComm,Hk,Wtk,Gmats,
   call assert_shape(Smats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gloc_matsubara_normal_lattice_main_mpi',"Smats")
   call assert_shape(Gmats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gloc_matsubara_normal_lattice_main_mpi',"Gmats")
   !
-  if(mpi_master)write(*,"(A)")"Get local Green's function (print mode:"//reg(txtfy(iprint))//")"
+  if(mpi_master)write(*,"(A)")"Get local Matsubara Green's function (print mode:"//reg(txtfy(iprint))//")"
   if(mpi_master)then
      if(.not.tridiag_)then
         write(*,"(A)")"Direct Inversion algorithm:"

@@ -44,7 +44,7 @@ subroutine dmft_get_gloc_realaxis_normal_main(Hk,Wtk,Greal,Sreal,iprint,hk_symm)
   enddo
   !
   !invert (Z-Hk) for each k-point
-  write(*,"(A)")"Get local Green's function (print mode:"//reg(txtfy(iprint))//")"
+  write(*,"(A)")"Get local Realaxis Green's function (print mode:"//reg(txtfy(iprint))//")"
   call start_timer
   Greal=zero
   do ik=1,Lk
@@ -99,7 +99,7 @@ subroutine dmft_get_gloc_realaxis_normal_dos_main(Ebands,Dbands,Hloc,Greal,Sreal
   enddo
   !
   !invert (Z-Hk) for each k-point
-  write(*,"(A)")"Get local Green's function (print mode:"//reg(txtfy(iprint))//")"
+  write(*,"(A)")"Get local Realaxis Green's function (print mode:"//reg(txtfy(iprint))//")"
   call start_timer
   Greal=zero
   do i=1,Lreal
@@ -161,7 +161,7 @@ subroutine dmft_get_gloc_realaxis_normal_lattice_main(Hk,Wtk,Greal,Sreal,iprint,
   call assert_shape(Sreal,[Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_normal_lattice_main',"Sreal")
   call assert_shape(Greal,[Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_normal_lattice_main',"Greal")
   !
-  write(*,"(A)")"Get local Green's function (print mode:"//reg(txtfy(iprint))//")"
+  write(*,"(A)")"Get local Realaxis Green's function (print mode:"//reg(txtfy(iprint))//")"
   if(.not.tridiag_)then
      write(*,"(A)")"Direct Inversion algorithm:"
   else

@@ -42,7 +42,7 @@ subroutine dmft_get_gloc_matsubara_superc_main(Hk,Wtk,Gmats,Smats,iprint,hk_symm
   enddo
   !
   !invert (Z-Hk) for each k-point
-  write(*,"(A)")"Get local Green's function (print mode:"//reg(txtfy(iprint))//")"
+  write(*,"(A)")"Get local Matsubara Superc Green's function (print mode:"//reg(txtfy(iprint))//")"
   call start_timer
   Gmats=zero
   do ik=1,Lk
@@ -90,7 +90,7 @@ subroutine dmft_get_gloc_matsubara_superc_lattice_main(Hk,Wtk,Gmats,Smats,iprint
   call assert_shape(Smats,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gloc_matsubara_superc_lattice_main',"Smats")
   call assert_shape(Gmats,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gloc_matsubara_superc_lattice_main',"Gmats")
   !
-  write(*,"(A)")"Get local Green's function (print mode:"//reg(txtfy(iprint))//")"
+  write(*,"(A)")"Get local Matsubara Superc Green's function (print mode:"//reg(txtfy(iprint))//")"
   !
   allocate(Gkmats(2,Nlat,Nspin,Nspin,Norb,Norb,Lmats))
   allocate(zeta_mats(2,2,Nlat,Nso,Nso,Lmats))

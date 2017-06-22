@@ -49,7 +49,7 @@ subroutine dmft_get_gloc_realaxis_normal_main_mpi(MpiComm,Hk,Wtk,Greal,Sreal,ipr
   enddo
   !
   !invert (Z-Hk) for each k-point
-  if(mpi_master)write(*,"(A)")"Get local Green's function (print mode:"//reg(txtfy(iprint))//")"
+  if(mpi_master)write(*,"(A)")"Get local Realaxis Green's function (print mode:"//reg(txtfy(iprint))//")"
   if(mpi_master)call start_timer
   Greal=zero
   select case(mpi_split_)
@@ -59,7 +59,7 @@ subroutine dmft_get_gloc_realaxis_normal_main_mpi(MpiComm,Hk,Wtk,Greal,Sreal,ipr
      do ik=1,Lk
         call invert_gk_normal_mpi(MpiComm,zeta_real,Hk(:,:,ik),hk_symm_(ik),Gkreal)      
         Greal = Greal + Gkreal*Wtk(ik)
-        call eta(ik,Lk)
+        if(mpi_master)call eta(ik,Lk)
      end do
   case ('k')
      allocate(Gtmp(Nspin,Nspin,Norb,Norb,Lreal));Gtmp=zero
@@ -127,7 +127,7 @@ subroutine dmft_get_gloc_realaxis_normal_dos_main_mpi(MpiComm,Ebands,Dbands,Hloc
   enddo
   !
   !invert (Z-Hk) for each k-point
-  if(mpi_master)write(*,"(A)")"Get local Green's function (print mode:"//reg(txtfy(iprint))//")"
+  if(mpi_master)write(*,"(A)")"Get local Realaxis Green's function (print mode:"//reg(txtfy(iprint))//")"
   if(mpi_master)call start_timer
   Greal=zero
   allocate(Gtmp(Nspin,Nspin,Norb,Norb,Lreal));Gtmp=zero
@@ -219,7 +219,7 @@ subroutine dmft_get_gloc_realaxis_normal_lattice_main_mpi(MpiComm,Hk,Wtk,Greal,S
   call assert_shape(Sreal,[Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_normal_lattice_main_mpi',"Sreal")
   call assert_shape(Greal,[Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_normal_lattice_main_mpi',"Greal")
   !
-  if(mpi_master)write(*,"(A)")"Get local Green's function (print mode:"//reg(txtfy(iprint))//")"
+  if(mpi_master)write(*,"(A)")"Get local Realaxis Green's function (print mode:"//reg(txtfy(iprint))//")"
   if(mpi_master)then
      if(.not.tridiag_)then
         write(*,"(A)")"Direct Inversion algorithm:"
