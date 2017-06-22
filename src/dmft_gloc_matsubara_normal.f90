@@ -54,7 +54,7 @@ subroutine dmft_get_gloc_matsubara_normal_main(Hk,Wtk,Gmats,Smats,iprint,hk_symm
   enddo
   !
   !invert (Z-Hk) for each k-point
-  write(*,"(A)")"Get local Green's function (print mode:"//reg(txtfy(iprint))//")"
+  write(*,"(A)")"Get local Matsubara Green's function (print mode:"//reg(txtfy(iprint))//")"
   call start_timer
   Gmats=zero
   do ik=1,Lk
@@ -109,7 +109,7 @@ subroutine dmft_get_gloc_matsubara_normal_dos_main(Ebands,Dbands,Hloc,Gmats,Smat
   enddo
   !
   !invert (Z-Hk) for each k-point
-  write(*,"(A)")"Get local Green's function (print mode:"//reg(txtfy(iprint))//")"
+  write(*,"(A)")"Get local Matsubara Green's function (print mode:"//reg(txtfy(iprint))//")"
   call start_timer
   Gmats=zero
   do i=1,Lmats
@@ -170,7 +170,7 @@ subroutine dmft_get_gloc_matsubara_normal_lattice_main(Hk,Wtk,Gmats,Smats,iprint
   call assert_shape(Smats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gloc_matsubara_normal_lattice_main',"Smats")
   call assert_shape(Gmats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gloc_matsubara_normal_lattice_main',"Gmats")
   !
-  write(*,"(A)")"Get local Green's function (print mode:"//reg(txtfy(iprint))//")"
+  write(*,"(A)")"Get local Matsubara Green's function (print mode:"//reg(txtfy(iprint))//")"
   if(.not.tridiag_)then
      write(*,"(A)")"Direct Inversion algorithm:"
   else

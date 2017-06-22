@@ -58,7 +58,7 @@ subroutine dmft_get_gloc_realaxis_superc_main_mpi(MpiComm,Hk,Wtk,Greal,Sreal,ipr
   enddo
   !
   !invert (Z-Hk) for each k-point
-  if(mpi_master)write(*,"(A)")"Get local Green's function (print mode:"//reg(txtfy(iprint))//")"
+  if(mpi_master)write(*,"(A)")"Get local Realaxis Superc Green's function (print mode:"//reg(txtfy(iprint))//")"
   if(mpi_master)call start_timer
   Greal=zero
   select case(mpi_split_)
@@ -133,7 +133,7 @@ subroutine dmft_get_gloc_realaxis_superc_lattice_main_mpi(MpiComm,Hk,Wtk,Greal,S
   call assert_shape(Sreal,[2,Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_superc_lattice_main_mpi',"Sreal")
   call assert_shape(Greal,[2,Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_superc_lattice_main_mpi',"Greal")
   !
-  if(mpi_master)write(*,"(A)")"Get local Green's function (print mode:"//reg(txtfy(iprint))//")"
+  if(mpi_master)write(*,"(A)")"Get local Realaxis Superc Green's function (print mode:"//reg(txtfy(iprint))//")"
   if(mpi_master)call start_timer
   !
   allocate(Gkreal(2,Nlat,Nspin,Nspin,Norb,Norb,Lreal))

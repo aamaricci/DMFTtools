@@ -51,7 +51,7 @@ subroutine dmft_get_gloc_matsubara_superc_main_mpi(MpiComm,Hk,Wtk,Gmats,Smats,ip
   enddo
   !
   !invert (Z-Hk) for each k-point
-  if(mpi_master)write(*,"(A)")"Get local Green's function (print mode:"//reg(txtfy(iprint))//")"
+  if(mpi_master)write(*,"(A)")"Get local Matsubara Superc Green's function (print mode:"//reg(txtfy(iprint))//")"
   if(mpi_master)call start_timer
   Gmats=zero
   select case(mpi_split_)
@@ -124,7 +124,7 @@ subroutine dmft_get_gloc_matsubara_superc_lattice_main_mpi(MpiComm,Hk,Wtk,Gmats,
   call assert_shape(Smats,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gloc_matsubara_superc_lattice_main_mpi',"Smats")
   call assert_shape(Gmats,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gloc_matsubara_superc_lattice_main_mpi',"Gmats")
   !
-  if(mpi_master)write(*,"(A)")"Get local Green's function (print mode:"//reg(txtfy(iprint))//")"
+  if(mpi_master)write(*,"(A)")"Get local Matsubara Superc Green's function (print mode:"//reg(txtfy(iprint))//")"
   if(mpi_master)call start_timer
   !
   allocate(Gkmats(2,Nlat,Nspin,Nspin,Norb,Norb,Lmats))

@@ -20,8 +20,7 @@ subroutine solve_Hk_along_BZpath(hk_model,Norb,kpath,Nk,colors_name,points_name,
   complex(8)                                :: h(Norb,Norb),u(Norb,Norb)
   type(rgb_color)                           :: corb(Norb),c(Norb)
   character(len=10)                         :: chpoint
-  !
-
+  character(len=32) :: fmt
   !
   file_="Eigenbands.tb";if(present(file))file_=file
   Npts=size(kpath,1)
@@ -32,8 +31,9 @@ subroutine solve_Hk_along_BZpath(hk_model,Norb,kpath,Nk,colors_name,points_name,
   open(unit,file=reg(file_))
   !
   write(*,*)"Solving model along the path:"
+  write(fmt,"(A3,I0,A)")"(A,",size(kpath,2),"F7.4,A1)"
   do ipts=1,Npts
-     write(*,"(A,3F9.5,A1)")"Point"//str(ipts)//": [",(kpath(ipts,ic),ic=1,size(kpath,2)),"]"
+     write(*,fmt)"Point"//str(ipts)//": [",(kpath(ipts,ic),ic=1,size(kpath,2)),"]"
   enddo
   !
   ic = 0

@@ -122,9 +122,9 @@ contains
     unit=6
     if(present(pfile))open(free_unit(unit),file=reg(pfile))
     write(unit,"(A)")"Using Reciprocal Lattice vectors:"
-    write(unit,"(A,3F9.5,A1)")"bk_x = [",(bk_x(i),i=1,3),"]"
-    write(unit,"(A,3F9.5,A1)")"bk_y = [",(bk_y(i),i=1,3),"]"
-    write(unit,"(A,3F9.5,A1)")"bk_z = [",(bk_z(i),i=1,3),"]"
+    write(unit,"(A,3F7.4,A1)")"bk_x = [",(bk_x(i),i=1,3),"]"
+    write(unit,"(A,3F7.4,A1)")"bk_y = [",(bk_y(i),i=1,3),"]"
+    write(unit,"(A,3F7.4,A1)")"bk_z = [",(bk_z(i),i=1,3),"]"
     if(present(pfile))close(unit)
   end subroutine print_bk
 
