@@ -1,9 +1,8 @@
-subroutine dmft_get_gloc_realaxis_normal_main(Hk,Wtk,Greal,Sreal,iprint,hk_symm)
+subroutine dmft_get_gloc_realaxis_normal_main(Hk,Wtk,Greal,Sreal,hk_symm)
   complex(8),dimension(:,:,:),intent(in)        :: Hk        ![Nspin*Norb][Nspin*Norb][Lk]
   real(8),dimension(size(Hk,3)),intent(in)      :: Wtk       ![Nk]
   complex(8),dimension(:,:,:,:,:),intent(in)    :: Sreal     ![Nspin][Nspin][Norb][Norb][Lreal]
   complex(8),dimension(:,:,:,:,:),intent(inout) :: Greal     !as Sreal
-  integer,intent(in)                            :: iprint
   logical,dimension(size(Hk,3)),optional        :: hk_symm   ![Lk]
   logical,dimension(size(Hk,3))                 :: hk_symm_  ![Lk]
   !allocatable arrays
@@ -43,7 +42,7 @@ subroutine dmft_get_gloc_realaxis_normal_main(Hk,Wtk,Greal,Sreal,iprint,hk_symm)
   enddo
   !
   !invert (Z-Hk) for each k-point
-  write(*,"(A)")"Get local Realaxis Green's function (print mode:"//reg(txtfy(iprint))//")"
+  write(*,"(A)")"Get local Realaxis Green's function (no print)"
   call start_timer
   Greal=zero
   do ik=1,Lk
@@ -52,17 +51,15 @@ subroutine dmft_get_gloc_realaxis_normal_main(Hk,Wtk,Greal,Sreal,iprint,hk_symm)
      call eta(ik,Lk)
   end do
   call stop_timer
-  call dmft_gloc_print_realaxis(wr,Greal,"Gloc",iprint)
 end subroutine dmft_get_gloc_realaxis_normal_main
 
 
-subroutine dmft_get_gloc_realaxis_normal_dos(Ebands,Dbands,Hloc,Greal,Sreal,iprint)
+subroutine dmft_get_gloc_realaxis_normal_dos(Ebands,Dbands,Hloc,Greal,Sreal)
   real(8),dimension(:,:),intent(in)                           :: Ebands    ![Nspin*Norb][Lk]
   real(8),dimension(size(Ebands,1),size(Ebands,2)),intent(in) :: Dbands    ![Nspin*Norb][Lk]
   real(8),dimension(size(Ebands,1)),intent(in)                :: Hloc      ![Nspin*Norb]
   complex(8),dimension(:,:,:,:,:),intent(in)                  :: Sreal     ![Nspin][Nspin][Norb][Norb][Lreal]
   complex(8),dimension(:,:,:,:,:),intent(inout)               :: Greal     !as Sreal
-  integer,intent(in)                                          :: iprint
   !
   complex(8)                                                  :: gktmp
   complex(8),dimension(:,:,:),allocatable                     :: zeta_real ![Nspin*Norb][Nspin*Norb][Lreal]
@@ -96,7 +93,7 @@ subroutine dmft_get_gloc_realaxis_normal_dos(Ebands,Dbands,Hloc,Greal,Sreal,ipri
   enddo
   !
   !invert (Z-Hk) for each k-point
-  write(*,"(A)")"Get local Realaxis Green's function (print mode:"//reg(txtfy(iprint))//")"
+  write(*,"(A)")"Get local Realaxis Green's function (no print)"
   call start_timer
   Greal=zero
   do i=1,Lreal
@@ -112,16 +109,14 @@ subroutine dmft_get_gloc_realaxis_normal_dos(Ebands,Dbands,Hloc,Greal,Sreal,ipri
      call eta(i,Lreal)
   end do
   call stop_timer
-  call dmft_gloc_print_realaxis(wr,Greal,"Gloc",iprint)
 end subroutine dmft_get_gloc_realaxis_normal_dos
 
 
-subroutine dmft_get_gloc_realaxis_normal_ineq(Hk,Wtk,Greal,Sreal,iprint,tridiag,hk_symm)
+subroutine dmft_get_gloc_realaxis_normal_ineq(Hk,Wtk,Greal,Sreal,tridiag,hk_symm)
   complex(8),dimension(:,:,:),intent(in)          :: Hk        ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Nk]
   real(8),dimension(size(Hk,3)),intent(in)        :: Wtk       ![Nk]
   complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sreal     ![Nlat][Nspin][Nspin][Norb][Norb][Lreal]
   complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Greal     !as Sreal
-  integer,intent(in)                              :: iprint    !
   logical,optional                                :: tridiag
   logical                                         :: tridiag_
   logical,dimension(size(Hk,3)),optional          :: hk_symm
@@ -155,7 +150,7 @@ subroutine dmft_get_gloc_realaxis_normal_ineq(Hk,Wtk,Greal,Sreal,iprint,tridiag,
   call assert_shape(Sreal,[Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_normal_ineq_main',"Sreal")
   call assert_shape(Greal,[Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_normal_ineq_main',"Greal")
   !
-  write(*,"(A)")"Get local Realaxis Green's function (print mode:"//reg(txtfy(iprint))//")"
+  write(*,"(A)")"Get local Realaxis Green's function (no print)"
   if(.not.tridiag_)then
      write(*,"(A)")"Direct Inversion algorithm:"
   else
@@ -190,16 +185,14 @@ subroutine dmft_get_gloc_realaxis_normal_ineq(Hk,Wtk,Greal,Sreal,iprint,tridiag,
      end do
   endif
   call stop_timer
-  call dmft_gloc_print_realaxis_ineq(wr,Greal,"LG",iprint)
 end subroutine dmft_get_gloc_realaxis_normal_ineq
 
 
-subroutine dmft_get_gloc_realaxis_normal_gij(Hk,Wtk,Greal,Sreal,iprint,hk_symm)
+subroutine dmft_get_gloc_realaxis_normal_gij(Hk,Wtk,Greal,Sreal,hk_symm)
   complex(8),dimension(:,:,:),intent(in)            :: Hk        ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Nk]
   real(8),dimension(size(Hk,3)),intent(in)          :: Wtk       ![Nk]
   complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Sreal     !      [Nlat][Nspin][Nspin][Norb][Norb][Lreal]
   complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Greal     ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lreal]
-  integer,intent(in)                                :: iprint
   logical,dimension(size(Hk,3)),optional            :: hk_symm
   logical,dimension((size(Hk,3)))                   :: hk_symm_
   !allocatable arrays
@@ -231,7 +224,7 @@ subroutine dmft_get_gloc_realaxis_normal_gij(Hk,Wtk,Greal,Sreal,iprint,hk_symm)
   !
   hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
   !
-  write(*,"(A)")"Get full Green's function (print mode:"//reg(txtfy(iprint))//")"
+  write(*,"(A)")"Get full Green's function (no print)"
   !
   allocate(Gkreal(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal));Gkreal=zero
   allocate(zeta_real(Nlat,Nso,Nso,Lreal));zeta_real=zero
@@ -253,5 +246,4 @@ subroutine dmft_get_gloc_realaxis_normal_gij(Hk,Wtk,Greal,Sreal,iprint,hk_symm)
      call eta(ik,Lk)
   end do
   call stop_timer
-  call dmft_gloc_print_realaxis_gij(wm,Greal,"Gij",iprint)
 end subroutine dmft_get_gloc_realaxis_normal_gij

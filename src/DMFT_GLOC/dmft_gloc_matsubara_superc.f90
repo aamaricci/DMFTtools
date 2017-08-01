@@ -1,9 +1,8 @@
-subroutine dmft_get_gloc_matsubara_superc_main(Hk,Wtk,Gmats,Smats,iprint,hk_symm)
+subroutine dmft_get_gloc_matsubara_superc_main(Hk,Wtk,Gmats,Smats,hk_symm)
   complex(8),dimension(:,:,:,:),intent(in)        :: Hk        ![2][Nspin*Norb][Nspin*Norb][Nk]
   real(8),dimension(size(Hk,4)),intent(in)        :: Wtk       ![Nk]
   complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Smats     ![2][Nspin][Nspin][Norb][Norb][Lmats]
   complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gmats     !as Smats
-  integer,intent(in)                              :: iprint
   logical,dimension(size(Hk,4)),optional          :: hk_symm   ![Nk]
   logical,dimension(size(Hk,4))                   :: hk_symm_  ![Nk]
   !allocatable arrays
@@ -41,7 +40,7 @@ subroutine dmft_get_gloc_matsubara_superc_main(Hk,Wtk,Gmats,Smats,iprint,hk_symm
   enddo
   !
   !invert (Z-Hk) for each k-point
-  write(*,"(A)")"Get local Matsubara Superc Green's function (print mode:"//reg(txtfy(iprint))//")"
+  write(*,"(A)")"Get local Matsubara Superc Green's function (no print)"
   call start_timer
   Gmats=zero
   do ik=1,Lk
@@ -50,18 +49,15 @@ subroutine dmft_get_gloc_matsubara_superc_main(Hk,Wtk,Gmats,Smats,iprint,hk_symm
      call eta(ik,Lk)
   end do
   call stop_timer
-  call dmft_gloc_print_matsubara(wm,Gmats(1,:,:,:,:,:),"Gloc",iprint)
-  call dmft_gloc_print_matsubara(wm,Gmats(2,:,:,:,:,:),"Floc",iprint)
 end subroutine dmft_get_gloc_matsubara_superc_main
 
 
-subroutine dmft_get_gloc_matsubara_superc_dos(Ebands,Dbands,Hloc,Gmats,Smats,iprint)
+subroutine dmft_get_gloc_matsubara_superc_dos(Ebands,Dbands,Hloc,Gmats,Smats)
   real(8),dimension(:,:,:),intent(in)                           :: Ebands    ![2][Nspin*Norb][Lk]
   real(8),dimension(size(Ebands,1),size(Ebands,2)),intent(in)   :: Dbands    ![Nspin*Norb][Lk]
   real(8),dimension(2,size(Ebands,1)),intent(in)                :: Hloc      ![2][Nspin*Norb]
   complex(8),dimension(:,:,:,:,:,:),intent(in)                  :: Smats     ![2][Nspin][Nspin][Norb][Norb][Lmats]
   complex(8),dimension(:,:,:,:,:,:),intent(inout)               :: Gmats     !as Smats
-  integer,intent(in)                                            :: iprint
   !allocatable arrays
   complex(8)                                                    :: gktmp(2),cdet
   complex(8)                                                    :: zeta_11,zeta_12,zeta_22 
@@ -95,7 +91,7 @@ subroutine dmft_get_gloc_matsubara_superc_dos(Ebands,Dbands,Hloc,Gmats,Smats,ipr
   enddo
   !
   !invert (Z-Hk) for each k-point
-  write(*,"(A)")"Get local Matsubara Superc Green's function (print mode:"//reg(txtfy(iprint))//")"
+  write(*,"(A)")"Get local Matsubara Superc Green's function (no print)"
   call start_timer
   Gmats=zero
   do i=1,Lmats
@@ -118,18 +114,15 @@ subroutine dmft_get_gloc_matsubara_superc_dos(Ebands,Dbands,Hloc,Gmats,Smats,ipr
      call eta(i,Lmats)
   enddo
   call stop_timer
-  call dmft_gloc_print_matsubara(wm,Gmats(1,:,:,:,:,:),"Gloc",iprint)
-  call dmft_gloc_print_matsubara(wm,Gmats(2,:,:,:,:,:),"Floc",iprint)
 end subroutine dmft_get_gloc_matsubara_superc_dos
 
 
 
-subroutine dmft_get_gloc_matsubara_superc_ineq(Hk,Wtk,Gmats,Smats,iprint,hk_symm)
+subroutine dmft_get_gloc_matsubara_superc_ineq(Hk,Wtk,Gmats,Smats,hk_symm)
   complex(8),dimension(:,:,:,:),intent(in)          :: Hk        ![2][Nlat*Nspin*Norb][Nlat*Nspin*Norb][Nk]
   real(8),dimension(size(Hk,4)),intent(in)          :: Wtk       ![Nk]
   complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Smats     ![2][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
   complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gmats     !as Smats
-  integer,intent(in)                                :: iprint
   logical,dimension(size(Hk,4)),optional            :: hk_symm   ![Nk]
   logical,dimension(size(Hk,4))                     :: hk_symm_  ![Nk]
   !allocatable arrays
@@ -157,7 +150,7 @@ subroutine dmft_get_gloc_matsubara_superc_ineq(Hk,Wtk,Gmats,Smats,iprint,hk_symm
   call assert_shape(Smats,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gloc_matsubara_superc_ineq_main',"Smats")
   call assert_shape(Gmats,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gloc_matsubara_superc_ineq_main',"Gmats")
   !
-  write(*,"(A)")"Get local Matsubara Superc Green's function (print mode:"//reg(txtfy(iprint))//")"
+  write(*,"(A)")"Get local Matsubara Superc Green's function (no print)"
   !
   allocate(Gkmats(2,Nlat,Nspin,Nspin,Norb,Norb,Lmats))
   allocate(zeta_mats(2,2,Nlat,Nso,Nso,Lmats))
@@ -184,8 +177,6 @@ subroutine dmft_get_gloc_matsubara_superc_ineq(Hk,Wtk,Gmats,Smats,iprint,hk_symm
      call eta(ik,Lk)
   end do
   call stop_timer
-  call dmft_gloc_print_matsubara_ineq(wm,Gmats(1,:,:,:,:,:,:),"LG",iprint)
-  call dmft_gloc_print_matsubara_ineq(wm,Gmats(2,:,:,:,:,:,:),"LF",iprint)
 end subroutine dmft_get_gloc_matsubara_superc_ineq
 
 
@@ -193,13 +184,12 @@ end subroutine dmft_get_gloc_matsubara_superc_ineq
 
 
 
-subroutine dmft_get_gloc_matsubara_superc_gij(Hk,Wtk,Gmats,Fmats,Smats,iprint,hk_symm)
+subroutine dmft_get_gloc_matsubara_superc_gij(Hk,Wtk,Gmats,Fmats,Smats,hk_symm)
   complex(8),dimension(:,:,:,:)                       :: Hk              ![2][Nlat*Norb*Nspin][Nlat*Norb*Nspin][Nk]
   real(8)                                           :: Wtk(size(Hk,4)) ![Nk]
   complex(8),intent(inout),dimension(:,:,:,:,:,:,:) :: Gmats           ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
   complex(8),intent(inout),dimension(:,:,:,:,:,:,:) :: Fmats           ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
   complex(8),intent(inout),dimension(:,:,:,:,:,:,:) :: Smats           ![2][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
-  integer                                           :: iprint
   logical,optional                                  :: hk_symm(size(Hk,4))
   logical                                           :: hk_symm_(size(Hk,4))
   !
@@ -233,7 +223,7 @@ subroutine dmft_get_gloc_matsubara_superc_gij(Hk,Wtk,Gmats,Fmats,Smats,iprint,hk
   !
   hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
   !
-  write(*,"(A)")"Get full Green's function (print mode:"//reg(txtfy(iprint))//")"
+  write(*,"(A)")"Get full Green's function (no print)"
   !
   allocate(Gkmats(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats));Gkmats=zero
   allocate(Fkmats(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats));Fkmats=zero
@@ -278,8 +268,6 @@ subroutine dmft_get_gloc_matsubara_superc_gij(Hk,Wtk,Gmats,Fmats,Smats,iprint,hk
      call eta(ik,Lk)
   end do
   call stop_timer
-  call dmft_gloc_print_matsubara_gij(wm,Gmats,"Gij",iprint)
-  call dmft_gloc_print_matsubara_gij(wm,Fmats,"Fij",iprint)
 end subroutine dmft_get_gloc_matsubara_superc_gij
 
 

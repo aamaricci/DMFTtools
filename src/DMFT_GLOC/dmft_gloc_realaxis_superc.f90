@@ -1,9 +1,8 @@
-subroutine dmft_get_gloc_realaxis_superc_main(Hk,Wtk,Greal,Sreal,iprint,hk_symm)
+subroutine dmft_get_gloc_realaxis_superc_main(Hk,Wtk,Greal,Sreal,hk_symm)
   complex(8),dimension(:,:,:,:),intent(in)        :: Hk        ![2][Nspin*Norb][Nspin*Norb][Nk]
   real(8),dimension(size(Hk,4)),intent(in)        :: Wtk       ![Nk]
   complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sreal     ![2][Nspin][Nspin][Norb][Norb][Lreal]
   complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Greal     !as Sreal
-  integer,intent(in)                              :: iprint
   logical,dimension(size(Hk,4)),optional          :: hk_symm   ![Nk]
   logical,dimension(size(Hk,4))                   :: hk_symm_  ![Nk]
   !allocatable arrays
@@ -50,7 +49,7 @@ subroutine dmft_get_gloc_realaxis_superc_main(Hk,Wtk,Greal,Sreal,iprint,hk_symm)
   enddo
   !
   !invert (Z-Hk) for each k-point
-  write(*,"(A)")"Get local Realaxis Superc Green's function (print mode:"//reg(txtfy(iprint))//")"
+  write(*,"(A)")"Get local Realaxis Superc Green's function (no print)"
   call start_timer
   Greal=zero
   do ik=1,Lk
@@ -59,18 +58,15 @@ subroutine dmft_get_gloc_realaxis_superc_main(Hk,Wtk,Greal,Sreal,iprint,hk_symm)
      call eta(ik,Lk)
   end do
   call stop_timer
-  call dmft_gloc_print_realaxis(wr,Greal(1,:,:,:,:,:),"Gloc",iprint)
-  call dmft_gloc_print_realaxis(wr,Greal(2,:,:,:,:,:),"Floc",iprint)
 end subroutine dmft_get_gloc_realaxis_superc_main
 
 
-subroutine dmft_get_gloc_realaxis_superc_dos(Ebands,Dbands,Hloc,Greal,Sreal,iprint)
+subroutine dmft_get_gloc_realaxis_superc_dos(Ebands,Dbands,Hloc,Greal,Sreal)
   real(8),dimension(:,:,:),intent(in)                           :: Ebands    ![2][Nspin*Norb][Lk]
   real(8),dimension(size(Ebands,1),size(Ebands,2)),intent(in)   :: Dbands    ![Nspin*Norb][Lk]
   real(8),dimension(2,size(Ebands,1)),intent(in)                :: Hloc      ![2][Nspin*Norb]
   complex(8),dimension(:,:,:,:,:,:),intent(in)                  :: Sreal     ![2][Nspin][Nspin][Norb][Norb][Lreal]
   complex(8),dimension(:,:,:,:,:,:),intent(inout)               :: Greal     !as Sreal
-  integer,intent(in)                                            :: iprint
   !allocatable arrays
   complex(8)                                                    :: gktmp(2),cdet
   complex(8)                                                    :: zeta_11,zeta_12,zeta_22 
@@ -108,7 +104,7 @@ subroutine dmft_get_gloc_realaxis_superc_dos(Ebands,Dbands,Hloc,Greal,Sreal,ipri
   enddo
   !
   !invert (Z-Hk) for each k-point
-  write(*,"(A)")"Get local Realaxis Superc Green's function (print mode:"//reg(txtfy(iprint))//")"
+  write(*,"(A)")"Get local Realaxis Superc Green's function (no print)"
   call start_timer
   Greal=zero
   do i=1,Lreal
@@ -131,18 +127,15 @@ subroutine dmft_get_gloc_realaxis_superc_dos(Ebands,Dbands,Hloc,Greal,Sreal,ipri
      call eta(i,Lreal)
   enddo
   call stop_timer
-  call dmft_gloc_print_realaxis(wr,Greal(1,:,:,:,:,:),"Gloc",iprint)
-  call dmft_gloc_print_realaxis(wr,Greal(2,:,:,:,:,:),"Floc",iprint)
 end subroutine dmft_get_gloc_realaxis_superc_dos
 
 
 
-subroutine dmft_get_gloc_realaxis_superc_ineq(Hk,Wtk,Greal,Sreal,iprint,hk_symm)
+subroutine dmft_get_gloc_realaxis_superc_ineq(Hk,Wtk,Greal,Sreal,hk_symm)
   complex(8),dimension(:,:,:,:),intent(in)          :: Hk        ![2][Nlat*Nspin*Norb][Nlat*Nspin*Norb][Nk]
   real(8),dimension(size(Hk,4)),intent(in)          :: Wtk       ![Nk]
   complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Sreal     ![2][Nlat][Nspin][Nspin][Norb][Norb][Lreal]
   complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Greal     !as Sreal
-  integer,intent(in)                                :: iprint
   logical,dimension(size(Hk,4)),optional            :: hk_symm   ![Nk]
   logical,dimension(size(Hk,4))                     :: hk_symm_  ![Nk]
   !allocatable arrays
@@ -174,7 +167,7 @@ subroutine dmft_get_gloc_realaxis_superc_ineq(Hk,Wtk,Greal,Sreal,iprint,hk_symm)
   call assert_shape(Sreal,[2,Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_superc_ineq_main',"Sreal")
   call assert_shape(Greal,[2,Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_superc_ineq_main',"Greal")
   !
-  write(*,"(A)")"Get local Realaxis Superc Green's function (print mode:"//reg(txtfy(iprint))//")"
+  write(*,"(A)")"Get local Realaxis Superc Green's function (no print)"
   !
   allocate(Gkreal(2,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
   allocate(zeta_real(2,2,Nlat,Nso,Nso,Lreal))
@@ -205,18 +198,15 @@ subroutine dmft_get_gloc_realaxis_superc_ineq(Hk,Wtk,Greal,Sreal,iprint,hk_symm)
      call eta(ik,Lk)
   end do
   call stop_timer
-  call dmft_gloc_print_realaxis_ineq(wr,Greal(1,:,:,:,:,:,:),"LG",iprint)
-  call dmft_gloc_print_realaxis_ineq(wr,Greal(2,:,:,:,:,:,:),"LF",iprint)
 end subroutine dmft_get_gloc_realaxis_superc_ineq
 
 
-subroutine dmft_get_gloc_realaxis_superc_gij(Hk,Wtk,Greal,Freal,Sreal,iprint,hk_symm)
+subroutine dmft_get_gloc_realaxis_superc_gij(Hk,Wtk,Greal,Freal,Sreal,hk_symm)
   complex(8),dimension(:,:,:,:)                       :: Hk              ![2][Nlat*Norb*Nspin][Nlat*Norb*Nspin][Nk]
   real(8)                                           :: Wtk(size(Hk,4)) ![Nk]
   complex(8),intent(inout),dimension(:,:,:,:,:,:,:) :: Greal           ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lreal]
   complex(8),intent(inout),dimension(:,:,:,:,:,:,:) :: Freal           ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lreal]
   complex(8),intent(inout),dimension(:,:,:,:,:,:,:) :: Sreal           ![2][Nlat][Nspin][Nspin][Norb][Norb][Lreal]
-  integer                                           :: iprint
   logical,optional                                  :: hk_symm(size(Hk,4))
   logical                                           :: hk_symm_(size(Hk,4))
   !
@@ -251,7 +241,7 @@ subroutine dmft_get_gloc_realaxis_superc_gij(Hk,Wtk,Greal,Freal,Sreal,iprint,hk_
   !
   hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
   !
-  write(*,"(A)")"Get full Green's function (print mode:"//reg(txtfy(iprint))//")"
+  write(*,"(A)")"Get full Green's function (no print)"
   !
   allocate(Gkreal(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal));Gkreal=zero
   allocate(Fkreal(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal));Fkreal=zero
@@ -300,8 +290,6 @@ subroutine dmft_get_gloc_realaxis_superc_gij(Hk,Wtk,Greal,Freal,Sreal,iprint,hk_
      call eta(ik,Lk)
   end do
   call stop_timer
-  call dmft_gloc_print_realaxis_gij(wm,Greal,"Gij",iprint)
-  call dmft_gloc_print_realaxis_gij(wm,Freal,"Fij",iprint)
 end subroutine dmft_get_gloc_realaxis_superc_gij
 
 

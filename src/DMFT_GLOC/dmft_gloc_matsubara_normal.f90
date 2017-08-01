@@ -1,9 +1,8 @@
-subroutine dmft_get_gloc_matsubara_normal_main(Hk,Wtk,Gmats,Smats,iprint,hk_symm)
+subroutine dmft_get_gloc_matsubara_normal_main(Hk,Wtk,Gmats,Smats,hk_symm)
   complex(8),dimension(:,:,:),intent(in)        :: Hk        ![Nspin*Norb][Nspin*Norb][Lk]
   real(8),dimension(size(Hk,3)),intent(in)      :: Wtk       ![Nk]
   complex(8),dimension(:,:,:,:,:),intent(in)    :: Smats     ![Nspin][Nspin][Norb][Norb][Lmats]
   complex(8),dimension(:,:,:,:,:),intent(inout) :: Gmats     !as Smats
-  integer,intent(in)                            :: iprint
   logical,dimension(size(Hk,3)),optional        :: hk_symm   ![Lk]
   logical,dimension(size(Hk,3))                 :: hk_symm_  ![Lk]
   !allocatable arrays
@@ -41,7 +40,7 @@ subroutine dmft_get_gloc_matsubara_normal_main(Hk,Wtk,Gmats,Smats,iprint,hk_symm
   enddo
   !
   !invert (Z-Hk) for each k-point
-  write(*,"(A)")"Get local Matsubara Green's function (print mode:"//reg(txtfy(iprint))//")"
+  write(*,"(A)")"Get local Matsubara Green's function (no print)"
   call start_timer
   Gmats=zero
   do ik=1,Lk
@@ -50,20 +49,18 @@ subroutine dmft_get_gloc_matsubara_normal_main(Hk,Wtk,Gmats,Smats,iprint,hk_symm
      call eta(ik,Lk)
   end do
   call stop_timer
-  call dmft_gloc_print_matsubara(wm,Gmats,"Gloc",iprint)
 end subroutine dmft_get_gloc_matsubara_normal_main
 
 
 
 
 
-subroutine dmft_get_gloc_matsubara_normal_dos(Ebands,Dbands,Hloc,Gmats,Smats,iprint)
+subroutine dmft_get_gloc_matsubara_normal_dos(Ebands,Dbands,Hloc,Gmats,Smats)
   real(8),dimension(:,:),intent(in)                           :: Ebands    ![Nspin*Norb][Lk]
   real(8),dimension(size(Ebands,1),size(Ebands,2)),intent(in) :: Dbands    ![Nspin*Norb][Lk]
   real(8),dimension(size(Ebands,1)),intent(in)                :: Hloc      ![Nspin*Norb]
   complex(8),dimension(:,:,:,:,:),intent(in)                  :: Smats     ![Nspin][Nspin][Norb][Norb][Lmats]
   complex(8),dimension(:,:,:,:,:),intent(inout)               :: Gmats     !as Smats
-  integer,intent(in)                                          :: iprint
   !
   complex(8)                                                  :: gktmp
   complex(8),dimension(:,:,:),allocatable                     :: zeta_mats ![Nspin*Norb][Nspin*Norb][Lmats]
@@ -96,7 +93,7 @@ subroutine dmft_get_gloc_matsubara_normal_dos(Ebands,Dbands,Hloc,Gmats,Smats,ipr
   enddo
   !
   !invert (Z-Hk) for each k-point
-  write(*,"(A)")"Get local Matsubara Green's function (print mode:"//reg(txtfy(iprint))//")"
+  write(*,"(A)")"Get local Matsubara Green's function (no print)"
   call start_timer
   Gmats=zero
   do i=1,Lmats
@@ -112,7 +109,6 @@ subroutine dmft_get_gloc_matsubara_normal_dos(Ebands,Dbands,Hloc,Gmats,Smats,ipr
      call eta(i,Lmats)
   end do
   call stop_timer
-  call dmft_gloc_print_matsubara(wm,Gmats,"Gloc",iprint)
 end subroutine dmft_get_gloc_matsubara_normal_dos
 
 
@@ -120,12 +116,11 @@ end subroutine dmft_get_gloc_matsubara_normal_dos
 
 
 
-subroutine dmft_get_gloc_matsubara_normal_ineq(Hk,Wtk,Gmats,Smats,iprint,tridiag,hk_symm)
+subroutine dmft_get_gloc_matsubara_normal_ineq(Hk,Wtk,Gmats,Smats,tridiag,hk_symm)
   complex(8),dimension(:,:,:),intent(in)          :: Hk        ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Nk]
   real(8),dimension(size(Hk,3)),intent(in)        :: Wtk       ![Nk]
   complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Smats     ![Nlat][Nspin][Nspin][Norb][Norb][Lmats]
   complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gmats     !as Smats
-  integer,intent(in)                              :: iprint    !
   logical,optional                                :: tridiag
   logical                                         :: tridiag_
   logical,dimension(size(Hk,3)),optional          :: hk_symm
@@ -157,7 +152,7 @@ subroutine dmft_get_gloc_matsubara_normal_ineq(Hk,Wtk,Gmats,Smats,iprint,tridiag
   call assert_shape(Smats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gloc_matsubara_normal_ineq_main',"Smats")
   call assert_shape(Gmats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gloc_matsubara_normal_ineq_main',"Gmats")
   !
-  write(*,"(A)")"Get local Matsubara Green's function (print mode:"//reg(txtfy(iprint))//")"
+  write(*,"(A)")"Get local Matsubara Green's function (no print)"
   if(.not.tridiag_)then
      write(*,"(A)")"Direct Inversion algorithm:"
   else
@@ -192,16 +187,14 @@ subroutine dmft_get_gloc_matsubara_normal_ineq(Hk,Wtk,Gmats,Smats,iprint,tridiag
      end do
   endif
   call stop_timer
-  call dmft_gloc_print_matsubara_ineq(wm,Gmats,"LG",iprint)
 end subroutine dmft_get_gloc_matsubara_normal_ineq
 
 
-subroutine dmft_get_gloc_matsubara_normal_gij(Hk,Wtk,Gmats,Smats,iprint,hk_symm)
+subroutine dmft_get_gloc_matsubara_normal_gij(Hk,Wtk,Gmats,Smats,hk_symm)
   complex(8),dimension(:,:,:),intent(in)            :: Hk        ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Nk]
   real(8),dimension(size(Hk,3)),intent(in)          :: Wtk       ![Nk]
   complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Smats     !      [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
   complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gmats     ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
-  integer,intent(in)                                :: iprint
   logical,dimension(size(Hk,3)),optional            :: hk_symm
   logical,dimension((size(Hk,3)))                   :: hk_symm_
   !allocatable arrays
@@ -230,7 +223,7 @@ subroutine dmft_get_gloc_matsubara_normal_gij(Hk,Wtk,Gmats,Smats,iprint,hk_symm)
   !
   hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
   !
-  write(*,"(A)")"Get full Green's function (print mode:"//reg(txtfy(iprint))//")"
+  write(*,"(A)")"Get full Green's function (no print)"
   !
   allocate(Gkmats(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats));Gkmats=zero
   allocate(zeta_mats(Nlat,Nso,Nso,Lmats));zeta_mats=zero
@@ -252,5 +245,4 @@ subroutine dmft_get_gloc_matsubara_normal_gij(Hk,Wtk,Gmats,Smats,iprint,hk_symm)
      call eta(ik,Lk)
   end do
   call stop_timer
-  call dmft_gloc_print_matsubara_gij(wm,Gmats,"Gij",iprint)
 end subroutine dmft_get_gloc_matsubara_normal_gij

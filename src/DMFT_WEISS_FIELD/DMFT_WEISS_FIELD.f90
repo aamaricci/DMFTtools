@@ -1,7 +1,7 @@
 module DMFT_WEISS_FIELD
   USE SF_TIMER
   USE SF_CONSTANTS, only: one,xi,zero,pi
-  USE SF_IOTOOLS,   only:reg,txtfy,splot,file_gzip
+  USE SF_IOTOOLS,   only:reg,txtfy
   USE SF_ARRAYS,    only:arange
   USE SF_LINALG,    only:eye,inv
   USE SF_MISC,      only:assert_shape
@@ -11,6 +11,46 @@ module DMFT_WEISS_FIELD
 #endif
   implicit none
   private
+
+
+
+
+
+
+  interface dmft_weiss
+     module procedure :: dmft_get_weiss_normal_main
+     module procedure :: dmft_get_weiss_normal_ineq
+     module procedure :: dmft_get_weiss_superc_main
+     module procedure :: dmft_get_weiss_superc_ineq
+#ifdef _MPI
+     module procedure :: dmft_get_weiss_normal_ineq_mpi
+     module procedure :: dmft_get_weiss_superc_ineq_mpi
+#endif
+  end interface dmft_weiss
+
+
+  interface dmft_delta
+     module procedure :: dmft_get_delta_normal_main
+     module procedure :: dmft_get_delta_normal_ineq
+     module procedure :: dmft_get_delta_superc_main
+     module procedure :: dmft_get_delta_superc_ineq
+#ifdef _MPI
+     module procedure :: dmft_get_delta_normal_ineq_mpi
+     module procedure :: dmft_get_delta_superc_ineq_mpi
+#endif
+  end interface dmft_delta
+
+
+
+  public :: dmft_weiss
+  public :: dmft_delta
+
+
+
+  !##################################################################
+  !##################################################################
+  !##################################################################
+
 
 
   interface select_block
@@ -39,75 +79,6 @@ module DMFT_WEISS_FIELD
      module procedure c_nn2nso
   end interface nn2so_reshape
 
-
-
-
-  interface dmft_weiss
-     module procedure :: dmft_get_weiss_normal_main
-     module procedure :: dmft_get_weiss_normal_1b
-     module procedure :: dmft_get_weiss_normal_Mb
-     module procedure :: dmft_get_weiss_normal_lattice_main
-     module procedure :: dmft_get_weiss_normal_lattice_1b
-     module procedure :: dmft_get_weiss_normal_lattice_mb
-#ifdef _MPI
-     module procedure :: dmft_get_weiss_normal_lattice_main_mpi
-     module procedure :: dmft_get_weiss_normal_lattice_1b_mpi
-     module procedure :: dmft_get_weiss_normal_lattice_mb_mpi
-#endif
-  end interface dmft_weiss
-
-
-  interface dmft_weiss_superc
-     module procedure :: dmft_get_weiss_superc_main
-     module procedure :: dmft_get_weiss_superc_1b
-     module procedure :: dmft_get_weiss_superc_Mb
-     module procedure :: dmft_get_weiss_superc_lattice_main
-     module procedure :: dmft_get_weiss_superc_lattice_1b
-     module procedure :: dmft_get_weiss_superc_lattice_Mb
-#ifdef _MPI
-     module procedure :: dmft_get_weiss_superc_lattice_main_mpi
-     module procedure :: dmft_get_weiss_superc_lattice_1b_mpi
-     module procedure :: dmft_get_weiss_superc_lattice_Mb_mpi
-#endif
-  end interface dmft_weiss_superc
-
-
-  interface dmft_delta
-     module procedure :: dmft_get_delta_normal_main
-     module procedure :: dmft_get_delta_normal_1b
-     module procedure :: dmft_get_delta_normal_Mb
-     module procedure :: dmft_get_delta_normal_lattice_main
-     module procedure :: dmft_get_delta_normal_lattice_1b
-     module procedure :: dmft_get_delta_normal_lattice_mb
-#ifdef _MPI
-     module procedure :: dmft_get_delta_normal_lattice_main_mpi
-     module procedure :: dmft_get_delta_normal_lattice_1b_mpi
-     module procedure :: dmft_get_delta_normal_lattice_mb_mpi
-#endif
-  end interface dmft_delta
-
-  interface dmft_delta_superc
-     module procedure :: dmft_get_delta_superc_main
-     module procedure :: dmft_get_delta_superc_1b
-     module procedure :: dmft_get_delta_superc_Mb
-     module procedure :: dmft_get_delta_superc_lattice_main
-     module procedure :: dmft_get_delta_superc_lattice_1b
-     module procedure :: dmft_get_delta_superc_lattice_Mb
-#ifdef _MPI
-     module procedure :: dmft_get_delta_superc_lattice_main_mpi
-     module procedure :: dmft_get_delta_superc_lattice_1b_mpi
-     module procedure :: dmft_get_delta_superc_lattice_Mb_mpi
-#endif
-  end interface dmft_delta_superc
-
-
-  public :: dmft_weiss
-  public :: dmft_delta
-
-  public :: dmft_weiss_superc
-  public :: dmft_delta_superc
-
-
   real(8),dimension(:),allocatable :: wm !Matsubara frequencies
   character(len=128)               :: suffix
   character(len=128)               :: weiss_suffix=".dat"
@@ -134,7 +105,6 @@ contains
   ! 1. GLOC  : ([2][Nlat])[Nspin][Nspin][Norb][Norb][Lmats]
   ! 2. Sigma : ([2][Nlat])[Nspin][Nspin][Norb][Norb][Lmats]
   ! 4. Hloc  : local part of the non-interacting Hamiltonian
-  ! 5. Iprint: printing flag
   !--------------------------------------------------------------------!
   !--------------------------------------------------------------------!
   !
@@ -142,13 +112,13 @@ contains
   !
   !--------------------------------------------------------------------!
   !--------------------------------------------------------------------!
-#define FROUTINE 'dmft_get_weiss_normal_main'
-  subroutine dmft_get_weiss_normal_main(Gloc,Smats,Weiss,Hloc,iprint)
+
+
+  subroutine dmft_get_weiss_normal_main(Gloc,Smats,Weiss,Hloc)
     complex(8),dimension(:,:,:,:,:),intent(in)    :: Gloc  ! [Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:),intent(in)    :: Smats ! [Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:),intent(inout) :: Weiss ! [Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:),intent(in)      :: Hloc  ! [Nspin][Nspin][Norb][Norb]
-    integer                                       :: iprint
     !aux
     complex(8),dimension(:,:,:),allocatable       :: zeta_site ![Nspin*Norb][Nspin*Norb][Lmats]
     complex(8),dimension(:,:,:),allocatable       :: Smats_site![Nspin*Norb][Nspin*Norb][Lmats]
@@ -166,10 +136,10 @@ contains
     Norb  = size(Gloc,3)
     Lmats = size(Gloc,5)
     Nso   = Nspin*Norb
-    call assert_shape(Gloc,[Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Gloc")
-    call assert_shape(Smats,[Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Smats")
-    call assert_shape(Weiss,[Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Weiss")
-    call assert_shape(Hloc,[Nspin,Nspin,Norb,Norb],FROUTINE,"Hloc")
+    call assert_shape(Gloc,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_normal_main","Gloc")
+    call assert_shape(Smats,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_normal_main","Smats")
+    call assert_shape(Weiss,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_normal_main","Weiss")
+    call assert_shape(Hloc,[Nspin,Nspin,Norb,Norb],"dmft_get_weiss_normal_main","Hloc")
     !
     if(allocated(wm))deallocate(wm)
     allocate(wm(Lmats))
@@ -203,18 +173,14 @@ contains
        Weiss(:,:,:,:,i) = so2nn_reshape(calG0_site(:,:,i),Nspin,Norb)
     enddo
     !
-    call dmft_weiss_print_single(wm,Weiss,"WeissG0",iprint)
-    !
   end subroutine dmft_get_weiss_normal_main
-#undef FROUTINE
 
-#define FROUTINE 'dmft_get_weiss_normal_lattice_main'
-  subroutine dmft_get_weiss_normal_lattice_main(Gloc,Smats,Weiss,Hloc,iprint)
+
+  subroutine dmft_get_weiss_normal_ineq(Gloc,Smats,Weiss,Hloc)
     complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Gloc         ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Smats        ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Weiss        ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:),intent(in)      :: Hloc         ! [Nlat][Nspin][Nspin][Norb][Norb]
-    integer                                         :: iprint       
     !aux
     complex(8),dimension(:,:,:,:,:,:),allocatable   :: Weiss_tmp    ![Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:),allocatable         :: zeta_site    ![Nspin*Norb][Nspin*Norb][Lmats]
@@ -235,10 +201,10 @@ contains
     Lmats = size(Gloc,6)
     Nso   = Nspin*Norb
     Nlso  = Nlat*Nspin*Norb
-    call assert_shape(Gloc,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Gloc")
-    call assert_shape(Smats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Smats")
-    call assert_shape(Weiss,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Weiss")
-    call assert_shape(Hloc,[Nlat,Nspin,Nspin,Norb,Norb],FROUTINE,"Hloc")
+    call assert_shape(Gloc,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_normal_ineq","Gloc")
+    call assert_shape(Smats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_normal_ineq","Smats")
+    call assert_shape(Weiss,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_normal_ineq","Weiss")
+    call assert_shape(Hloc,[Nlat,Nspin,Nspin,Norb,Norb],"dmft_get_weiss_normal_ineq","Hloc")
     !
     if(allocated(wm))deallocate(wm)
     allocate(wm(Lmats))
@@ -285,20 +251,16 @@ contains
        enddo
     end do
     !
-    call dmft_weiss_print_lattice(wm,Weiss,"LWeissG0",iprint)
-    !
-  end subroutine dmft_get_weiss_normal_lattice_main
-#undef FROUTINE
+  end subroutine dmft_get_weiss_normal_ineq
+
 
 #ifdef _MPI
-#define FROUTINE 'dmft_get_weiss_normal_lattice_main_mpi'
-  subroutine dmft_get_weiss_normal_lattice_main_mpi(MpiComm,Gloc,Smats,Weiss,Hloc,iprint)
+  subroutine dmft_get_weiss_normal_ineq_mpi(MpiComm,Gloc,Smats,Weiss,Hloc)
     integer                                         :: MpiComm
     complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Gloc         ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Smats        ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Weiss        ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:),intent(in)      :: Hloc         ! [Nlat][Nspin][Nspin][Norb][Norb]
-    integer                                         :: iprint       
     !aux
     complex(8),dimension(:,:,:,:,:,:),allocatable   :: Weiss_tmp    ![Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:),allocatable         :: zeta_site    ![Nspin*Norb][Nspin*Norb][Lmats]
@@ -324,10 +286,10 @@ contains
     Lmats = size(Gloc,6)
     Nso   = Nspin*Norb
     Nlso  = Nlat*Nspin*Norb
-    call assert_shape(Gloc,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Gloc")
-    call assert_shape(Smats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Smats")
-    call assert_shape(Weiss,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Weiss")
-    call assert_shape(Hloc,[Nlat,Nspin,Nspin,Norb,Norb],FROUTINE,"Hloc")
+    call assert_shape(Gloc,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_normal_ineq_mpi","Gloc")
+    call assert_shape(Smats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_normal_ineq_mpi","Smats")
+    call assert_shape(Weiss,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_normal_ineq_mpi","Weiss")
+    call assert_shape(Hloc,[Nlat,Nspin,Nspin,Norb,Norb],"dmft_get_weiss_normal_ineq_mpi","Hloc")
     !
     if(allocated(wm))deallocate(wm)
     allocate(wm(Lmats))
@@ -377,167 +339,13 @@ contains
     !
     call Mpi_AllReduce(Weiss_tmp, Weiss, size(Weiss), MPI_Double_Complex, MPI_Sum, MpiComm, mpi_ierr)
     !
-    if(mpi_master)call dmft_weiss_print_lattice(wm,Weiss,"LWeissG0",iprint)
-    !
-  end subroutine dmft_get_weiss_normal_lattice_main_mpi
-#undef FROUTINE
+  end subroutine dmft_get_weiss_normal_ineq_mpi
 #endif
 
 
-  !##################################################################
-  !##################################################################
-  !##################################################################
 
 
-  subroutine dmft_get_weiss_normal_1b(Gloc,Smats,Weiss,Hloc,iprint)
-    complex(8),dimension(:),intent(in)             :: Gloc
-    complex(8),dimension(size(Gloc)),intent(in)    :: Smats
-    complex(8),dimension(size(Gloc)),intent(inout) :: Weiss
-    complex(8),dimension(1,1,1,1)                  :: Hloc
-    integer                                        :: iprint
-    !aux
-    complex(8),dimension(1,1,1,1,size(Gloc))       :: Gloc_
-    complex(8),dimension(1,1,1,1,size(Gloc))       :: Smats_
-    complex(8),dimension(1,1,1,1,size(Gloc))       :: Weiss_
-    Gloc_(1,1,1,1,:) = Gloc(:)
-    Smats_(1,1,1,1,:) = Smats(:)
-    call dmft_get_weiss_normal_main(Gloc_,Smats_,Weiss_,Hloc,iprint)
-    Weiss(:) = Weiss_(1,1,1,1,:)
-  end subroutine dmft_get_weiss_normal_1b
 
-  subroutine dmft_get_weiss_normal_lattice_1b(Gloc,Smats,Weiss,Hloc,iprint)
-    complex(8),dimension(:,:),intent(in)                          :: Gloc
-    complex(8),dimension(size(Gloc,1),size(Gloc,2)),intent(in)    :: Smats
-    complex(8),dimension(size(Gloc,1),size(Gloc,2)),intent(inout) :: Weiss
-    complex(8),dimension(size(Gloc,1),1,1,1,1)                    :: Hloc
-    integer                                                       :: iprint
-    !aux
-    complex(8),dimension(size(Gloc,1),1,1,1,1,size(Gloc,2))       :: Gloc_
-    complex(8),dimension(size(Gloc,1),1,1,1,1,size(Gloc,2))       :: Smats_
-    complex(8),dimension(size(Gloc,1),1,1,1,1,size(Gloc,2))       :: Weiss_
-    Gloc_(:,1,1,1,1,:) = Gloc(:,:)
-    Smats_(:,1,1,1,1,:) = Smats(:,:)
-    call dmft_get_weiss_normal_lattice_main(Gloc_,Smats_,Weiss_,Hloc,iprint)
-    Weiss(:,:) = Weiss_(:,1,1,1,1,:)
-  end subroutine dmft_get_weiss_normal_lattice_1b
-
-#ifdef _MPI
-  subroutine dmft_get_weiss_normal_lattice_1b_mpi(MpiComm,Gloc,Smats,Weiss,Hloc,iprint)
-    integer                                                       :: MpiComm
-    complex(8),dimension(:,:),intent(in)                          :: Gloc
-    complex(8),dimension(size(Gloc,1),size(Gloc,2)),intent(in)    :: Smats
-    complex(8),dimension(size(Gloc,1),size(Gloc,2)),intent(inout) :: Weiss
-    complex(8),dimension(size(Gloc,1),1,1,1,1)                    :: Hloc
-    integer                                                       :: iprint
-    !aux
-    complex(8),dimension(size(Gloc,1),1,1,1,1,size(Gloc,2))       :: Gloc_
-    complex(8),dimension(size(Gloc,1),1,1,1,1,size(Gloc,2))       :: Smats_
-    complex(8),dimension(size(Gloc,1),1,1,1,1,size(Gloc,2))       :: Weiss_
-    Gloc_(:,1,1,1,1,:) = Gloc(:,:)
-    Smats_(:,1,1,1,1,:) = Smats(:,:)
-    call dmft_get_weiss_normal_lattice_main_mpi(MpiComm,Gloc_,Smats_,Weiss_,Hloc,iprint)
-    Weiss(:,:) = Weiss_(:,1,1,1,1,:)
-  end subroutine dmft_get_weiss_normal_lattice_1b_mpi
-#endif
-
-
-#define FROUTINE 'dmft_get_weiss_normal_Mb'
-  subroutine dmft_get_weiss_normal_Mb(Gloc,Smats,Weiss,Hloc,iprint)
-    complex(8),dimension(:,:,:),intent(in)      :: Gloc  ![Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:),intent(in)      :: Smats !
-    complex(8),dimension(:,:,:),intent(inout)   :: Weiss !
-    complex(8),dimension(:,:,:,:),intent(in)    :: Hloc  ![Nspin][Nspin][Norb][Norb]
-    integer                                     :: iprint
-    !aux
-    complex(8),dimension(:,:,:,:,:),allocatable :: Gloc_ ![Nspin][Nspin][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:,:),allocatable :: Smats_!
-    complex(8),dimension(:,:,:,:,:),allocatable :: Weiss_!
-    integer                                     :: Nspin,Norb,Lfreq
-    !
-    Nspin = 1
-    Norb  = size(Gloc,1)
-    Lfreq = size(Gloc,3)
-    !
-    call assert_shape(Gloc,[Norb,Norb,Lfreq],FROUTINE,"Gloc")
-    call assert_shape(Smats,[Norb,Norb,Lfreq],FROUTINE,"Smats")
-    call assert_shape(Weiss,[Norb,Norb,Lfreq],FROUTINE,"Weiss")
-    call assert_shape(Hloc,[1,1,Norb,Norb],FROUTINE,"Hloc")
-    allocate(Gloc_(1,1,Norb,Norb,Lfreq))
-    allocate(Smats_(1,1,Norb,Norb,Lfreq))
-    allocate(Weiss_(1,1,Norb,Norb,Lfreq))
-    Gloc_(1,1,:,:,:) = Gloc(:,:,:)
-    Smats_(1,1,:,:,:) = Smats(:,:,:)
-    call dmft_get_weiss_normal_main(Gloc_,Smats_,Weiss_,Hloc,iprint)
-    Weiss(:,:,:) = Weiss_(1,1,:,:,:)
-  end subroutine dmft_get_weiss_normal_mb
-#undef FROUTINE
-
-#define FROUTINE 'dmft_get_weiss_normal_lattice_mb'
-  subroutine dmft_get_weiss_normal_lattice_mb(Gloc,Smats,Weiss,Hloc,iprint)
-    complex(8),dimension(:,:,:,:),intent(in)      :: Gloc  ![Nlat][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:),intent(in)      :: Smats !
-    complex(8),dimension(:,:,:,:),intent(inout)   :: Weiss !
-    complex(8),dimension(:,:,:,:,:),intent(in)    :: Hloc  ![Nlat][Nspin][Nspin][Norb][Norb]
-    integer                                       :: iprint
-    !aux
-    complex(8),dimension(:,:,:,:,:,:),allocatable :: Gloc_ ![Nlat][Nspin][Nspin][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:,:,:),allocatable :: Smats_!
-    complex(8),dimension(:,:,:,:,:,:),allocatable :: Weiss_!
-    integer                                       :: Nlat,Nspin,Norb,Lfreq
-    !
-    Nlat  = size(Gloc,1)
-    Nspin = 1
-    Norb  = size(Gloc,2)
-    Lfreq = size(Gloc,4)
-    call assert_shape(Gloc,[Nlat,Norb,Norb,Lfreq],FROUTINE,"Gloc")
-    call assert_shape(Smats,[Nlat,Norb,Norb,Lfreq],FROUTINE,"Smats")
-    call assert_shape(Weiss,[Nlat,Norb,Norb,Lfreq],FROUTINE,"Weiss")
-    call assert_shape(Hloc,[Nlat,1,1,Norb,Norb],FROUTINE,"Hloc")
-    allocate(Gloc_(Nlat,1,1,Norb,Norb,Lfreq))
-    allocate(Smats_(Nlat,1,1,Norb,Norb,Lfreq))
-    allocate(Weiss_(Nlat,1,1,Norb,Norb,Lfreq))
-    !
-    Gloc_(:,1,1,:,:,:) = Gloc(:,:,:,:)
-    Smats_(:,1,1,:,:,:) = Smats(:,:,:,:)
-    call dmft_get_weiss_normal_lattice_main(Gloc_,Smats_,Weiss_,Hloc,iprint)
-    Weiss(:,:,:,:) = Weiss_(:,1,1,:,:,:)
-  end subroutine dmft_get_weiss_normal_lattice_mb
-#undef FROUTINE
-
-#ifdef _MPI
-#define FROUTINE 'dmft_get_weiss_normal_lattice_mb_mpi'
-  subroutine dmft_get_weiss_normal_lattice_mb_mpi(MpiComm,Gloc,Smats,Weiss,Hloc,iprint)
-    integer                                       :: MpiComm
-    complex(8),dimension(:,:,:,:),intent(in)      :: Gloc  ![Nlat][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:),intent(in)      :: Smats !
-    complex(8),dimension(:,:,:,:),intent(inout)   :: Weiss !
-    complex(8),dimension(:,:,:,:,:),intent(in)    :: Hloc  ![Nlat][Nspin][Nspin][Norb][Norb]
-    integer                                       :: iprint
-    !aux
-    complex(8),dimension(:,:,:,:,:,:),allocatable :: Gloc_ ![Nlat][Nspin][Nspin][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:,:,:),allocatable :: Smats_!
-    complex(8),dimension(:,:,:,:,:,:),allocatable :: Weiss_!
-    integer                                       :: Nlat,Nspin,Norb,Lfreq
-    !
-    Nlat  = size(Gloc,1)
-    Nspin = 1
-    Norb  = size(Gloc,2)
-    Lfreq = size(Gloc,4)
-    call assert_shape(Gloc,[Nlat,Norb,Norb,Lfreq],FROUTINE,"Gloc")
-    call assert_shape(Smats,[Nlat,Norb,Norb,Lfreq],FROUTINE,"Smats")
-    call assert_shape(Weiss,[Nlat,Norb,Norb,Lfreq],FROUTINE,"Weiss")
-    call assert_shape(Hloc,[Nlat,1,1,Norb,Norb],FROUTINE,"Hloc")
-    allocate(Gloc_(Nlat,1,1,Norb,Norb,Lfreq))
-    allocate(Smats_(Nlat,1,1,Norb,Norb,Lfreq))
-    allocate(Weiss_(Nlat,1,1,Norb,Norb,Lfreq))
-    !
-    Gloc_(:,1,1,:,:,:) = Gloc(:,:,:,:)
-    Smats_(:,1,1,:,:,:) = Smats(:,:,:,:)
-    call dmft_get_weiss_normal_lattice_main_mpi(MpiComm,Gloc_,Smats_,Weiss_,Hloc,iprint)
-    Weiss(:,:,:,:) = Weiss_(:,1,1,:,:,:)
-  end subroutine dmft_get_weiss_normal_lattice_mb_mpi
-#undef FROUTINE
-#endif
 
 
 
@@ -549,13 +357,11 @@ contains
   !
   !--------------------------------------------------------------------!
   !--------------------------------------------------------------------!
-#define FROUTINE 'dmft_get_weiss_superc_main'
-  subroutine dmft_get_weiss_superc_main(Gloc,Smats,Weiss,Hloc,iprint)
+  subroutine dmft_get_weiss_superc_main(Gloc,Smats,Weiss,Hloc)
     complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Gloc         ! [2][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Smats        !
     complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Weiss        !
     complex(8),dimension(:,:,:,:),intent(in)        :: Hloc         ! [Nspin][Nspin][Norb][Norb]
-    integer                                         :: iprint
     !aux
     complex(8),dimension(:,:,:),allocatable         :: zeta_site    ![2*Nspin*Norb][2*Nspin*Norb][Lmats]
     complex(8),dimension(:,:,:),allocatable         :: Smats_site   ![2*Nspin*Norb][2*Nspin*Norb][Lmats]
@@ -574,10 +380,10 @@ contains
     Lmats = size(Gloc,6)
     Nso   = Nspin*Norb
     Nso2  = 2*Nso
-    call assert_shape(Gloc,[2,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Gloc")
-    call assert_shape(Smats,[2,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Smats")
-    call assert_shape(Weiss,[2,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Weiss")
-    call assert_shape(Hloc,[Nspin,Nspin,Norb,Norb],FROUTINE,"Hloc")
+    call assert_shape(Gloc,[2,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_main","Gloc")
+    call assert_shape(Smats,[2,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_main","Smats")
+    call assert_shape(Weiss,[2,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_main","Weiss")
+    call assert_shape(Hloc,[Nspin,Nspin,Norb,Norb],"dmft_get_weiss_superc_main","Hloc")
     !
     if(allocated(wm))deallocate(wm)
     allocate(wm(Lmats))
@@ -649,19 +455,14 @@ contains
        enddo
     enddo
     !
-    call dmft_weiss_print_single(wm,Weiss(1,:,:,:,:,:),"WeissG0",iprint)
-    call dmft_weiss_print_single(wm,Weiss(2,:,:,:,:,:),"WeissF0",iprint)
-    !
   end subroutine dmft_get_weiss_superc_main
-#undef FROUTINE
 
-#define FROUTINE 'dmft_get_weiss_superc_lattice_main'
-  subroutine dmft_get_weiss_superc_lattice_main(Gloc,Smats,Weiss,Hloc,iprint)
+
+  subroutine dmft_get_weiss_superc_ineq(Gloc,Smats,Weiss,Hloc)
     complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Gloc         ! [2][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Smats        ! 
     complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Weiss        ! 
     complex(8),dimension(:,:,:,:,:),intent(in)        :: Hloc         ! [Nlat][Nspin][Nspin][Norb][Norb]
-    integer                                           :: iprint
     !aux
     complex(8),dimension(:,:,:),allocatable           :: zeta_site    ![2*Nspin*Norb][2*Nspin*Norb][Lmats]
     complex(8),dimension(:,:,:),allocatable           :: Smats_site   !
@@ -682,10 +483,10 @@ contains
     Nso   = Nspin*Norb
     Nso2  = 2*Nso
     Nlso  = Nlat*Nspin*Norb
-    call assert_shape(Gloc,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Gloc")
-    call assert_shape(Smats,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Smats")
-    call assert_shape(Weiss,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Weiss")
-    call assert_shape(Hloc,[Nlat,Nspin,Nspin,Norb,Norb],FROUTINE,"Hloc")
+    call assert_shape(Gloc,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_ineq","Gloc")
+    call assert_shape(Smats,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_ineq","Smats")
+    call assert_shape(Weiss,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_ineq","Weiss")
+    call assert_shape(Hloc,[Nlat,Nspin,Nspin,Norb,Norb],"dmft_get_weiss_superc_ineq","Hloc")
     !
     if(allocated(wm))deallocate(wm)
     allocate(wm(Lmats))
@@ -758,21 +559,15 @@ contains
        enddo
     end do
     !
-    call dmft_weiss_print_lattice(wm,Weiss(1,:,:,:,:,:,:),"LWeissG0",iprint)
-    call dmft_weiss_print_lattice(wm,Weiss(2,:,:,:,:,:,:),"LWeissF0",iprint)
-    !
-  end subroutine dmft_get_weiss_superc_lattice_main
-#undef FROUTINE
+  end subroutine dmft_get_weiss_superc_ineq
 
 #ifdef _MPI
-#define FROUTINE 'dmft_get_weiss_superc_lattice_main_mpi'
-  subroutine dmft_get_weiss_superc_lattice_main_mpi(MpiComm,Gloc,Smats,Weiss,Hloc,iprint)
+  subroutine dmft_get_weiss_superc_ineq_mpi(MpiComm,Gloc,Smats,Weiss,Hloc)
     integer                                           :: MpiComm
     complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Gloc         ! [2][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Smats        ! 
     complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Weiss        ! 
     complex(8),dimension(:,:,:,:,:),intent(in)        :: Hloc         ! [Nlat][Nspin][Nspin][Norb][Norb]
-    integer                                           :: iprint
     !aux
     complex(8),dimension(:,:,:,:,:,:,:),allocatable   :: Weiss_tmp        ! 
     complex(8),dimension(:,:,:),allocatable           :: zeta_site    ![2*Nspin*Norb][2*Nspin*Norb][Lmats]
@@ -800,10 +595,10 @@ contains
     Nso   = Nspin*Norb
     Nso2  = 2*Nso
     Nlso  = Nlat*Nspin*Norb
-    call assert_shape(Gloc,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Gloc")
-    call assert_shape(Smats,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Smats")
-    call assert_shape(Weiss,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Weiss")
-    call assert_shape(Hloc,[Nlat,Nspin,Nspin,Norb,Norb],FROUTINE,"Hloc")
+    call assert_shape(Gloc,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_ineq_mpi","Gloc")
+    call assert_shape(Smats,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_ineq_mpi","Smats")
+    call assert_shape(Weiss,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_ineq_mpi","Weiss")
+    call assert_shape(Hloc,[Nlat,Nspin,Nspin,Norb,Norb],"dmft_get_weiss_superc_ineq_mpi","Hloc")
     !
     if(allocated(wm))deallocate(wm)
     allocate(wm(Lmats))
@@ -880,190 +675,13 @@ contains
     !
     call MPI_Allreduce(Weiss_tmp, Weiss, size(Weiss), MPI_DOUBLE_COMPLEX, MPI_SUM, MpiComm, mpi_ierr)
     !
-    if(mpi_master)then
-       call dmft_weiss_print_lattice(wm,Weiss(1,:,:,:,:,:,:),"LWeissG0",iprint)
-       call dmft_weiss_print_lattice(wm,Weiss(2,:,:,:,:,:,:),"LWeissF0",iprint)
-    endif
-    !
-  end subroutine dmft_get_weiss_superc_lattice_main_mpi
-#undef FROUTINE
+  end subroutine dmft_get_weiss_superc_ineq_mpi
 #endif
 
 
   !##################################################################
   !##################################################################
   !##################################################################
-
-#define FROUTINE 'dmft_get_weiss_superc_1b'
-  subroutine dmft_get_weiss_superc_1b(Gloc,Smats,Weiss,Hloc,iprint)
-    complex(8),dimension(:,:),intent(in)               :: Gloc
-    complex(8),dimension(2,size(Gloc,2)),intent(in)    :: Smats
-    complex(8),dimension(2,size(Gloc,2)),intent(inout) :: Weiss
-    complex(8),dimension(1,1,1,1)                      :: Hloc
-    integer                                            :: iprint
-    !aux
-    complex(8),dimension(2,1,1,1,1,size(Gloc,2))       :: Gloc_
-    complex(8),dimension(2,1,1,1,1,size(Gloc,2))       :: Smats_
-    complex(8),dimension(2,1,1,1,1,size(Gloc,2))       :: Weiss_
-    call assert_shape(Gloc,[2,size(Gloc,2)],FROUTINE,"Gloc")
-    Gloc_(:,1,1,1,1,:) = Gloc(:,:)
-    Smats_(:,1,1,1,1,:) = Smats(:,:)
-    call dmft_get_weiss_superc_main(Gloc_,Smats_,Weiss_,Hloc,iprint)
-    Weiss(:,:) = Weiss_(:,1,1,1,1,:)
-  end subroutine dmft_get_weiss_superc_1b
-#undef FROUTINE
-
-#define FROUTINE 'dmft_get_weiss_superc_lattice_1b'
-  subroutine dmft_get_weiss_superc_lattice_1b(Gloc,Smats,Weiss,Hloc,iprint)
-    complex(8),dimension(:,:,:),intent(in)                          :: Gloc ![2][Nlat][Lmats]
-    complex(8),dimension(2,size(Gloc,2),size(Gloc,3)),intent(in)    :: Smats
-    complex(8),dimension(2,size(Gloc,2),size(Gloc,3)),intent(inout) :: Weiss
-    complex(8),dimension(size(Gloc,2),1,1,1,1)                      :: Hloc
-    integer                                                         :: iprint
-    !aux
-    complex(8),dimension(2,size(Gloc,2),1,1,1,1,size(Gloc,3))       :: Gloc_
-    complex(8),dimension(2,size(Gloc,2),1,1,1,1,size(Gloc,3))       :: Smats_
-    complex(8),dimension(2,size(Gloc,2),1,1,1,1,size(Gloc,3))       :: Weiss_
-    call assert_shape(Gloc,[2,size(Gloc,2),size(Gloc,3)],FROUTINE,"Gloc")
-    Gloc_(:,:,1,1,1,1,:) = Gloc(:,:,:)
-    Smats_(:,:,1,1,1,1,:) = Smats(:,:,:)
-    call dmft_get_weiss_superc_lattice_main(Gloc_,Smats_,Weiss_,Hloc,iprint)
-    Weiss(:,:,:) = Weiss_(:,:,1,1,1,1,:)
-  end subroutine dmft_get_weiss_superc_lattice_1b
-#undef FROUTINE
-
-#ifdef _MPI
-#define FROUTINE 'dmft_get_weiss_superc_lattice_1b_mpi'
-  subroutine dmft_get_weiss_superc_lattice_1b_mpi(MpiComm,Gloc,Smats,Weiss,Hloc,iprint)
-    integer                                                         :: MpiComm
-    complex(8),dimension(:,:,:),intent(in)                          :: Gloc ![2][Nlat][Lmats]
-    complex(8),dimension(2,size(Gloc,2),size(Gloc,3)),intent(in)    :: Smats
-    complex(8),dimension(2,size(Gloc,2),size(Gloc,3)),intent(inout) :: Weiss
-    complex(8),dimension(size(Gloc,2),1,1,1,1)                      :: Hloc
-    integer                                                         :: iprint
-    !aux
-    complex(8),dimension(2,size(Gloc,2),1,1,1,1,size(Gloc,3))       :: Gloc_
-    complex(8),dimension(2,size(Gloc,2),1,1,1,1,size(Gloc,3))       :: Smats_
-    complex(8),dimension(2,size(Gloc,2),1,1,1,1,size(Gloc,3))       :: Weiss_
-    call assert_shape(Gloc,[2,size(Gloc,2),size(Gloc,3)],FROUTINE,"Gloc")
-    Gloc_(:,:,1,1,1,1,:) = Gloc(:,:,:)
-    Smats_(:,:,1,1,1,1,:) = Smats(:,:,:)
-    call dmft_get_weiss_superc_lattice_main_mpi(MpiComm,Gloc_,Smats_,Weiss_,Hloc,iprint)
-    Weiss(:,:,:) = Weiss_(:,:,1,1,1,1,:)
-  end subroutine dmft_get_weiss_superc_lattice_1b_mpi
-#undef FROUTINE
-#endif
-
-#define FROUTINE 'dmft_get_weiss_superc_Mb'
-  subroutine dmft_get_weiss_superc_Mb(Gloc,Smats,Weiss,Hloc,iprint)
-    complex(8),dimension(:,:,:,:),intent(in)      :: Gloc   ![2][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:),intent(in)      :: Smats  !
-    complex(8),dimension(:,:,:,:),intent(inout)   :: Weiss  !
-    complex(8),dimension(:,:,:,:),intent(in)      :: Hloc   ![Nspin][Nspin][Norb][Norb]
-    integer                                       :: iprint
-    !aux
-    complex(8),dimension(:,:,:,:,:,:),allocatable :: Gloc_  ![2][Nspin][Nspin][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:,:,:),allocatable :: Smats_ !
-    complex(8),dimension(:,:,:,:,:,:),allocatable :: Weiss_ !
-    integer                                       :: Nspin,Norb,Lfreq
-    !
-    Nspin=1
-    Norb =size(Gloc,2)
-    Lfreq=size(Gloc,4)
-    call assert_shape(Gloc,[2,Norb,Norb,Lfreq],FROUTINE,"Gloc")
-    call assert_shape(Smats,[2,Norb,Norb,Lfreq],FROUTINE,"Smats")
-    call assert_shape(Weiss,[2,Norb,Norb,Lfreq],FROUTINE,"Weiss")
-    call assert_shape(Hloc,[1,1,Norb,Norb],FROUTINE,"Hloc")
-    allocate(Gloc_(2,1,1,Norb,Norb,Lfreq))
-    allocate(Smats_(2,1,1,Norb,Norb,Lfreq))
-    allocate(Weiss_(2,1,1,Norb,Norb,Lfreq))
-    Gloc_(:,1,1,:,:,:) = Gloc(:,:,:,:)
-    Smats_(:,1,1,:,:,:) = Smats(:,:,:,:)
-    call dmft_get_weiss_superc_main(Gloc_,Smats_,Weiss_,Hloc,iprint)
-    Weiss(:,:,:,:) = Weiss_(:,1,1,:,:,:)
-  end subroutine dmft_get_weiss_superc_Mb
-#undef FROUTINE
-
-#define FROUTINE 'dmft_get_weiss_superc_lattice_Mb'
-  subroutine dmft_get_weiss_superc_lattice_Mb(Gloc,Smats,Weiss,Hloc,iprint)
-    complex(8),dimension(:,:,:,:,:),intent(in)      :: Gloc  ![2][Nlat][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:,:),intent(in)      :: Smats !
-    complex(8),dimension(:,:,:,:,:),intent(inout)   :: Weiss !
-    complex(8),dimension(:,:,:,:,:),intent(in)      :: Hloc  ![Nlat][Nspin][Nspin][Norb][Norb]
-    integer                                         :: iprint
-    !aux
-    complex(8),dimension(:,:,:,:,:,:,:),allocatable :: Gloc_ ![2][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:,:,:,:),allocatable :: Smats_!
-    complex(8),dimension(:,:,:,:,:,:,:),allocatable :: Weiss_!
-    integer                                         :: Nlat,Nspin,Norb,Lfreq
-    !
-    Nlat  = size(Gloc,2)
-    Nspin = 1
-    Norb  = size(Gloc,3)
-    Lfreq = size(Gloc,5)
-    call assert_shape(Gloc,[2,Nlat,Norb,Norb,Lfreq],FROUTINE,"Gloc")
-    call assert_shape(Smats,[2,Nlat,Norb,Norb,Lfreq],FROUTINE,"Smats")
-    call assert_shape(Weiss,[2,Nlat,Norb,Norb,Lfreq],FROUTINE,"Weiss")
-    call assert_shape(Hloc,[Nlat,1,1,Norb,Norb],FROUTINE,"Hloc")
-    allocate(Gloc_(2,Nlat,1,1,Norb,Norb,Lfreq))
-    allocate(Smats_(2,Nlat,1,1,Norb,Norb,Lfreq))
-    allocate(Weiss_(2,Nlat,1,1,Norb,Norb,Lfreq))
-    Gloc_(:,:,1,1,:,:,:) = Gloc(:,:,:,:,:)
-    Smats_(:,:,1,1,:,:,:) = Smats(:,:,:,:,:)
-    call dmft_get_weiss_superc_lattice_main(Gloc_,Smats_,Weiss_,Hloc,iprint)
-    Weiss(:,:,:,:,:) = Weiss_(:,:,1,1,:,:,:)
-  end subroutine dmft_get_weiss_superc_lattice_Mb
-#undef FROUTINE
-
-
-#ifdef _MPI
-#define FROUTINE 'dmft_get_weiss_superc_lattice_Mb_mpi'
-  subroutine dmft_get_weiss_superc_lattice_Mb_mpi(MpiComm,Gloc,Smats,Weiss,Hloc,iprint)
-    integer                                         :: MpiComm
-    complex(8),dimension(:,:,:,:,:),intent(in)      :: Gloc  ![2][Nlat][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:,:),intent(in)      :: Smats !
-    complex(8),dimension(:,:,:,:,:),intent(inout)   :: Weiss !
-    complex(8),dimension(:,:,:,:,:),intent(in)      :: Hloc  ![Nlat][Nspin][Nspin][Norb][Norb]
-    integer                                         :: iprint
-    !aux
-    complex(8),dimension(:,:,:,:,:,:,:),allocatable :: Gloc_ ![2][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:,:,:,:),allocatable :: Smats_!
-    complex(8),dimension(:,:,:,:,:,:,:),allocatable :: Weiss_!
-    integer                                         :: Nlat,Nspin,Norb,Lfreq
-    !
-    Nlat  = size(Gloc,2)
-    Nspin = 1
-    Norb  = size(Gloc,3)
-    Lfreq = size(Gloc,5)
-    call assert_shape(Gloc,[2,Nlat,Norb,Norb,Lfreq],FROUTINE,"Gloc")
-    call assert_shape(Smats,[2,Nlat,Norb,Norb,Lfreq],FROUTINE,"Smats")
-    call assert_shape(Weiss,[2,Nlat,Norb,Norb,Lfreq],FROUTINE,"Weiss")
-    call assert_shape(Hloc,[Nlat,1,1,Norb,Norb],FROUTINE,"Hloc")
-    allocate(Gloc_(2,Nlat,1,1,Norb,Norb,Lfreq))
-    allocate(Smats_(2,Nlat,1,1,Norb,Norb,Lfreq))
-    allocate(Weiss_(2,Nlat,1,1,Norb,Norb,Lfreq))
-    Gloc_(:,:,1,1,:,:,:) = Gloc(:,:,:,:,:)
-    Smats_(:,:,1,1,:,:,:) = Smats(:,:,:,:,:)
-    call dmft_get_weiss_superc_lattice_main_mpi(MpiComm,Gloc_,Smats_,Weiss_,Hloc,iprint)
-    Weiss(:,:,:,:,:) = Weiss_(:,:,1,1,:,:,:)
-  end subroutine dmft_get_weiss_superc_lattice_Mb_mpi
-#undef FROUTINE
-#endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1078,7 +696,6 @@ contains
   ! 1. GLOC  : ([2][Nlat])[Nspin][Nspin][Norb][Norb][Lmats]
   ! 2. Sigma : ([2][Nlat])[Nspin][Nspin][Norb][Norb][Lmats]
   ! 4. Hloc  : local part of the non-interacting Hamiltonian
-  ! 5. Iprint: printing flag
   !--------------------------------------------------------------------!
   !--------------------------------------------------------------------!
   !--------------------------------------------------------------------!
@@ -1087,13 +704,11 @@ contains
   !
   !--------------------------------------------------------------------!
   !--------------------------------------------------------------------!
-#define FROUTINE 'dmft_get_delta_normal_main'
-  subroutine dmft_get_delta_normal_main(Gloc,Smats,Delta,Hloc,iprint)
+  subroutine dmft_get_delta_normal_main(Gloc,Smats,Delta,Hloc)
     complex(8),dimension(:,:,:,:,:),intent(in)    :: Gloc  ! [Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:),intent(in)    :: Smats ! [Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:),intent(inout) :: Delta ! [Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:),intent(in)      :: Hloc  ! [Nspin][Nspin][Norb][Norb]
-    integer                                       :: iprint
     !aux
     complex(8),dimension(:,:,:),allocatable       :: zeta_site ![Nspin*Norb][Nspin*Norb][Lmats]
     complex(8),dimension(:,:,:),allocatable       :: Smats_site![Nspin*Norb][Nspin*Norb][Lmats]
@@ -1111,10 +726,10 @@ contains
     Norb  = size(Gloc,3)
     Lmats = size(Gloc,5)
     Nso   = Nspin*Norb
-    call assert_shape(Gloc,[Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Gloc")
-    call assert_shape(Smats,[Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Smats")
-    call assert_shape(Delta,[Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Delta")
-    call assert_shape(Hloc,[Nspin,Nspin,Norb,Norb],FROUTINE,"Hloc")
+    call assert_shape(Gloc,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_normal_main","Gloc")
+    call assert_shape(Smats,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_normal_main","Smats")
+    call assert_shape(Delta,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_normal_main","Delta")
+    call assert_shape(Hloc,[Nspin,Nspin,Norb,Norb],"dmft_get_delta_normal_main","Hloc")
     !
     if(allocated(wm))deallocate(wm)
     allocate(wm(Lmats))
@@ -1145,18 +760,13 @@ contains
        Delta(:,:,:,:,i) = so2nn_reshape(calG0_site(:,:,i),Nspin,Norb)
     enddo
     !
-    call dmft_weiss_print_single(wm,Delta,"DeltaG0",iprint)
-    !
   end subroutine dmft_get_delta_normal_main
-#undef FROUTINE
 
-#define FROUTINE 'dmft_get_delta_normal_lattice_main'
-  subroutine dmft_get_delta_normal_lattice_main(Gloc,Smats,Delta,Hloc,iprint)
+  subroutine dmft_get_delta_normal_ineq(Gloc,Smats,Delta,Hloc)
     complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Gloc         ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Smats        ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Delta        ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:),intent(in)      :: Hloc         ! [Nlat][Nspin][Nspin][Norb][Norb]
-    integer                                         :: iprint       
     !aux
     complex(8),dimension(:,:,:,:,:,:),allocatable   :: Delta_tmp    ![Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:),allocatable         :: zeta_site    ![Nspin*Norb][Nspin*Norb][Lmats]
@@ -1177,10 +787,10 @@ contains
     Lmats = size(Gloc,6)
     Nso   = Nspin*Norb
     Nlso  = Nlat*Nspin*Norb
-    call assert_shape(Gloc,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Gloc")
-    call assert_shape(Smats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Smats")
-    call assert_shape(Delta,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Delta")
-    call assert_shape(Hloc,[Nlat,Nspin,Nspin,Norb,Norb],FROUTINE,"Hloc")
+    call assert_shape(Gloc,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_normal_ineq","Gloc")
+    call assert_shape(Smats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_normal_ineq","Smats")
+    call assert_shape(Delta,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_normal_ineq","Delta")
+    call assert_shape(Hloc,[Nlat,Nspin,Nspin,Norb,Norb],"dmft_get_delta_normal_ineq","Hloc")
     !
     if(allocated(wm))deallocate(wm)
     allocate(wm(Lmats))
@@ -1224,20 +834,15 @@ contains
        enddo
     end do
     !
-    call dmft_weiss_print_lattice(wm,Delta,"LDeltaG0",iprint)
-    !
-  end subroutine dmft_get_delta_normal_lattice_main
-#undef FROUTINE
+  end subroutine dmft_get_delta_normal_ineq
 
 #ifdef _MPI
-#define FROUTINE 'dmft_get_delta_normal_lattice_main_mpi'
-  subroutine dmft_get_delta_normal_lattice_main_mpi(MpiComm,Gloc,Smats,Delta,Hloc,iprint)
+  subroutine dmft_get_delta_normal_ineq_mpi(MpiComm,Gloc,Smats,Delta,Hloc)
     integer                                         :: MpiComm
     complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Gloc         ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Smats        ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Delta        ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:),intent(in)      :: Hloc         ! [Nlat][Nspin][Nspin][Norb][Norb]
-    integer                                         :: iprint       
     !aux
     complex(8),dimension(:,:,:,:,:,:),allocatable   :: Delta_tmp    ![Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:),allocatable         :: zeta_site    ![Nspin*Norb][Nspin*Norb][Lmats]
@@ -1263,10 +868,10 @@ contains
     Lmats = size(Gloc,6)
     Nso   = Nspin*Norb
     Nlso  = Nlat*Nspin*Norb
-    call assert_shape(Gloc,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Gloc")
-    call assert_shape(Smats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Smats")
-    call assert_shape(Delta,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Delta")
-    call assert_shape(Hloc,[Nlat,Nspin,Nspin,Norb,Norb],FROUTINE,"Hloc")
+    call assert_shape(Gloc,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_normal_ineq_mpi","Gloc")
+    call assert_shape(Smats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_normal_ineq_mpi","Smats")
+    call assert_shape(Delta,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_normal_ineq_mpi","Delta")
+    call assert_shape(Hloc,[Nlat,Nspin,Nspin,Norb,Norb],"dmft_get_delta_normal_ineq_mpi","Hloc")
     !
     if(allocated(wm))deallocate(wm)
     allocate(wm(Lmats))
@@ -1313,167 +918,9 @@ contains
     !
     call Mpi_AllReduce(Delta_tmp, Delta, size(Delta), MPI_Double_Complex, MPI_Sum, MpiComm, mpi_ierr)
     !
-    if(mpi_master)call dmft_weiss_print_lattice(wm,Delta,"LDeltaG0",iprint)
-    !
-  end subroutine dmft_get_delta_normal_lattice_main_mpi
-#undef FROUTINE
+  end subroutine dmft_get_delta_normal_ineq_mpi
 #endif
 
-
-  !##################################################################
-  !##################################################################
-  !##################################################################
-
-
-  subroutine dmft_get_delta_normal_1b(Gloc,Smats,Delta,Hloc,iprint)
-    complex(8),dimension(:),intent(in)             :: Gloc
-    complex(8),dimension(size(Gloc)),intent(in)    :: Smats
-    complex(8),dimension(size(Gloc)),intent(inout) :: Delta
-    complex(8),dimension(1,1,1,1)                  :: Hloc
-    integer                                        :: iprint
-    !aux
-    complex(8),dimension(1,1,1,1,size(Gloc))       :: Gloc_
-    complex(8),dimension(1,1,1,1,size(Gloc))       :: Smats_
-    complex(8),dimension(1,1,1,1,size(Gloc))       :: Delta_
-    Gloc_(1,1,1,1,:) = Gloc(:)
-    Smats_(1,1,1,1,:) = Smats(:)
-    call dmft_get_delta_normal_main(Gloc_,Smats_,Delta_,Hloc,iprint)
-    Delta(:) = Delta_(1,1,1,1,:)
-  end subroutine dmft_get_delta_normal_1b
-
-  subroutine dmft_get_delta_normal_lattice_1b(Gloc,Smats,Delta,Hloc,iprint)
-    complex(8),dimension(:,:),intent(in)                          :: Gloc
-    complex(8),dimension(size(Gloc,1),size(Gloc,2)),intent(in)    :: Smats
-    complex(8),dimension(size(Gloc,1),size(Gloc,2)),intent(inout) :: Delta
-    complex(8),dimension(size(Gloc,1),1,1,1,1)                    :: Hloc
-    integer                                                       :: iprint
-    !aux
-    complex(8),dimension(size(Gloc,1),1,1,1,1,size(Gloc,2))       :: Gloc_
-    complex(8),dimension(size(Gloc,1),1,1,1,1,size(Gloc,2))       :: Smats_
-    complex(8),dimension(size(Gloc,1),1,1,1,1,size(Gloc,2))       :: Delta_
-    Gloc_(:,1,1,1,1,:) = Gloc(:,:)
-    Smats_(:,1,1,1,1,:) = Smats(:,:)
-    call dmft_get_delta_normal_lattice_main(Gloc_,Smats_,Delta_,Hloc,iprint)
-    Delta(:,:) = Delta_(:,1,1,1,1,:)
-  end subroutine dmft_get_delta_normal_lattice_1b
-
-#ifdef _MPI
-  subroutine dmft_get_delta_normal_lattice_1b_mpi(MpiComm,Gloc,Smats,Delta,Hloc,iprint)
-    integer                                                       :: MpiComm
-    complex(8),dimension(:,:),intent(in)                          :: Gloc
-    complex(8),dimension(size(Gloc,1),size(Gloc,2)),intent(in)    :: Smats
-    complex(8),dimension(size(Gloc,1),size(Gloc,2)),intent(inout) :: Delta
-    complex(8),dimension(size(Gloc,1),1,1,1,1)                    :: Hloc
-    integer                                                       :: iprint
-    !aux
-    complex(8),dimension(size(Gloc,1),1,1,1,1,size(Gloc,2))       :: Gloc_
-    complex(8),dimension(size(Gloc,1),1,1,1,1,size(Gloc,2))       :: Smats_
-    complex(8),dimension(size(Gloc,1),1,1,1,1,size(Gloc,2))       :: Delta_
-    Gloc_(:,1,1,1,1,:) = Gloc(:,:)
-    Smats_(:,1,1,1,1,:) = Smats(:,:)
-    call dmft_get_delta_normal_lattice_main_mpi(MpiComm,Gloc_,Smats_,Delta_,Hloc,iprint)
-    Delta(:,:) = Delta_(:,1,1,1,1,:)
-  end subroutine dmft_get_delta_normal_lattice_1b_mpi
-#endif
-
-
-#define FROUTINE 'dmft_get_delta_normal_Mb'
-  subroutine dmft_get_delta_normal_Mb(Gloc,Smats,Delta,Hloc,iprint)
-    complex(8),dimension(:,:,:),intent(in)      :: Gloc  ![Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:),intent(in)      :: Smats !
-    complex(8),dimension(:,:,:),intent(inout)   :: Delta !
-    complex(8),dimension(:,:,:,:),intent(in)    :: Hloc  ![Nspin][Nspin][Norb][Norb]
-    integer                                     :: iprint
-    !aux
-    complex(8),dimension(:,:,:,:,:),allocatable :: Gloc_ ![Nspin][Nspin][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:,:),allocatable :: Smats_!
-    complex(8),dimension(:,:,:,:,:),allocatable :: Delta_!
-    integer                                     :: Nspin,Norb,Lfreq
-    !
-    Nspin = 1
-    Norb  = size(Gloc,1)
-    Lfreq = size(Gloc,3)
-    !
-    call assert_shape(Gloc,[Norb,Norb,Lfreq],FROUTINE,"Gloc")
-    call assert_shape(Smats,[Norb,Norb,Lfreq],FROUTINE,"Smats")
-    call assert_shape(Delta,[Norb,Norb,Lfreq],FROUTINE,"Delta")
-    call assert_shape(Hloc,[1,1,Norb,Norb],FROUTINE,"Hloc")
-    allocate(Gloc_(1,1,Norb,Norb,Lfreq))
-    allocate(Smats_(1,1,Norb,Norb,Lfreq))
-    allocate(Delta_(1,1,Norb,Norb,Lfreq))
-    Gloc_(1,1,:,:,:) = Gloc(:,:,:)
-    Smats_(1,1,:,:,:) = Smats(:,:,:)
-    call dmft_get_delta_normal_main(Gloc_,Smats_,Delta_,Hloc,iprint)
-    Delta(:,:,:) = Delta_(1,1,:,:,:)
-  end subroutine dmft_get_delta_normal_mb
-#undef FROUTINE
-
-#define FROUTINE 'dmft_get_delta_normal_lattice_mb'
-  subroutine dmft_get_delta_normal_lattice_mb(Gloc,Smats,Delta,Hloc,iprint)
-    complex(8),dimension(:,:,:,:),intent(in)      :: Gloc  ![Nlat][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:),intent(in)      :: Smats !
-    complex(8),dimension(:,:,:,:),intent(inout)   :: Delta !
-    complex(8),dimension(:,:,:,:,:),intent(in)    :: Hloc  ![Nlat][Nspin][Nspin][Norb][Norb]
-    integer                                       :: iprint
-    !aux
-    complex(8),dimension(:,:,:,:,:,:),allocatable :: Gloc_ ![Nlat][Nspin][Nspin][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:,:,:),allocatable :: Smats_!
-    complex(8),dimension(:,:,:,:,:,:),allocatable :: Delta_!
-    integer                                       :: Nlat,Nspin,Norb,Lfreq
-    !
-    Nlat  = size(Gloc,1)
-    Nspin = 1
-    Norb  = size(Gloc,2)
-    Lfreq = size(Gloc,4)
-    call assert_shape(Gloc,[Nlat,Norb,Norb,Lfreq],FROUTINE,"Gloc")
-    call assert_shape(Smats,[Nlat,Norb,Norb,Lfreq],FROUTINE,"Smats")
-    call assert_shape(Delta,[Nlat,Norb,Norb,Lfreq],FROUTINE,"Delta")
-    call assert_shape(Hloc,[Nlat,1,1,Norb,Norb],FROUTINE,"Hloc")
-    allocate(Gloc_(Nlat,1,1,Norb,Norb,Lfreq))
-    allocate(Smats_(Nlat,1,1,Norb,Norb,Lfreq))
-    allocate(Delta_(Nlat,1,1,Norb,Norb,Lfreq))
-    !
-    Gloc_(:,1,1,:,:,:) = Gloc(:,:,:,:)
-    Smats_(:,1,1,:,:,:) = Smats(:,:,:,:)
-    call dmft_get_delta_normal_lattice_main(Gloc_,Smats_,Delta_,Hloc,iprint)
-    Delta(:,:,:,:) = Delta_(:,1,1,:,:,:)
-  end subroutine dmft_get_delta_normal_lattice_mb
-#undef FROUTINE
-
-#ifdef _MPI
-#define FROUTINE 'dmft_get_delta_normal_lattice_mb_mpi'
-  subroutine dmft_get_delta_normal_lattice_mb_mpi(MpiComm,Gloc,Smats,Delta,Hloc,iprint)
-    integer                                       :: MpiComm
-    complex(8),dimension(:,:,:,:),intent(in)      :: Gloc  ![Nlat][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:),intent(in)      :: Smats !
-    complex(8),dimension(:,:,:,:),intent(inout)   :: Delta !
-    complex(8),dimension(:,:,:,:,:),intent(in)    :: Hloc  ![Nlat][Nspin][Nspin][Norb][Norb]
-    integer                                       :: iprint
-    !aux
-    complex(8),dimension(:,:,:,:,:,:),allocatable :: Gloc_ ![Nlat][Nspin][Nspin][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:,:,:),allocatable :: Smats_!
-    complex(8),dimension(:,:,:,:,:,:),allocatable :: Delta_!
-    integer                                       :: Nlat,Nspin,Norb,Lfreq
-    !
-    Nlat  = size(Gloc,1)
-    Nspin = 1
-    Norb  = size(Gloc,2)
-    Lfreq = size(Gloc,4)
-    call assert_shape(Gloc,[Nlat,Norb,Norb,Lfreq],FROUTINE,"Gloc")
-    call assert_shape(Smats,[Nlat,Norb,Norb,Lfreq],FROUTINE,"Smats")
-    call assert_shape(Delta,[Nlat,Norb,Norb,Lfreq],FROUTINE,"Delta")
-    call assert_shape(Hloc,[Nlat,1,1,Norb,Norb],FROUTINE,"Hloc")
-    allocate(Gloc_(Nlat,1,1,Norb,Norb,Lfreq))
-    allocate(Smats_(Nlat,1,1,Norb,Norb,Lfreq))
-    allocate(Delta_(Nlat,1,1,Norb,Norb,Lfreq))
-    !
-    Gloc_(:,1,1,:,:,:) = Gloc(:,:,:,:)
-    Smats_(:,1,1,:,:,:) = Smats(:,:,:,:)
-    call dmft_get_delta_normal_lattice_main_mpi(MpiComm,Gloc_,Smats_,Delta_,Hloc,iprint)
-    Delta(:,:,:,:) = Delta_(:,1,1,:,:,:)
-  end subroutine dmft_get_delta_normal_lattice_mb_mpi
-#undef FROUTINE
-#endif
 
 
 
@@ -1487,13 +934,11 @@ contains
   !
   !--------------------------------------------------------------------!
   !--------------------------------------------------------------------!
-#define FROUTINE 'dmft_get_delta_superc_main'
-  subroutine dmft_get_delta_superc_main(Gloc,Smats,Delta,Hloc,iprint)
+  subroutine dmft_get_delta_superc_main(Gloc,Smats,Delta,Hloc)
     complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Gloc         ! [2][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Smats        !
     complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Delta        !
     complex(8),dimension(:,:,:,:),intent(in)        :: Hloc         ! [Nspin][Nspin][Norb][Norb]
-    integer                                         :: iprint
     !aux
     complex(8),dimension(:,:,:),allocatable         :: zeta_site    ![2*Nspin*Norb][2*Nspin*Norb][Lmats]
     complex(8),dimension(:,:,:),allocatable         :: Smats_site   ![2*Nspin*Norb][2*Nspin*Norb][Lmats]
@@ -1512,10 +957,10 @@ contains
     Lmats = size(Gloc,6)
     Nso   = Nspin*Norb
     Nso2  = 2*Nso
-    call assert_shape(Gloc,[2,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Gloc")
-    call assert_shape(Smats,[2,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Smats")
-    call assert_shape(Delta,[2,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Delta")
-    call assert_shape(Hloc,[Nspin,Nspin,Norb,Norb],FROUTINE,"Hloc")
+    call assert_shape(Gloc,[2,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_main","Gloc")
+    call assert_shape(Smats,[2,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_main","Smats")
+    call assert_shape(Delta,[2,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_main","Delta")
+    call assert_shape(Hloc,[Nspin,Nspin,Norb,Norb],"dmft_get_delta_superc_main","Hloc")
     !
     if(allocated(wm))deallocate(wm)
     allocate(wm(Lmats))
@@ -1584,19 +1029,14 @@ contains
        enddo
     enddo
     !
-    call dmft_weiss_print_single(wm,Delta(1,:,:,:,:,:),"DeltaG0",iprint)
-    call dmft_weiss_print_single(wm,Delta(2,:,:,:,:,:),"DeltaF0",iprint)
     !
   end subroutine dmft_get_delta_superc_main
-#undef FROUTINE
 
-#define FROUTINE 'dmft_get_delta_superc_lattice_main'
-  subroutine dmft_get_delta_superc_lattice_main(Gloc,Smats,Delta,Hloc,iprint)
+  subroutine dmft_get_delta_superc_ineq(Gloc,Smats,Delta,Hloc)
     complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Gloc         ! [2][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Smats        ! 
     complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Delta        ! 
     complex(8),dimension(:,:,:,:,:),intent(in)        :: Hloc         ! [Nlat][Nspin][Nspin][Norb][Norb]
-    integer                                           :: iprint
     !aux
     complex(8),dimension(:,:,:),allocatable           :: zeta_site    ![2*Nspin*Norb][2*Nspin*Norb][Lmats]
     complex(8),dimension(:,:,:),allocatable           :: Smats_site   !
@@ -1617,10 +1057,10 @@ contains
     Nso   = Nspin*Norb
     Nso2  = 2*Nso
     Nlso  = Nlat*Nspin*Norb
-    call assert_shape(Gloc,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Gloc")
-    call assert_shape(Smats,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Smats")
-    call assert_shape(Delta,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Delta")
-    call assert_shape(Hloc,[Nlat,Nspin,Nspin,Norb,Norb],FROUTINE,"Hloc")
+    call assert_shape(Gloc,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_ineq","Gloc")
+    call assert_shape(Smats,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_ineq","Smats")
+    call assert_shape(Delta,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_ineq","Delta")
+    call assert_shape(Hloc,[Nlat,Nspin,Nspin,Norb,Norb],"dmft_get_delta_superc_ineq","Hloc")
     !
     if(allocated(wm))deallocate(wm)
     allocate(wm(Lmats))
@@ -1690,21 +1130,15 @@ contains
        enddo
     end do
     !
-    call dmft_weiss_print_lattice(wm,Delta(1,:,:,:,:,:,:),"LDeltaG0",iprint)
-    call dmft_weiss_print_lattice(wm,Delta(2,:,:,:,:,:,:),"LDeltaF0",iprint)
-    !
-  end subroutine dmft_get_delta_superc_lattice_main
-#undef FROUTINE
+  end subroutine dmft_get_delta_superc_ineq
 
 #ifdef _MPI
-#define FROUTINE 'dmft_get_delta_superc_lattice_main_mpi'
-  subroutine dmft_get_delta_superc_lattice_main_mpi(MpiComm,Gloc,Smats,Delta,Hloc,iprint)
+  subroutine dmft_get_delta_superc_ineq_mpi(MpiComm,Gloc,Smats,Delta,Hloc)
     integer                                           :: MpiComm
     complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Gloc         ! [2][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Smats        ! 
     complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Delta        ! 
     complex(8),dimension(:,:,:,:,:),intent(in)        :: Hloc         ! [Nlat][Nspin][Nspin][Norb][Norb]
-    integer                                           :: iprint
     !aux
     complex(8),dimension(:,:,:,:,:,:,:),allocatable   :: Delta_tmp        ! 
     complex(8),dimension(:,:,:),allocatable           :: zeta_site    ![2*Nspin*Norb][2*Nspin*Norb][Lmats]
@@ -1732,10 +1166,10 @@ contains
     Nso   = Nspin*Norb
     Nso2  = 2*Nso
     Nlso  = Nlat*Nspin*Norb
-    call assert_shape(Gloc,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Gloc")
-    call assert_shape(Smats,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Smats")
-    call assert_shape(Delta,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],FROUTINE,"Delta")
-    call assert_shape(Hloc,[Nlat,Nspin,Nspin,Norb,Norb],FROUTINE,"Hloc")
+    call assert_shape(Gloc,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_ineq_mpi","Gloc")
+    call assert_shape(Smats,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_ineq_mpi","Smats")
+    call assert_shape(Delta,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_ineq_mpi","Delta")
+    call assert_shape(Hloc,[Nlat,Nspin,Nspin,Norb,Norb],"dmft_get_delta_superc_ineq_mpi","Hloc")
     !
     if(allocated(wm))deallocate(wm)
     allocate(wm(Lmats))
@@ -1809,175 +1243,7 @@ contains
     !
     call MPI_Allreduce(Delta_tmp, Delta, size(Delta), MPI_DOUBLE_COMPLEX, MPI_SUM, MpiComm, mpi_ierr)
     !
-    if(mpi_master)then
-       call dmft_weiss_print_lattice(wm,Delta(1,:,:,:,:,:,:),"LDeltaG0",iprint)
-       call dmft_weiss_print_lattice(wm,Delta(2,:,:,:,:,:,:),"LDeltaF0",iprint)
-    endif
-    !
-  end subroutine dmft_get_delta_superc_lattice_main_mpi
-#undef FROUTINE
-#endif
-
-
-  !##################################################################
-  !##################################################################
-  !##################################################################
-
-
-#define FROUTINE 'dmft_get_delta_superc_1b'
-  subroutine dmft_get_delta_superc_1b(Gloc,Smats,Delta,Hloc,iprint)
-    complex(8),dimension(:,:),intent(in)               :: Gloc
-    complex(8),dimension(2,size(Gloc,2)),intent(in)    :: Smats
-    complex(8),dimension(2,size(Gloc,2)),intent(inout) :: Delta
-    complex(8),dimension(1,1,1,1)                      :: Hloc
-    integer                                            :: iprint
-    !aux
-    complex(8),dimension(2,1,1,1,1,size(Gloc,2))       :: Gloc_
-    complex(8),dimension(2,1,1,1,1,size(Gloc,2))       :: Smats_
-    complex(8),dimension(2,1,1,1,1,size(Gloc,2))       :: Delta_
-    call assert_shape(Gloc,[2,size(Gloc,2)],FROUTINE,"Gloc")
-    Gloc_(:,1,1,1,1,:) = Gloc(:,:)
-    Smats_(:,1,1,1,1,:) = Smats(:,:)
-    call dmft_get_delta_superc_main(Gloc_,Smats_,Delta_,Hloc,iprint)
-    Delta(:,:) = Delta_(:,1,1,1,1,:)
-  end subroutine dmft_get_delta_superc_1b
-#undef FROUTINE
-
-#define FROUTINE 'dmft_get_delta_superc_lattice_1b'
-  subroutine dmft_get_delta_superc_lattice_1b(Gloc,Smats,Delta,Hloc,iprint)
-    complex(8),dimension(:,:,:),intent(in)                          :: Gloc ![2][Nlat][Lmats]
-    complex(8),dimension(2,size(Gloc,2),size(Gloc,3)),intent(in)    :: Smats
-    complex(8),dimension(2,size(Gloc,2),size(Gloc,3)),intent(inout) :: Delta
-    complex(8),dimension(size(Gloc,2),1,1,1,1)                      :: Hloc
-    integer                                                         :: iprint
-    !aux
-    complex(8),dimension(2,size(Gloc,2),1,1,1,1,size(Gloc,3))       :: Gloc_
-    complex(8),dimension(2,size(Gloc,2),1,1,1,1,size(Gloc,3))       :: Smats_
-    complex(8),dimension(2,size(Gloc,2),1,1,1,1,size(Gloc,3))       :: Delta_
-    call assert_shape(Gloc,[2,size(Gloc,2),size(Gloc,3)],FROUTINE,"Gloc")
-    Gloc_(:,:,1,1,1,1,:) = Gloc(:,:,:)
-    Smats_(:,:,1,1,1,1,:) = Smats(:,:,:)
-    call dmft_get_delta_superc_lattice_main(Gloc_,Smats_,Delta_,Hloc,iprint)
-    Delta(:,:,:) = Delta_(:,:,1,1,1,1,:)
-  end subroutine dmft_get_delta_superc_lattice_1b
-#undef FROUTINE
-
-#ifdef _MPI
-#define FROUTINE 'dmft_get_delta_superc_lattice_1b_mpi'
-  subroutine dmft_get_delta_superc_lattice_1b_mpi(MpiComm,Gloc,Smats,Delta,Hloc,iprint)
-    integer :: MpiComm
-    complex(8),dimension(:,:,:),intent(in)                          :: Gloc ![2][Nlat][Lmats]
-    complex(8),dimension(2,size(Gloc,2),size(Gloc,3)),intent(in)    :: Smats
-    complex(8),dimension(2,size(Gloc,2),size(Gloc,3)),intent(inout) :: Delta
-    complex(8),dimension(size(Gloc,2),1,1,1,1)                      :: Hloc
-    integer                                                         :: iprint
-    !aux
-    complex(8),dimension(2,size(Gloc,2),1,1,1,1,size(Gloc,3))       :: Gloc_
-    complex(8),dimension(2,size(Gloc,2),1,1,1,1,size(Gloc,3))       :: Smats_
-    complex(8),dimension(2,size(Gloc,2),1,1,1,1,size(Gloc,3))       :: Delta_
-    call assert_shape(Gloc,[2,size(Gloc,2),size(Gloc,3)],FROUTINE,"Gloc")
-    Gloc_(:,:,1,1,1,1,:) = Gloc(:,:,:)
-    Smats_(:,:,1,1,1,1,:) = Smats(:,:,:)
-    call dmft_get_delta_superc_lattice_main_mpi(MpiComm,Gloc_,Smats_,Delta_,Hloc,iprint)
-    Delta(:,:,:) = Delta_(:,:,1,1,1,1,:)
-  end subroutine dmft_get_delta_superc_lattice_1b_mpi
-#undef FROUTINE
-#endif
-
-#define FROUTINE 'dmft_get_delta_superc_Mb'
-  subroutine dmft_get_delta_superc_Mb(Gloc,Smats,Delta,Hloc,iprint)
-    complex(8),dimension(:,:,:,:),intent(in)      :: Gloc   ![2][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:),intent(in)      :: Smats  !
-    complex(8),dimension(:,:,:,:),intent(inout)   :: Delta  !
-    complex(8),dimension(:,:,:,:),intent(in)      :: Hloc   ![Nspin][Nspin][Norb][Norb]
-    integer                                       :: iprint
-    !aux
-    complex(8),dimension(:,:,:,:,:,:),allocatable :: Gloc_  ![2][Nspin][Nspin][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:,:,:),allocatable :: Smats_ !
-    complex(8),dimension(:,:,:,:,:,:),allocatable :: Delta_ !
-    integer                                       :: Nspin,Norb,Lfreq
-    !
-    Nspin=1
-    Norb =size(Gloc,2)
-    Lfreq=size(Gloc,4)
-    call assert_shape(Gloc,[2,Norb,Norb,Lfreq],FROUTINE,"Gloc")
-    call assert_shape(Smats,[2,Norb,Norb,Lfreq],FROUTINE,"Smats")
-    call assert_shape(Delta,[2,Norb,Norb,Lfreq],FROUTINE,"Delta")
-    call assert_shape(Hloc,[1,1,Norb,Norb],FROUTINE,"Hloc")
-    allocate(Gloc_(2,1,1,Norb,Norb,Lfreq))
-    allocate(Smats_(2,1,1,Norb,Norb,Lfreq))
-    allocate(Delta_(2,1,1,Norb,Norb,Lfreq))
-    Gloc_(:,1,1,:,:,:) = Gloc(:,:,:,:)
-    Smats_(:,1,1,:,:,:) = Smats(:,:,:,:)
-    call dmft_get_delta_superc_main(Gloc_,Smats_,Delta_,Hloc,iprint)
-    Delta(:,:,:,:) = Delta_(:,1,1,:,:,:)
-  end subroutine dmft_get_delta_superc_Mb
-#undef FROUTINE
-
-#define FROUTINE 'dmft_get_delta_superc_lattice_Mb'
-  subroutine dmft_get_delta_superc_lattice_Mb(Gloc,Smats,Delta,Hloc,iprint)
-    complex(8),dimension(:,:,:,:,:),intent(in)      :: Gloc  ![2][Nlat][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:,:),intent(in)      :: Smats !
-    complex(8),dimension(:,:,:,:,:),intent(inout)   :: Delta !
-    complex(8),dimension(:,:,:,:,:),intent(in)      :: Hloc  ![Nlat][Nspin][Nspin][Norb][Norb]
-    integer                                         :: iprint
-    !aux
-    complex(8),dimension(:,:,:,:,:,:,:),allocatable :: Gloc_ ![2][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:,:,:,:),allocatable :: Smats_!
-    complex(8),dimension(:,:,:,:,:,:,:),allocatable :: Delta_!
-    integer                                         :: Nlat,Nspin,Norb,Lfreq
-    !
-    Nlat  = size(Gloc,2)
-    Nspin = 1
-    Norb  = size(Gloc,3)
-    Lfreq = size(Gloc,5)
-    call assert_shape(Gloc,[2,Nlat,Norb,Norb,Lfreq],FROUTINE,"Gloc")
-    call assert_shape(Smats,[2,Nlat,Norb,Norb,Lfreq],FROUTINE,"Smats")
-    call assert_shape(Delta,[2,Nlat,Norb,Norb,Lfreq],FROUTINE,"Delta")
-    call assert_shape(Hloc,[Nlat,1,1,Norb,Norb],FROUTINE,"Hloc")
-    allocate(Gloc_(2,Nlat,1,1,Norb,Norb,Lfreq))
-    allocate(Smats_(2,Nlat,1,1,Norb,Norb,Lfreq))
-    allocate(Delta_(2,Nlat,1,1,Norb,Norb,Lfreq))
-    Gloc_(:,:,1,1,:,:,:) = Gloc(:,:,:,:,:)
-    Smats_(:,:,1,1,:,:,:) = Smats(:,:,:,:,:)
-    call dmft_get_delta_superc_lattice_main(Gloc_,Smats_,Delta_,Hloc,iprint)
-    Delta(:,:,:,:,:) = Delta_(:,:,1,1,:,:,:)
-  end subroutine dmft_get_delta_superc_lattice_Mb
-#undef FROUTINE
-
-
-#ifdef _MPI
-#define FROUTINE 'dmft_get_delta_superc_lattice_Mb_mpi'
-  subroutine dmft_get_delta_superc_lattice_Mb_mpi(MpiComm,Gloc,Smats,Delta,Hloc,iprint)
-    integer                                         :: MpiComm
-    complex(8),dimension(:,:,:,:,:),intent(in)      :: Gloc  ![2][Nlat][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:,:),intent(in)      :: Smats !
-    complex(8),dimension(:,:,:,:,:),intent(inout)   :: Delta !
-    complex(8),dimension(:,:,:,:,:),intent(in)      :: Hloc  ![Nlat][Nspin][Nspin][Norb][Norb]
-    integer                                         :: iprint
-    !aux
-    complex(8),dimension(:,:,:,:,:,:,:),allocatable :: Gloc_ ![2][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:,:,:,:),allocatable :: Smats_!
-    complex(8),dimension(:,:,:,:,:,:,:),allocatable :: Delta_!
-    integer                                         :: Nlat,Nspin,Norb,Lfreq
-    !
-    Nlat  = size(Gloc,2)
-    Nspin = 1
-    Norb  = size(Gloc,3)
-    Lfreq = size(Gloc,5)
-    call assert_shape(Gloc,[2,Nlat,Norb,Norb,Lfreq],FROUTINE,"Gloc")
-    call assert_shape(Smats,[2,Nlat,Norb,Norb,Lfreq],FROUTINE,"Smats")
-    call assert_shape(Delta,[2,Nlat,Norb,Norb,Lfreq],FROUTINE,"Delta")
-    call assert_shape(Hloc,[Nlat,1,1,Norb,Norb],FROUTINE,"Hloc")
-    allocate(Gloc_(2,Nlat,1,1,Norb,Norb,Lfreq))
-    allocate(Smats_(2,Nlat,1,1,Norb,Norb,Lfreq))
-    allocate(Delta_(2,Nlat,1,1,Norb,Norb,Lfreq))
-    Gloc_(:,:,1,1,:,:,:) = Gloc(:,:,:,:,:)
-    Smats_(:,:,1,1,:,:,:) = Smats(:,:,:,:,:)
-    call dmft_get_delta_superc_lattice_main_mpi(MpiComm,Gloc_,Smats_,Delta_,Hloc,iprint)
-    Delta(:,:,:,:,:) = Delta_(:,:,1,1,:,:,:)
-  end subroutine dmft_get_delta_superc_lattice_Mb_mpi
-#undef FROUTINE
+  end subroutine dmft_get_delta_superc_ineq_mpi
 #endif
 
 
@@ -1987,209 +1253,6 @@ contains
 
 
 
-
-
-
-
-
-  !##################################################################
-  !##################################################################
-  !##################################################################
-
-  !##################################################################
-  !##################################################################
-  !##################################################################
-
-  !##################################################################
-  !##################################################################
-  !##################################################################
-
-
-
-  !SET THE GLOC SUFFIX
-  subroutine dmft_weiss_set_suffix(string)
-    character(len=*) :: string
-    weiss_suffix=reg(string)
-  end subroutine dmft_weiss_set_suffix
-
-
-
-
-  !+-----------------------------------------------------------------------------+!
-  !PURPOSE: print a local GF according to iprint variable
-  !+-----------------------------------------------------------------------------+!
-  subroutine dmft_weiss_print_single(w,Green,fname,iprint)
-    complex(8),dimension(:,:,:,:,:),intent(in) :: Green ![Nspin][Nspin][Norb][Norb][Lfreq]
-    real(8),dimension(size(Green,5))           :: w
-    character(len=*),intent(in)                :: fname
-    integer,intent(in)                         :: iprint
-    integer                                    :: Nspin,Norb,ispin,jspin,iorb,jorb
-    !
-    Nspin = size(Green,1)
-    Norb  = size(Green,3)
-    call assert_shape(Green,[Nspin,Nspin,Norb,Norb,size(Green,5)],"print_weiss","Green")
-    !
-    !
-    select case(iprint)
-    case (0)
-       write(*,*)"Delta//WeissField not written to file."
-    case(1)
-       write(*,"(A)") "Delta//WeissField: write spin-orbital diagonal elements."
-       do ispin=1,Nspin
-          do iorb=1,Norb
-             suffix=reg(fname)//&
-                  "_l"//reg(txtfy(iorb))//&
-                  "_s"//reg(txtfy(ispin))//&
-                  "_iw"//reg(weiss_suffix)
-             call splot(reg(suffix),wm,Green(ispin,ispin,iorb,iorb,:))
-          enddo
-       enddo
-       !
-    case(2)
-       write(*,"(A)") "Delta//WeissField: write spin diagonal and all orbitals elements."
-       do ispin=1,Nspin
-          do iorb=1,Norb
-             do jorb=1,Norb
-                suffix=reg(fname)//&
-                     "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
-                     "_s"//reg(txtfy(ispin))//&
-                     "_iw"//reg(weiss_suffix)
-                call splot(reg(suffix),wm,Green(ispin,ispin,iorb,jorb,:))
-             enddo
-          enddo
-       enddo
-       !
-    case default
-       write(*,"(A)") "Delta//WeissField: write all elements."
-       do ispin=1,Nspin
-          do jspin=1,Nspin
-             do iorb=1,Norb
-                do jorb=1,Norb
-                   suffix=reg(fname)//&
-                        "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
-                        "_s"//reg(txtfy(ispin))//reg(txtfy(jspin))//&
-                        "_iw"//reg(weiss_suffix)
-                   call splot(reg(suffix),wm,Green(ispin,jspin,iorb,jorb,:))
-                enddo
-             enddo
-          enddo
-       enddo
-    end select
-  end subroutine dmft_weiss_print_single
-
-
-
-
-  !PRINT GLOC LATTICE
-  subroutine dmft_weiss_print_lattice(w,Green,fname,iprint)
-    complex(8),dimension(:,:,:,:,:,:),intent(in) :: Green
-    real(8),dimension(size(Green,6))              :: w        
-    character(len=*),intent(in)                  :: fname
-    integer,intent(in)                           :: iprint
-    !
-    Nlat  = size(Green,1)
-    Nspin = size(Green,2)
-    Norb  = size(Green,4)
-    call assert_shape(Green,[Nlat,Nspin,Nspin,Norb,Norb,size(Green,6)],"dmft_weiss_print_lattice",fname)
-    !
-    select case(iprint)
-    case (0)
-       write(*,"(A)") "Delta//WeissField: not written to file."
-       !
-    case(1)                  !print only diagonal elements
-       write(*,*)"Delta//WeissField: write spin-orbital diagonal elements No Split."
-       do ispin=1,Nspin
-          do iorb=1,Norb
-             suffix=reg(fname)//&
-                  "_l"//reg(txtfy(iorb))//&
-                  "_s"//reg(txtfy(ispin))//&
-                  "_iw"//reg(weiss_suffix)
-             call splot(reg(suffix),w,Green(:,ispin,ispin,iorb,iorb,:))
-             call file_gzip(reg(suffix))
-          enddo
-       enddo
-       !
-    case(2)                  !print spin-diagonal, all orbitals 
-       write(*,*)"Delta//WeissField: write spin diagonal and all orbitals elements No Split."
-       do ispin=1,Nspin
-          do iorb=1,Norb
-             do jorb=1,Norb
-                suffix=reg(fname)//&
-                     "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
-                     "_s"//reg(txtfy(ispin))//&
-                     "_iw"//reg(weiss_suffix)
-                call splot(reg(suffix),w,Green(:,ispin,ispin,iorb,jorb,:))
-                call file_gzip(reg(suffix))
-             enddo
-          enddo
-       enddo
-       !
-    case(3)                  !print all off-diagonals
-       write(*,*)"Delta//WeissField: write all elements No Split."
-       do ispin=1,Nspin
-          do jspin=1,Nspin
-             do iorb=1,Norb
-                do jorb=1,Norb
-                   suffix=reg(fname)//&
-                        "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
-                        "_s"//reg(txtfy(ispin))//reg(txtfy(jspin))//&
-                        "_iw"//reg(weiss_suffix)
-                   call splot(reg(suffix),w,Green(:,ispin,jspin,iorb,jorb,:))
-                   call file_gzip(reg(suffix))
-                enddo
-             enddo
-          enddo
-       enddo
-       !
-    case(4)                  !print only diagonal elements
-       write(*,*)"Delta//WeissField: write spin-orbital diagonal elements Split."
-       do ilat=1,Nlat
-          do ispin=1,Nspin
-             do iorb=1,Norb
-                suffix=reg(fname)//&
-                     "_l"//reg(txtfy(iorb))//&
-                     "_s"//reg(txtfy(ispin))//&
-                     "_iw_indx"//reg(txtfy(ilat,6))//reg(weiss_suffix)
-                call splot(reg(suffix),w,Green(ilat,ispin,ispin,iorb,iorb,:))
-             enddo
-          enddo
-       enddo
-       !
-    case(5)                  !print spin-diagonal, all orbitals 
-       write(*,*)"Delta//WeissField: write spin diagonal and all orbitals elements Split."
-       do ilat=1,Nlat
-          do ispin=1,Nspin
-             do iorb=1,Norb
-                do jorb=1,Norb
-                   suffix=reg(fname)//&
-                        "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
-                        "_s"//reg(txtfy(ispin))//&
-                        "_iw_indx"//reg(txtfy(ilat,6))//reg(weiss_suffix)
-                   call splot(reg(suffix),w,Green(ilat,ispin,ispin,iorb,jorb,:))
-                enddo
-             enddo
-          enddo
-       enddo
-       !
-    case default
-       write(*,*)"Delta//WeissField: write all elements Split."
-       do ilat=1,Nlat
-          do ispin=1,Nspin
-             do jspin=1,Nspin
-                do iorb=1,Norb
-                   do jorb=1,Norb
-                      suffix=reg(fname)//&
-                           "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
-                           "_s"//reg(txtfy(ispin))//reg(txtfy(jspin))//&
-                           "_iw_indx"//reg(txtfy(ilat,6))//reg(weiss_suffix)
-                      call splot(reg(suffix),w,Green(ilat,ispin,jspin,iorb,jorb,:))
-                   enddo
-                enddo
-             enddo
-          enddo
-       enddo
-    end select
-  end subroutine dmft_weiss_print_lattice
 
 
 

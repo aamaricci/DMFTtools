@@ -1,10 +1,9 @@
-subroutine dmft_get_gloc_realaxis_normal_main_mpi(MpiComm,Hk,Wtk,Greal,Sreal,iprint,mpi_split,hk_symm)
+subroutine dmft_get_gloc_realaxis_normal_main_mpi(MpiComm,Hk,Wtk,Greal,Sreal,mpi_split,hk_symm)
   integer                                       :: MpiComm
   complex(8),dimension(:,:,:),intent(in)        :: Hk        ![Nspin*Norb][Nspin*Norb][Lk]
   real(8),dimension(size(Hk,3)),intent(in)      :: Wtk       ![Nk]
   complex(8),dimension(:,:,:,:,:),intent(in)    :: Sreal     ![Nspin][Nspin][Norb][Norb][Lreal]
   complex(8),dimension(:,:,:,:,:),intent(inout) :: Greal     !as Sreal
-  integer,intent(in)                            :: iprint
   character(len=*),optional                     :: mpi_split  
   character(len=1)                              :: mpi_split_ 
   logical,dimension(size(Hk,3)),optional        :: hk_symm   ![Lk]
@@ -48,7 +47,7 @@ subroutine dmft_get_gloc_realaxis_normal_main_mpi(MpiComm,Hk,Wtk,Greal,Sreal,ipr
   enddo
   !
   !invert (Z-Hk) for each k-point
-  if(mpi_master)write(*,"(A)")"Get local Realaxis Green's function (print mode:"//reg(txtfy(iprint))//")"
+  if(mpi_master)write(*,"(A)")"Get local Realaxis Green's function (no print)"
   if(mpi_master)call start_timer
   Greal=zero
   select case(mpi_split_)
@@ -70,18 +69,16 @@ subroutine dmft_get_gloc_realaxis_normal_main_mpi(MpiComm,Hk,Wtk,Greal,Sreal,ipr
      call Mpi_AllReduce(Gtmp,Greal, size(Greal), MPI_Double_Complex, MPI_Sum, MpiComm, MPI_ierr)
   end select
   if(mpi_master)call stop_timer
-  if(mpi_master)call dmft_gloc_print_realaxis(wr,Greal,"Gloc",iprint)
 end subroutine dmft_get_gloc_realaxis_normal_main_mpi
 
 
-subroutine dmft_get_gloc_realaxis_normal_dos_mpi(MpiComm,Ebands,Dbands,Hloc,Greal,Sreal,iprint,mpi_split)
+subroutine dmft_get_gloc_realaxis_normal_dos_mpi(MpiComm,Ebands,Dbands,Hloc,Greal,Sreal,mpi_split)
   integer                                                     :: MpiComm
   real(8),dimension(:,:),intent(in)                           :: Ebands    ![Nspin*Norb][Lk]
   real(8),dimension(size(Ebands,1),size(Ebands,2)),intent(in) :: Dbands    ![Nspin*Norb][Lk]
   real(8),dimension(size(Ebands,1)),intent(in)                :: Hloc      ![Nspin*Norb]
   complex(8),dimension(:,:,:,:,:),intent(in)                  :: Sreal     ![Nspin][Nspin][Norb][Norb][Lreal]
   complex(8),dimension(:,:,:,:,:),intent(inout)               :: Greal     !as Sreal
-  integer,intent(in)                                          :: iprint
   character(len=*),optional                                   :: mpi_split  
   character(len=1)                                            :: mpi_split_ 
   !
@@ -125,7 +122,7 @@ subroutine dmft_get_gloc_realaxis_normal_dos_mpi(MpiComm,Ebands,Dbands,Hloc,Grea
   enddo
   !
   !invert (Z-Hk) for each k-point
-  if(mpi_master)write(*,"(A)")"Get local Realaxis Green's function (print mode:"//reg(txtfy(iprint))//")"
+  if(mpi_master)write(*,"(A)")"Get local Realaxis Green's function (no print)"
   if(mpi_master)call start_timer
   Greal=zero
   allocate(Gtmp(Nspin,Nspin,Norb,Norb,Lreal));Gtmp=zero
@@ -163,17 +160,15 @@ subroutine dmft_get_gloc_realaxis_normal_dos_mpi(MpiComm,Ebands,Dbands,Hloc,Grea
      call Mpi_AllReduce(Gtmp,Greal, size(Greal), MPI_Double_Complex, MPI_Sum, MpiComm, MPI_ierr)
   end select
   if(mpi_master)call stop_timer
-  if(mpi_master)call dmft_gloc_print_realaxis(wm,Greal,"Gloc",iprint)
 end subroutine dmft_get_gloc_realaxis_normal_dos_mpi
 
 
-subroutine dmft_get_gloc_realaxis_normal_ineq_mpi(MpiComm,Hk,Wtk,Greal,Sreal,iprint,tridiag,mpi_split,hk_symm)
+subroutine dmft_get_gloc_realaxis_normal_ineq_mpi(MpiComm,Hk,Wtk,Greal,Sreal,tridiag,mpi_split,hk_symm)
   integer                                         :: MpiComm
   complex(8),dimension(:,:,:),intent(in)          :: Hk        ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Nk]
   real(8),dimension(size(Hk,3)),intent(in)        :: Wtk       ![Nk]
   complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sreal     ![Nlat][Nspin][Nspin][Norb][Norb][Lreal]
   complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Greal     !as Sreal
-  integer,intent(in)                              :: iprint    !
   logical,optional                                :: tridiag
   logical                                         :: tridiag_
   character(len=*),optional                       :: mpi_split  
@@ -215,7 +210,7 @@ subroutine dmft_get_gloc_realaxis_normal_ineq_mpi(MpiComm,Hk,Wtk,Greal,Sreal,ipr
   call assert_shape(Sreal,[Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_normal_ineq_main_mpi',"Sreal")
   call assert_shape(Greal,[Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_normal_ineq_main_mpi',"Greal")
   !
-  if(mpi_master)write(*,"(A)")"Get local Realaxis Green's function (print mode:"//reg(txtfy(iprint))//")"
+  if(mpi_master)write(*,"(A)")"Get local Realaxis Green's function (no print)"
   if(mpi_master)then
      if(.not.tridiag_)then
         write(*,"(A)")"Direct Inversion algorithm:"
@@ -277,17 +272,15 @@ subroutine dmft_get_gloc_realaxis_normal_ineq_mpi(MpiComm,Hk,Wtk,Greal,Sreal,ipr
      !
   end select
   if(mpi_master)call stop_timer
-  if(mpi_master)call dmft_gloc_print_realaxis_ineq(wr,Greal,"LG",iprint)
 end subroutine dmft_get_gloc_realaxis_normal_ineq_mpi
 
 
-subroutine dmft_get_gloc_realaxis_normal_gij_mpi(MpiComm,Hk,Wtk,Greal,Sreal,iprint,mpi_split,hk_symm)
+subroutine dmft_get_gloc_realaxis_normal_gij_mpi(MpiComm,Hk,Wtk,Greal,Sreal,mpi_split,hk_symm)
   integer                                           :: MpiComm
   complex(8),dimension(:,:,:),intent(in)            :: Hk        ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Nk]
   real(8),dimension(size(Hk,3)),intent(in)          :: Wtk       ![Nk]
   complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Sreal     !      [Nlat][Nspin][Nspin][Norb][Norb][Lreal]
   complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Greal     ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lreal]
-  integer,intent(in)                                :: iprint
   character(len=*),optional                         :: mpi_split  
   character(len=1)                                  :: mpi_split_ 
   logical,dimension(size(Hk,3)),optional            :: hk_symm
@@ -325,7 +318,7 @@ subroutine dmft_get_gloc_realaxis_normal_gij_mpi(MpiComm,Hk,Wtk,Greal,Sreal,ipri
   mpi_split_='w'    ;if(present(mpi_split)) mpi_split_=mpi_split
   hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
   !
-  if(mpi_master)write(*,"(A)")"Get full Green's function (print mode:"//reg(txtfy(iprint))//")"
+  if(mpi_master)write(*,"(A)")"Get full Green's function (no print)"
   !
   allocate(Gkreal(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal));Gkreal=zero
   allocate(zeta_real(Nlat,Nso,Nso,Lreal))
@@ -364,7 +357,6 @@ subroutine dmft_get_gloc_realaxis_normal_gij_mpi(MpiComm,Hk,Wtk,Greal,Sreal,ipri
      !
   end select
   if(mpi_master)call stop_timer
-  if(mpi_master)call dmft_gloc_print_realaxis_gij(wm,Greal,"Gij",iprint)
 end subroutine dmft_get_gloc_realaxis_normal_gij_mpi
 
 

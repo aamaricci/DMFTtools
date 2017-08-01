@@ -1,10 +1,9 @@
-subroutine dmft_get_gloc_matsubara_superc_main_mpi(MpiComm,Hk,Wtk,Gmats,Smats,iprint,mpi_split,hk_symm)
+subroutine dmft_get_gloc_matsubara_superc_main_mpi(MpiComm,Hk,Wtk,Gmats,Smats,mpi_split,hk_symm)
   integer                                         :: MpiComm
   complex(8),dimension(:,:,:,:),intent(in)          :: Hk        ![2][Nspin*Norb][Nspin*Norb][Nk]
   real(8),dimension(size(Hk,4)),intent(in)        :: Wtk       ![Nk]
   complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Smats     ![2][Nspin][Nspin][Norb][Norb][Lmats]
   complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gmats     !as Smats
-  integer,intent(in)                              :: iprint
   character(len=*),optional                       :: mpi_split  
   character(len=1)                                :: mpi_split_ 
   logical,dimension(size(Hk,4)),optional          :: hk_symm   ![Nk]
@@ -49,7 +48,7 @@ subroutine dmft_get_gloc_matsubara_superc_main_mpi(MpiComm,Hk,Wtk,Gmats,Smats,ip
   enddo
   !
   !invert (Z-Hk) for each k-point
-  if(mpi_master)write(*,"(A)")"Get local Matsubara Superc Green's function (print mode:"//reg(txtfy(iprint))//")"
+  if(mpi_master)write(*,"(A)")"Get local Matsubara Superc Green's function (no print)"
   if(mpi_master)call start_timer
   Gmats=zero
   select case(mpi_split_)
@@ -75,19 +74,16 @@ subroutine dmft_get_gloc_matsubara_superc_main_mpi(MpiComm,Hk,Wtk,Gmats,Smats,ip
      !
   end select
   if(mpi_master)call stop_timer
-  if(mpi_master)call dmft_gloc_print_matsubara(wm,Gmats(1,:,:,:,:,:),"Gloc",iprint)
-  if(mpi_master)call dmft_gloc_print_matsubara(wm,Gmats(2,:,:,:,:,:),"Floc",iprint)
 end subroutine dmft_get_gloc_matsubara_superc_main_mpi
 
 
-subroutine dmft_get_gloc_matsubara_superc_dos_mpi(MpiComm,Ebands,Dbands,Hloc,Gmats,Smats,iprint,mpi_split)
+subroutine dmft_get_gloc_matsubara_superc_dos_mpi(MpiComm,Ebands,Dbands,Hloc,Gmats,Smats,mpi_split)
   integer                                                       :: MpiComm
   real(8),dimension(:,:,:),intent(in)                           :: Ebands    ![2][Nspin*Norb][Lk]
   real(8),dimension(size(Ebands,1),size(Ebands,2)),intent(in)   :: Dbands    ![Nspin*Norb][Lk]
   real(8),dimension(2,size(Ebands,1)),intent(in)                :: Hloc      ![2][Nspin*Norb]
   complex(8),dimension(:,:,:,:,:,:),intent(in)                  :: Smats     ![2][Nspin][Nspin][Norb][Norb][Lmats]
   complex(8),dimension(:,:,:,:,:,:),intent(inout)               :: Gmats     !as Smats
-  integer,intent(in)                                            :: iprint
   character(len=*),optional                                     :: mpi_split  
   character(len=1)                                              :: mpi_split_ 
   !allocatable arrays
@@ -132,7 +128,7 @@ subroutine dmft_get_gloc_matsubara_superc_dos_mpi(MpiComm,Ebands,Dbands,Hloc,Gma
   enddo
   !
   !invert (Z-Hk) for each k-point
-  if(mpi_master)write(*,"(A)")"Get local Matsubara Superc Green's function (print mode:"//reg(txtfy(iprint))//")"
+  if(mpi_master)write(*,"(A)")"Get local Matsubara Superc Green's function (no print)"
   if(mpi_master)call start_timer
   Gmats=zero
   allocate(Gtmp(2,Nspin,Nspin,Norb,Norb,Lmats));Gtmp=zero
@@ -183,18 +179,15 @@ subroutine dmft_get_gloc_matsubara_superc_dos_mpi(MpiComm,Ebands,Dbands,Hloc,Gma
      call Mpi_AllReduce(Gtmp,Gmats, size(Gmats), MPI_Double_Complex, MPI_Sum, MpiComm, MPI_ierr)
   end select
   if(mpi_master)call stop_timer
-  call dmft_gloc_print_matsubara(wm,Gmats(1,:,:,:,:,:),"Gloc",iprint)
-  call dmft_gloc_print_matsubara(wm,Gmats(2,:,:,:,:,:),"Floc",iprint)
 end subroutine dmft_get_gloc_matsubara_superc_dos_mpi
 
 
-subroutine dmft_get_gloc_matsubara_superc_ineq_mpi(MpiComm,Hk,Wtk,Gmats,Smats,iprint,mpi_split,hk_symm)
+subroutine dmft_get_gloc_matsubara_superc_ineq_mpi(MpiComm,Hk,Wtk,Gmats,Smats,mpi_split,hk_symm)
   integer                                           :: MpiComm
   complex(8),dimension(:,:,:,:),intent(in)            :: Hk        ![2][Nlat*Nspin*Norb][Nlat*Nspin*Norb][Nk]
   real(8),dimension(size(Hk,4)),intent(in)          :: Wtk       ![Nk]
   complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Smats     ![2][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
   complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gmats     !as Smats
-  integer,intent(in)                                :: iprint
   character(len=*),optional                         :: mpi_split  
   character(len=1)                                  :: mpi_split_ 
   logical,dimension(size(Hk,4)),optional            :: hk_symm   ![Nk]
@@ -229,7 +222,7 @@ subroutine dmft_get_gloc_matsubara_superc_ineq_mpi(MpiComm,Hk,Wtk,Gmats,Smats,ip
   call assert_shape(Smats,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gloc_matsubara_superc_ineq_main_mpi',"Smats")
   call assert_shape(Gmats,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gloc_matsubara_superc_ineq_main_mpi',"Gmats")
   !
-  if(mpi_master)write(*,"(A)")"Get local Matsubara Superc Green's function (print mode:"//reg(txtfy(iprint))//")"
+  if(mpi_master)write(*,"(A)")"Get local Matsubara Superc Green's function (no print)"
   if(mpi_master)call start_timer
   !
   allocate(Gkmats(2,Nlat,Nspin,Nspin,Norb,Norb,Lmats))
@@ -274,20 +267,17 @@ subroutine dmft_get_gloc_matsubara_superc_ineq_mpi(MpiComm,Hk,Wtk,Gmats,Smats,ip
      !
   end select
   if(mpi_master)call stop_timer
-  if(mpi_master)call dmft_gloc_print_matsubara_ineq(wm,Gmats(1,:,:,:,:,:,:),"LG",iprint)
-  if(mpi_master)call dmft_gloc_print_matsubara_ineq(wm,Gmats(2,:,:,:,:,:,:),"LF",iprint)
 end subroutine dmft_get_gloc_matsubara_superc_ineq_mpi
 
 
 
-subroutine dmft_get_gloc_matsubara_superc_gij_mpi(MpiComm,Hk,Wtk,Gmats,Fmats,Smats,iprint,mpi_split,hk_symm)
+subroutine dmft_get_gloc_matsubara_superc_gij_mpi(MpiComm,Hk,Wtk,Gmats,Fmats,Smats,mpi_split,hk_symm)
   integer                                           :: MpiComm
   complex(8),dimension(:,:,:,:)                       :: Hk              ![2][Nlat*Norb*Nspin][Nlat*Norb*Nspin][Nk]
   real(8)                                           :: Wtk(size(Hk,4)) ![Nk]
   complex(8),intent(inout),dimension(:,:,:,:,:,:,:) :: Gmats           ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
   complex(8),intent(inout),dimension(:,:,:,:,:,:,:) :: Fmats           ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
   complex(8),intent(inout),dimension(:,:,:,:,:,:,:) :: Smats           ![2][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
-  integer                                           :: iprint
   character(len=*),optional                         :: mpi_split  
   character(len=1)                                  :: mpi_split_ 
   logical,optional                                  :: hk_symm(size(Hk,4))
@@ -325,7 +315,7 @@ subroutine dmft_get_gloc_matsubara_superc_gij_mpi(MpiComm,Hk,Wtk,Gmats,Fmats,Sma
   mpi_split_='w'    ;if(present(mpi_split)) mpi_split_=mpi_split
   hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
   !
-  if(mpi_master)write(*,"(A)")"Get full Green's function (print mode:"//reg(txtfy(iprint))//")"
+  if(mpi_master)write(*,"(A)")"Get full Green's function (no print)"
   !
   allocate(Gkmats(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats));Gkmats=zero
   allocate(Fkmats(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats));Fkmats=zero
@@ -390,8 +380,6 @@ subroutine dmft_get_gloc_matsubara_superc_gij_mpi(MpiComm,Hk,Wtk,Gmats,Fmats,Sma
      !
   end select
   if(mpi_master)call stop_timer
-  if(mpi_master)call dmft_gloc_print_matsubara_gij(wm,Gmats,"Gij",iprint)
-  if(mpi_master)call dmft_gloc_print_matsubara_gij(wm,Fmats,"Fij",iprint)
 end subroutine dmft_get_gloc_matsubara_superc_gij_mpi
 
 
