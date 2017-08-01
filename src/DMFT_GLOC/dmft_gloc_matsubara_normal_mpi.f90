@@ -72,7 +72,7 @@ subroutine dmft_get_gloc_matsubara_normal_main_mpi(MpiComm,Hk,Wtk,Gmats,Smats,ip
 end subroutine dmft_get_gloc_matsubara_normal_main_mpi
 
 
-subroutine dmft_get_gloc_matsubara_normal_dos_main_mpi(MpiComm,Ebands,Dbands,Hloc,Gmats,Smats,iprint,mpi_split)
+subroutine dmft_get_gloc_matsubara_normal_dos_mpi(MpiComm,Ebands,Dbands,Hloc,Gmats,Smats,iprint,mpi_split)
   integer                                                     :: MpiComm
   real(8),dimension(:,:),intent(in)                           :: Ebands    ![Nspin*Norb][Lk]
   real(8),dimension(size(Ebands,1),size(Ebands,2)),intent(in) :: Dbands    ![Nspin*Norb][Lk]
@@ -160,10 +160,10 @@ subroutine dmft_get_gloc_matsubara_normal_dos_main_mpi(MpiComm,Ebands,Dbands,Hlo
   end select
   if(mpi_master)call stop_timer
   if(mpi_master)call dmft_gloc_print_matsubara(wm,Gmats,"Gloc",iprint)
-end subroutine dmft_get_gloc_matsubara_normal_dos_main_mpi
+end subroutine dmft_get_gloc_matsubara_normal_dos_mpi
 
 
-subroutine dmft_get_gloc_matsubara_normal_lattice_main_mpi(MpiComm,Hk,Wtk,Gmats,Smats,iprint,tridiag,mpi_split,hk_symm)
+subroutine dmft_get_gloc_matsubara_normal_ineq_mpi(MpiComm,Hk,Wtk,Gmats,Smats,iprint,tridiag,mpi_split,hk_symm)
   integer                                         :: MpiComm
   complex(8),dimension(:,:,:),intent(in)          :: Hk        ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Nk]
   real(8),dimension(size(Hk,3)),intent(in)        :: Wtk       ![Nk]
@@ -201,9 +201,9 @@ subroutine dmft_get_gloc_matsubara_normal_lattice_main_mpi(MpiComm,Hk,Wtk,Gmats,
   Nso   = Nspin*Norb
   Nlso  = Nlat*Nspin*Norb
   !Testing part:
-  call assert_shape(Hk,[Nlso,Nlso,Lk],'dmft_get_gloc_matsubara_normal_lattice_main_mpi',"Hk")
-  call assert_shape(Smats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gloc_matsubara_normal_lattice_main_mpi',"Smats")
-  call assert_shape(Gmats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gloc_matsubara_normal_lattice_main_mpi',"Gmats")
+  call assert_shape(Hk,[Nlso,Nlso,Lk],'dmft_get_gloc_matsubara_normal_ineq_main_mpi',"Hk")
+  call assert_shape(Smats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gloc_matsubara_normal_ineq_main_mpi',"Smats")
+  call assert_shape(Gmats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gloc_matsubara_normal_ineq_main_mpi',"Gmats")
   !
   if(mpi_master)write(*,"(A)")"Get local Matsubara Green's function (print mode:"//reg(txtfy(iprint))//")"
   if(mpi_master)then
@@ -230,12 +230,12 @@ subroutine dmft_get_gloc_matsubara_normal_lattice_main_mpi(MpiComm,Hk,Wtk,Gmats,
   Gmats=zero
   select case(mpi_split_)
   case default
-     stop "dmft_get_gloc_matsubara_normal_main_lattice_mpi: ! mpi_split_ in ['w','k'] "
+     stop "dmft_get_gloc_matsubara_normal_main_ineq_mpi: ! mpi_split_ in ['w','k'] "
      !
   case ('w')
      if(.not.tridiag_)then
         do ik=1,Lk
-           call invert_gk_normal_lattice_mpi(MpiComm,zeta_mats,Hk(:,:,ik),hk_symm_(ik),Gkmats)
+           call invert_gk_normal_ineq_mpi(MpiComm,zeta_mats,Hk(:,:,ik),hk_symm_(ik),Gkmats)
            Gmats = Gmats + Gkmats*Wtk(ik)
            if(mpi_master)call eta(ik,Lk)
         end do
@@ -251,7 +251,7 @@ subroutine dmft_get_gloc_matsubara_normal_lattice_main_mpi(MpiComm,Hk,Wtk,Gmats,
      allocate(Gtmp(Nlat,Nspin,Nspin,Norb,Norb,Lmats));Gtmp=zero
      if(.not.tridiag_)then
         do ik=1+mpi_rank,Lk,mpi_size
-           call invert_gk_normal_lattice(zeta_mats,Hk(:,:,ik),hk_symm_(ik),Gkmats)
+           call invert_gk_normal_ineq(zeta_mats,Hk(:,:,ik),hk_symm_(ik),Gkmats)
            Gtmp = Gtmp + Gkmats*Wtk(ik)
            if(mpi_master)call eta(ik,Lk)
         end do
@@ -267,8 +267,8 @@ subroutine dmft_get_gloc_matsubara_normal_lattice_main_mpi(MpiComm,Hk,Wtk,Gmats,
      !
   end select
   if(mpi_master)call stop_timer
-  if(mpi_master)call dmft_gloc_print_matsubara_lattice(wm,Gmats,"LG",iprint)
-end subroutine dmft_get_gloc_matsubara_normal_lattice_main_mpi
+  if(mpi_master)call dmft_gloc_print_matsubara_ineq(wm,Gmats,"LG",iprint)
+end subroutine dmft_get_gloc_matsubara_normal_ineq_mpi
 
 
 
@@ -277,170 +277,7 @@ end subroutine dmft_get_gloc_matsubara_normal_lattice_main_mpi
 
 
 
-
-
-
-
-!##################################################################
-!##################################################################
-!##################################################################
-
-
-
-
-
-
-
-
-
-
-
-subroutine dmft_get_gloc_matsubara_normal_1band_mpi(MpiComm,Hk,Wtk,Gmats,Smats,iprint,mpi_split,hk_symm)
-  integer                                   :: MpiComm
-  complex(8),dimension(:),intent(in)        :: Hk              ![Nk]
-  real(8),intent(in)                        :: Wtk(size(Hk))   ![Nk]
-  complex(8),intent(in)                     :: Smats(:)
-  complex(8),intent(inout)                  :: Gmats(size(Smats))
-  logical,optional                          :: hk_symm(size(Hk,1))
-  logical                                   :: hk_symm_(size(Hk,1))
-  integer                                   :: iprint
-  character(len=*),optional                 :: mpi_split  
-  character(len=1)                          :: mpi_split_ 
-  !
-  complex(8),dimension(1,1,size(Hk))        :: Hk_             ![Norb*Nspin][Norb*Nspin][Nk]
-  complex(8),dimension(1,1,1,1,size(Smats)) :: Gmats_
-  complex(8),dimension(1,1,1,1,size(Smats)) :: Smats_
-  !
-  Hk_(1,1,:)        = Hk(:)
-  Smats_(1,1,1,1,:) = Smats(:)
-  mpi_split_='w'    ;if(present(mpi_split)) mpi_split_=mpi_split
-  hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
-  call dmft_get_gloc_matsubara_normal_main_mpi(MpiComm,Hk_,Wtk,Gmats_,Smats_,iprint,mpi_split_,hk_symm_)
-  Gmats(:) = Gmats_(1,1,1,1,:)
-end subroutine dmft_get_gloc_matsubara_normal_1band_mpi
-
-subroutine dmft_get_gloc_matsubara_normal_lattice_1band_mpi(MpiComm,Hk,Wtk,Gmats,Smats,iprint,tridiag,mpi_split,hk_symm)
-  integer                                                         :: MpiComm
-  complex(8),dimension(:,:,:),intent(in)                          :: Hk              ![Nlat][Nlat][Nk]
-  real(8),intent(in)                                              :: Wtk(size(Hk,3)) ![Nk]
-  complex(8),dimension(:,:),intent(in)                            :: Smats           ![Nlat][Lmats]
-  complex(8),dimension(size(Smats,1),size(Smats,2)),intent(inout) :: Gmats
-  integer                                                         :: iprint
-  logical,optional                                                :: tridiag
-  logical                                                         :: tridiag_
-  character(len=*),optional                                       :: mpi_split  
-  character(len=1)                                                :: mpi_split_ 
-  logical,optional                                                :: hk_symm(size(Hk,1))
-  logical                                                         :: hk_symm_(size(Hk,1))
-  !
-  complex(8),dimension(size(Smats,1),1,1,1,1,size(Smats,2))       :: Gmats_
-  complex(8),dimension(size(Smats,1),1,1,1,1,size(Smats,2))       :: Smats_
-  !
-  tridiag_=.false.;if(present(tridiag)) tridiag_=tridiag
-  mpi_split_='w'    ;if(present(mpi_split)) mpi_split_=mpi_split
-  hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
-  !
-  call assert_shape(Hk,[size(Hk,1),size(Hk,1),size(Hk,3)],'dmft_get_gloc_matsubara_normal_lattice_1band_mpi',"Hk")
-  call assert_shape(Smats,[size(Hk,1),size(Smats,2)],'dmft_get_gloc_matsubara_normal_lattice_1band_mpi',"Smats")
-  Smats_(:,1,1,1,1,:) = Smats(:,:)
-  call dmft_get_gloc_matsubara_normal_lattice_main_mpi(MpiComm,Hk,Wtk,Gmats_,Smats_,iprint,tridiag_,mpi_split_,hk_symm_)
-  Gmats(:,:) = Gmats_(:,1,1,1,1,:)
-end subroutine dmft_get_gloc_matsubara_normal_lattice_1band_mpi
-
-
-
-
-
-!##################################################################
-!##################################################################
-!##################################################################
-
-
-
-
-
-
-
-subroutine dmft_get_gloc_matsubara_normal_Nband_mpi(MpiComm,Hk,Wtk,Gmats,Smats,iprint,mpi_split,hk_symm)
-  integer                                                             :: MpiComm
-  complex(8),dimension(:,:,:),intent(in)                              :: Hk              ![Norb][Norb][Nk]
-  real(8)                                                             :: Wtk(size(Hk,3)) ![Nk]
-  complex(8),intent(in),dimension(:,:,:)                              :: Smats(:,:,:)    ![Norb][Norb][Lmats]
-  complex(8),intent(inout),dimension(:,:,:)                           :: Gmats
-  logical,optional                                                    :: hk_symm(size(Hk,3))
-  logical                                                             :: hk_symm_(size(Hk,3))
-  integer                                                             :: iprint
-  character(len=*),optional                                           :: mpi_split  
-  character(len=1)                                                    :: mpi_split_ 
-  !
-  complex(8),dimension(1,1,size(Smats,1),size(Smats,2),size(Smats,3)) :: Gmats_
-  complex(8),dimension(1,1,size(Smats,1),size(Smats,2),size(Smats,3)) :: Smats_
-  integer                                                             :: Nspin,Norb,Nso,Lmats
-  !
-  mpi_split_='w'    ;if(present(mpi_split)) mpi_split_=mpi_split
-  hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
-  !
-  Nspin = 1
-  Norb  = size(Smats,1)
-  Lmats = size(Smats,3)
-  Nso   = Nspin*Norb
-  call assert_shape(Hk,[Nso,Nso,size(Hk,3)],'dmft_get_gloc_matsubara_normal_Nband_mpi',"Hk")
-  call assert_shape(Smats,[Nso,Nso,Lmats],'dmft_get_gloc_matsubara_normal_Nband_mpi',"Smats")
-  call assert_shape(Gmats,[Nso,Nso,Lmats],'dmft_get_gloc_matsubara_normal_Nband_mpi',"Gmats")
-  !
-  Smats_(1,1,:,:,:) = Smats(:,:,:)
-  call dmft_get_gloc_matsubara_normal_main_mpi(MpiComm,Hk,Wtk,Gmats_,Smats_,iprint,mpi_split_,hk_symm_)
-  Gmats(:,:,:) = Gmats_(1,1,:,:,:)
-end subroutine dmft_get_gloc_matsubara_normal_Nband_mpi
-
-
-subroutine dmft_get_gloc_matsubara_normal_lattice_Nband_mpi(MpiComm,Hk,Wtk,Gmats,Smats,iprint,tridiag,mpi_split,hk_symm)
-  integer                                                                     :: MpiComm
-  complex(8),dimension(:,:,:),intent(in)                                      :: Hk              ![Nlat*Norb][Nlat*Norb][Nk]
-  real(8)                                                                     :: Wtk(size(Hk,3)) ![Nk]
-  complex(8),intent(in)                                                       :: Smats(:,:,:,:)  ![Nlat][Norb][Norb][Lmats]
-  complex(8),intent(inout)                                                    :: Gmats(:,:,:,:)
-  logical,optional                                                            :: hk_symm(size(Hk,3))
-  logical                                                                     :: hk_symm_(size(Hk,3))
-  integer                                                                     :: iprint
-  logical,optional                                                            :: tridiag
-  logical                                                                     :: tridiag_
-  character(len=*),optional                                                   :: mpi_split  
-  character(len=1)                                                            :: mpi_split_ 
-  !
-  complex(8),&
-       dimension(size(Smats,1),1,1,size(Smats,2),size(Smats,3),size(Smats,4)) :: Gmats_ ![Nlat][1][1][Norb][Norb][Lmats]
-  complex(8),&
-       dimension(size(Smats,1),1,1,size(Smats,2),size(Smats,3),size(Smats,4)) :: Smats_![Nlat][1][1][Norb][Norb][Lmats]
-  !
-  integer                                                                     :: Nspin,Norb,Nso,Nlso,Lmats
-  !
-  !
-  tridiag_=.false.;if(present(tridiag)) tridiag_=tridiag
-  mpi_split_='w'    ;if(present(mpi_split)) mpi_split_=mpi_split
-  hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
-  !
-  Nspin = 1    
-  Nlat  = size(Smats,1)
-  Norb  = size(Smats,2)
-  Lmats = size(Smats,4)
-  Nso   = Nspin*Norb
-  Nlso  = Nlat*Nspin*Norb
-  call assert_shape(Hk,[Nlso,Nlso,size(Hk,3)],'dmft_get_gloc_matsubara_normal_lattice_Nband_mpi',"Hk")
-  call assert_shape(Smats,[Nlat,Nso,Nso,Lmats],'dmft_get_gloc_matsubara_normal_lattice_Nband_mpi',"Smats")
-  call assert_shape(Gmats,[Nlat,Nso,Nso,Lmats],'dmft_get_gloc_matsubara_normal_lattice_Nband_mpi',"Gmats")
-  !
-  Smats_(:,1,1,:,:,:) = Smats(:,:,:,:)
-  call dmft_get_gloc_matsubara_normal_lattice_main_mpi(MpiComm,Hk,Wtk,Gmats_,Smats_,iprint,tridiag_,mpi_split_,hk_symm_)
-  Gmats(:,:,:,:) = Gmats_(:,1,1,:,:,:)
-end subroutine dmft_get_gloc_matsubara_normal_lattice_Nband_mpi
-
-
-
-
-
-
-subroutine dmft_get_gloc_matsubara_normal_gij_main_mpi(MpiComm,Hk,Wtk,Gmats,Smats,iprint,mpi_split,hk_symm)
+subroutine dmft_get_gloc_matsubara_normal_gij_mpi(MpiComm,Hk,Wtk,Gmats,Smats,iprint,mpi_split,hk_symm)
   integer                                           :: MpiComm
   complex(8),dimension(:,:,:),intent(in)            :: Hk        ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Nk]
   real(8),dimension(size(Hk,3)),intent(in)          :: Wtk       ![Nk]
@@ -521,7 +358,7 @@ subroutine dmft_get_gloc_matsubara_normal_gij_main_mpi(MpiComm,Hk,Wtk,Gmats,Smat
   end select
   if(mpi_master)call stop_timer
   if(mpi_master)call dmft_gloc_print_matsubara_gij(wm,Gmats,"Gij",iprint)
-end subroutine dmft_get_gloc_matsubara_normal_gij_main_mpi
+end subroutine dmft_get_gloc_matsubara_normal_gij_mpi
 
 
 

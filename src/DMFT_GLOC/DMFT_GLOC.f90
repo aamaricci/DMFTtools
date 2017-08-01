@@ -15,114 +15,84 @@ module DMFT_GLOC
 
   interface dmft_gloc_matsubara
      module procedure :: dmft_get_gloc_matsubara_normal_main
-     module procedure :: dmft_get_gloc_matsubara_normal_1band
-     module procedure :: dmft_get_gloc_matsubara_normal_Nband
-     module procedure :: dmft_get_gloc_matsubara_normal_dos_main
-     module procedure :: dmft_get_gloc_matsubara_normal_lattice_main
-     module procedure :: dmft_get_gloc_matsubara_normal_lattice_1band
-     module procedure :: dmft_get_gloc_matsubara_normal_lattice_Nband
+     module procedure :: dmft_get_gloc_matsubara_normal_dos
+     module procedure :: dmft_get_gloc_matsubara_normal_ineq
+     module procedure :: dmft_get_gloc_matsubara_superc_main
+     module procedure :: dmft_get_gloc_matsubara_superc_dos
+     module procedure :: dmft_get_gloc_matsubara_superc_ineq
 #ifdef _MPI
      module procedure :: dmft_get_gloc_matsubara_normal_main_mpi
-     module procedure :: dmft_get_gloc_matsubara_normal_1band_mpi
-     module procedure :: dmft_get_gloc_matsubara_normal_Nband_mpi
-     module procedure :: dmft_get_gloc_matsubara_normal_dos_main_mpi
-     module procedure :: dmft_get_gloc_matsubara_normal_lattice_main_mpi
-     module procedure :: dmft_get_gloc_matsubara_normal_lattice_1band_mpi     
-     module procedure :: dmft_get_gloc_matsubara_normal_lattice_Nband_mpi
+     module procedure :: dmft_get_gloc_matsubara_normal_dos_mpi
+     module procedure :: dmft_get_gloc_matsubara_normal_ineq_mpi
+     module procedure :: dmft_get_gloc_matsubara_superc_main_mpi
+     module procedure :: dmft_get_gloc_matsubara_superc_dos_mpi
+     module procedure :: dmft_get_gloc_matsubara_superc_ineq_mpi     
 #endif
   end interface dmft_gloc_matsubara
 
 
 
-
-  interface dmft_gloc_matsubara_superc
-     module procedure :: dmft_get_gloc_matsubara_superc_main
-     module procedure :: dmft_get_gloc_matsubara_superc_1band
-     module procedure :: dmft_get_gloc_matsubara_superc_Nband
-     module procedure :: dmft_get_gloc_matsubara_superc_lattice_main          
-     module procedure :: dmft_get_gloc_matsubara_superc_lattice_1band
-     module procedure :: dmft_get_gloc_matsubara_superc_lattice_Nband     
-#ifdef _MPI
-     module procedure :: dmft_get_gloc_matsubara_superc_main_mpi
-     module procedure :: dmft_get_gloc_matsubara_superc_1band_mpi
-     module procedure :: dmft_get_gloc_matsubara_superc_Nband_mpi     
-     module procedure :: dmft_get_gloc_matsubara_superc_lattice_main_mpi     
-     module procedure :: dmft_get_gloc_matsubara_superc_lattice_1band_mpi
-     module procedure :: dmft_get_gloc_matsubara_superc_lattice_Nband_mpi
-#endif
-  end interface dmft_gloc_matsubara_superc
-
-
-
+  !   interface dmft_gloc_matsubara_superc
+  !      module procedure :: dmft_get_gloc_matsubara_superc_main
+  !      module procedure :: dmft_get_gloc_matsubara_superc_dos
+  !      module procedure :: dmft_get_gloc_matsubara_superc_ineq
+  ! #ifdef _MPI
+  !      module procedure :: dmft_get_gloc_matsubara_superc_main_mpi
+  !      module procedure :: dmft_get_gloc_matsubara_superc_dos_mpi
+  !      module procedure :: dmft_get_gloc_matsubara_superc_ineq_mpi     
+  ! #endif
+  !   end interface dmft_gloc_matsubara_superc
 
 
 
   interface dmft_gloc_realaxis
      module procedure :: dmft_get_gloc_realaxis_normal_main
-     module procedure :: dmft_get_gloc_realaxis_normal_1band
-     module procedure :: dmft_get_gloc_realaxis_normal_Nband
-     module procedure :: dmft_get_gloc_realaxis_normal_dos_main
-     module procedure :: dmft_get_gloc_realaxis_normal_lattice_main
-     module procedure :: dmft_get_gloc_realaxis_normal_lattice_1band     
-     module procedure :: dmft_get_gloc_realaxis_normal_lattice_Nband
+     module procedure :: dmft_get_gloc_realaxis_normal_dos
+     module procedure :: dmft_get_gloc_realaxis_normal_ineq
+     module procedure :: dmft_get_gloc_realaxis_superc_main
+     module procedure :: dmft_get_gloc_realaxis_superc_dos
+     module procedure :: dmft_get_gloc_realaxis_superc_ineq
 #ifdef _MPI
      module procedure :: dmft_get_gloc_realaxis_normal_main_mpi
-     module procedure :: dmft_get_gloc_realaxis_normal_1band_mpi
-     module procedure :: dmft_get_gloc_realaxis_normal_Nband_mpi
-     module procedure :: dmft_get_gloc_realaxis_normal_dos_main_mpi
-     module procedure :: dmft_get_gloc_realaxis_normal_lattice_main_mpi
-     module procedure :: dmft_get_gloc_realaxis_normal_lattice_1band_mpi
-     module procedure :: dmft_get_gloc_realaxis_normal_lattice_Nband_mpi
+     module procedure :: dmft_get_gloc_realaxis_normal_dos_mpi
+     module procedure :: dmft_get_gloc_realaxis_normal_ineq_mpi
+     module procedure :: dmft_get_gloc_realaxis_superc_main_mpi
+     module procedure :: dmft_get_gloc_realaxis_superc_dos_mpi
+     module procedure :: dmft_get_gloc_realaxis_superc_ineq_mpi
 #endif
   end interface dmft_gloc_realaxis
 
 
-
-
-
-  interface dmft_gloc_realaxis_superc
-     module procedure :: dmft_get_gloc_realaxis_superc_main
-     module procedure :: dmft_get_gloc_realaxis_superc_1band
-     module procedure :: dmft_get_gloc_realaxis_superc_Nband
-     module procedure :: dmft_get_gloc_realaxis_superc_lattice_main
-     module procedure :: dmft_get_gloc_realaxis_superc_lattice_1band     
-     module procedure :: dmft_get_gloc_realaxis_superc_lattice_Nband
-#ifdef _MPI
-     module procedure :: dmft_get_gloc_realaxis_superc_main_mpi
-     module procedure :: dmft_get_gloc_realaxis_superc_1band_mpi
-     module procedure :: dmft_get_gloc_realaxis_superc_Nband_mpi
-     module procedure :: dmft_get_gloc_realaxis_superc_lattice_main_mpi          
-     module procedure :: dmft_get_gloc_realaxis_superc_lattice_1band_mpi
-     module procedure :: dmft_get_gloc_realaxis_superc_lattice_Nband_mpi
-#endif
-  end interface dmft_gloc_realaxis_superc
-
-
-
-
-
+  !   interface dmft_gloc_realaxis_superc
+  !      module procedure :: dmft_get_gloc_realaxis_superc_main
+  !      module procedure :: dmft_get_gloc_realaxis_superc_dos
+  !      module procedure :: dmft_get_gloc_realaxis_superc_ineq
+  ! #ifdef _MPI
+  !      module procedure :: dmft_get_gloc_realaxis_superc_main_mpi
+  !      module procedure :: dmft_get_gloc_realaxis_superc_dos_mpi
+  !      module procedure :: dmft_get_gloc_realaxis_superc_ineq_mpi          
+  ! #endif
+  !   end interface dmft_gloc_realaxis_superc
 
 
 
 
   interface dmft_gij_matsubara
-     module procedure :: dmft_get_gloc_matsubara_normal_gij_main
+     module procedure :: dmft_get_gloc_matsubara_normal_gij
+     module procedure :: dmft_get_gloc_matsubara_superc_gij
 #ifdef _MPI
-     module procedure :: dmft_get_gloc_matsubara_normal_gij_main_mpi
+     module procedure :: dmft_get_gloc_matsubara_normal_gij_mpi
+     module procedure :: dmft_get_gloc_matsubara_superc_gij_mpi
 #endif     
   end interface dmft_gij_matsubara
 
 
-
-
-
-
-  interface dmft_gij_matsubara_superc
-     module procedure :: dmft_get_gloc_matsubara_superc_gij_main
-#ifdef _MPI
-     module procedure :: dmft_get_gloc_matsubara_superc_gij_main_mpi
-#endif     
-  end interface dmft_gij_matsubara_superc
+  !   interface dmft_gij_matsubara_superc
+  !      module procedure :: dmft_get_gloc_matsubara_superc_gij
+  ! #ifdef _MPI
+  !      module procedure :: dmft_get_gloc_matsubara_superc_gij_mpi
+  ! #endif     
+  !   end interface dmft_gij_matsubara_superc
 
 
 
@@ -130,35 +100,37 @@ module DMFT_GLOC
 
 
   interface dmft_gij_realaxis
-     module procedure :: dmft_get_gloc_realaxis_normal_gij_main
+     module procedure :: dmft_get_gloc_realaxis_normal_gij
+     module procedure :: dmft_get_gloc_realaxis_superc_gij
 #ifdef _MPI
-     module procedure :: dmft_get_gloc_realaxis_normal_gij_main_mpi
+     module procedure :: dmft_get_gloc_realaxis_normal_gij_mpi
+     module procedure :: dmft_get_gloc_realaxis_superc_gij_mpi
 #endif     
   end interface dmft_gij_realaxis
 
 
 
 
-  interface dmft_gij_realaxis_superc
-     module procedure :: dmft_get_gloc_realaxis_superc_gij_main
-#ifdef _MPI
-     module procedure :: dmft_get_gloc_realaxis_superc_gij_main_mpi
-#endif     
-  end interface dmft_gij_realaxis_superc
+  !   interface dmft_gij_realaxis_superc
+  !      module procedure :: dmft_get_gloc_realaxis_superc_gij
+  ! #ifdef _MPI
+  !      module procedure :: dmft_get_gloc_realaxis_superc_gij_mpi
+  ! #endif     
+  !   end interface dmft_gij_realaxis_superc
 
 
 
 
   interface dmft_set_Gamma_matsubara
      module procedure :: dmft_set_Gamma_matsubara_local
-     module procedure :: dmft_set_Gamma_matsubara_lattice
+     module procedure :: dmft_set_Gamma_matsubara_ineq
   end interface dmft_set_Gamma_matsubara
 
 
 
   interface dmft_set_Gamma_realaxis
      module procedure :: dmft_set_Gamma_realaxis_local
-     module procedure :: dmft_set_Gamma_realaxis_lattice
+     module procedure :: dmft_set_Gamma_realaxis_ineq
   end interface dmft_set_Gamma_realaxis
 
 
@@ -212,16 +184,16 @@ module DMFT_GLOC
 
   !PUBLIC IN DMFT:
   public :: dmft_gloc_matsubara
-  public :: dmft_gloc_matsubara_superc
+  ! public :: dmft_gloc_matsubara_superc
 
   public :: dmft_gloc_realaxis
-  public :: dmft_gloc_realaxis_superc
+  ! public :: dmft_gloc_realaxis_superc
 
   public :: dmft_gij_matsubara
-  public :: dmft_gij_matsubara_superc
+  ! public :: dmft_gij_matsubara_superc
 
   public :: dmft_gij_realaxis
-  public :: dmft_gij_realaxis_superc
+  ! public :: dmft_gij_realaxis_superc
 
   public :: dmft_set_Gamma_matsubara
   public :: dmft_set_Gamma_realaxis
@@ -371,10 +343,10 @@ contains
 
 
   !
-  ! INVERT_GK_NORMAL_LATTICE(_MPI)
+  ! INVERT_GK_NORMAL_INEQ(_MPI)
   !
   !SERIAL (OR PARALLEL ON K)
-  subroutine invert_gk_normal_lattice(zeta,Hk,hk_symm,Gkout)
+  subroutine invert_gk_normal_ineq(zeta,Hk,hk_symm,Gkout)
     complex(8),dimension(:,:,:,:),intent(in)        :: zeta    ![Nlat][Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lfreq]
     complex(8),dimension(:,:),intent(in)            :: Hk      ![Nlat*Nspin*Norb][Nlat*Nspin*Norb]
     logical,intent(in)                              :: hk_symm
@@ -393,18 +365,18 @@ contains
     Nso   = Nspin*Norb
     Nlso  = Nlat*Nspin*Norb
     !Testing:
-    call assert_shape(zeta,[Nlat,Nso,Nso,Lfreq],"invert_gk_normal_lattice","zeta")
-    call assert_shape(Hk,[Nlso,Nlso],"invert_gk_normal_lattice","Hk")
-    call assert_shape(Gkout,[Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_normal_lattice","Gkout")
+    call assert_shape(zeta,[Nlat,Nso,Nso,Lfreq],"invert_gk_normal_ineq","zeta")
+    call assert_shape(Hk,[Nlso,Nlso],"invert_gk_normal_ineq","Hk")
+    call assert_shape(Gkout,[Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_normal_ineq","Gkout")
     !
     if(allocated(lattice_gamma_mats).AND.allocated(lattice_gamma_real))&
-         stop "invert_gk_normal_lattice: lattice_Gamma_mats & lattice_Gamma_real both allocated"
+         stop "invert_gk_normal_ineq: lattice_Gamma_mats & lattice_Gamma_real both allocated"
     if(allocated(lattice_gamma_mats))then
-       call assert_shape(lattice_gamma_mats,[Nlso,Nlso,Lfreq],"invert_gk_normal_lattice","lattice_gamma_mats")
+       call assert_shape(lattice_gamma_mats,[Nlso,Nlso,Lfreq],"invert_gk_normal_ineq","lattice_gamma_mats")
        allocate(Gembed(Nlso,Nlso,Lfreq));Gembed=lattice_gamma_mats
     endif
     if(allocated(lattice_gamma_real))then
-       call assert_shape(lattice_gamma_real,[Nlso,Nlso,Lfreq],"invert_gk_normal_lattice","lattice_gamma_real")
+       call assert_shape(lattice_gamma_real,[Nlso,Nlso,Lfreq],"invert_gk_normal_ineq","lattice_gamma_real")
        allocate(Gembed(Nlso,Nlso,Lfreq));Gembed=lattice_gamma_real
     endif
     !
@@ -435,11 +407,11 @@ contains
        enddo
     enddo
     Gkout = Gktmp
-  end subroutine invert_gk_normal_lattice
+  end subroutine invert_gk_normal_ineq
 
   !PARALLEL ON FREQ:
 #ifdef _MPI
-  subroutine invert_gk_normal_lattice_mpi(MpiComm,zeta,Hk,hk_symm,Gkout)
+  subroutine invert_gk_normal_ineq_mpi(MpiComm,zeta,Hk,hk_symm,Gkout)
     integer                                         :: MpiComm
     complex(8),dimension(:,:,:,:),intent(in)        :: zeta    ![Nlat][Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lfreq]
     complex(8),dimension(:,:),intent(in)            :: Hk      ![Nlat*Nspin*Norb][Nlat*Nspin*Norb]
@@ -463,18 +435,18 @@ contains
     Lfreq = size(zeta,4)
     Nso   = Nspin*Norb
     Nlso  = Nlat*Nspin*Norb
-    call assert_shape(zeta,[Nlat,Nso,Nso,Lfreq],"invert_gk_normal_lattice_mpi","zeta")
-    call assert_shape(Hk,[Nlso,Nlso],"invert_gk_normal_lattice_mpi","Hk")
-    call assert_shape(Gkout,[Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_normal_lattice_mpi","Gkout")
+    call assert_shape(zeta,[Nlat,Nso,Nso,Lfreq],"invert_gk_normal_ineq_mpi","zeta")
+    call assert_shape(Hk,[Nlso,Nlso],"invert_gk_normal_ineq_mpi","Hk")
+    call assert_shape(Gkout,[Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_normal_ineq_mpi","Gkout")
     !
     if(allocated(lattice_gamma_mats).AND.allocated(lattice_gamma_real))&
-         stop "invert_gk_normal_lattice_mpi: lattice_Gamma_mats & lattice_Gamma_real both allocated"
+         stop "invert_gk_normal_ineq_mpi: lattice_Gamma_mats & lattice_Gamma_real both allocated"
     if(allocated(lattice_gamma_mats))then
-       call assert_shape(lattice_gamma_mats,[Nlso,Nlso,Lfreq],"invert_gk_normal_lattice_mpi","lattice_gamma_mats")
+       call assert_shape(lattice_gamma_mats,[Nlso,Nlso,Lfreq],"invert_gk_normal_ineq_mpi","lattice_gamma_mats")
        allocate(Gembed(Nlso,Nlso,Lfreq));Gembed=lattice_gamma_mats
     endif
     if(allocated(lattice_gamma_real))then
-       call assert_shape(lattice_gamma_real,[Nlso,Nlso,Lfreq],"invert_gk_normal_lattice_mpi","lattice_gamma_real")
+       call assert_shape(lattice_gamma_real,[Nlso,Nlso,Lfreq],"invert_gk_normal_ineq_mpi","lattice_gamma_real")
        allocate(Gembed(Nlso,Nlso,Lfreq));Gembed=lattice_gamma_real
     endif
     !
@@ -506,7 +478,7 @@ contains
     enddo
     Gkout=zero
     call MPI_AllReduce(Gktmp, Gkout, size(Gkout), MPI_Double_Complex, MPI_Sum, MpiComm, mpi_ierr)
-  end subroutine invert_gk_normal_lattice_mpi
+  end subroutine invert_gk_normal_ineq_mpi
 #endif
 
 
@@ -698,7 +670,7 @@ contains
     call assert_shape(Gkout,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_normal_gij","Gkout")
     !
     if(allocated(lattice_gamma_mats).AND.allocated(lattice_gamma_real))&
-         stop "invert_gk_normal_lattice: lattice_Gamma_mats & lattice_Gamma_real both allocated"
+         stop "invert_gk_normal_ineq: lattice_Gamma_mats & lattice_Gamma_real both allocated"
     if(allocated(lattice_gamma_mats))then
        call assert_shape(lattice_gamma_mats,[Nlso,Nlso,Lfreq],"invert_gk_normal_gij","lattice_gamma_mats")
        allocate(Gembed(Nlso,Nlso,Lfreq));Gembed=lattice_gamma_mats
@@ -938,10 +910,10 @@ contains
 
 
   !
-  ! INVERT_GK_NORMAL_LATTICE(_MPI)
+  ! INVERT_GK_NORMAL_INEQ(_MPI)
   !
   !SERIAL (OR PARALLEL ON K)
-  subroutine invert_gk_superc_lattice(zeta,Hk,hk_symm,Gkout)
+  subroutine invert_gk_superc_ineq(zeta,Hk,hk_symm,Gkout)
     complex(8),dimension(:,:,:,:,:,:),intent(in)      :: zeta    ![2][2][Nlat][Nspin*Norb][Nspin*Norb][Lfreq]
     complex(8),dimension(:,:,:),intent(in)              :: Hk      ![2][Nlat*Nspin*Norb][Nlat*Nspin*Norb]
     logical,intent(in)                                :: hk_symm !
@@ -957,9 +929,9 @@ contains
     Lfreq = size(zeta,6)
     Nso   = Nspin*Norb
     Nlso  = Nlat*Nspin*Norb
-    call assert_shape(zeta,[2,2,Nlat,Nso,Nso,Lfreq],"invert_gk_superc_lattice","zeta")
-    call assert_shape(Hk,[2,Nlso,Nlso],"invert_gk_superc_lattice","Hk")
-    call assert_shape(Gkout,[2,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_superc_lattice","Gkout")
+    call assert_shape(zeta,[2,2,Nlat,Nso,Nso,Lfreq],"invert_gk_superc_ineq","zeta")
+    call assert_shape(Hk,[2,Nlso,Nlso],"invert_gk_superc_ineq","Hk")
+    call assert_shape(Gkout,[2,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_superc_ineq","Gkout")
     !
     allocate(Gktmp(2,Nlat,Nspin,Nspin,Norb,Norb,Lfreq))
     allocate(Gmatrix(2*Nlso,2*Nlso))
@@ -993,12 +965,12 @@ contains
        enddo
     enddo
     Gkout = Gktmp
-  end subroutine invert_gk_superc_lattice
+  end subroutine invert_gk_superc_ineq
 
 
   !PARALLEL ON FREQ:
 #ifdef _MPI
-  subroutine invert_gk_superc_lattice_mpi(MpiComm,zeta,Hk,hk_symm,Gkout)
+  subroutine invert_gk_superc_ineq_mpi(MpiComm,zeta,Hk,hk_symm,Gkout)
     integer                                           :: MpiComm
     complex(8),dimension(:,:,:,:,:,:),intent(in)      :: zeta    ![2][2][Nlat][Nspin*Norb][Nspin*Norb][Lfreq]
     complex(8),dimension(:,:,:),intent(in)              :: Hk      ![2][Nlat*Nspin*Norb][Nlat*Nspin*Norb]
@@ -1020,9 +992,9 @@ contains
     Lfreq = size(zeta,6)
     Nso   = Nspin*Norb
     Nlso  = Nlat*Nspin*Norb
-    call assert_shape(zeta,[2,2,Nlat,Nso,Nso,Lfreq],"invert_gk_superc_lattice_mpi","zeta")
-    call assert_shape(Hk,[2,Nlso,Nlso],"invert_gk_superc_lattice_mpi","Hk")
-    call assert_shape(Gkout,[2,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_superc_lattice_mpi","Gkout")
+    call assert_shape(zeta,[2,2,Nlat,Nso,Nso,Lfreq],"invert_gk_superc_ineq_mpi","zeta")
+    call assert_shape(Hk,[2,Nlso,Nlso],"invert_gk_superc_ineq_mpi","Hk")
+    call assert_shape(Gkout,[2,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_superc_ineq_mpi","Gkout")
     !
     allocate(Gktmp(2,Nlat,Nspin,Nspin,Norb,Norb,Lfreq))
     allocate(Gmatrix(2*Nlso,2*Nlso))
@@ -1057,7 +1029,7 @@ contains
     enddo
     Gkout=zero
     call MPI_AllReduce(Gktmp, Gkout, size(Gkout), MPI_Double_Complex, MPI_Sum, MpiComm, mpi_ierr)
-  end subroutine invert_gk_superc_lattice_mpi
+  end subroutine invert_gk_superc_ineq_mpi
 #endif
 
 
@@ -1208,13 +1180,13 @@ contains
   !--------------------------------------------------------------------!
   ! PURPOSE: Set the lattice/local Gamma functions for Embedding
   !--------------------------------------------------------------------!
-  subroutine dmft_set_Gamma_matsubara_lattice(Gamma_mats)
+  subroutine dmft_set_Gamma_matsubara_ineq(Gamma_mats)
     complex(8),dimension(:,:,:) :: Gamma_mats![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lmats]
     integer                     :: Nlso,Lmats
     Nlso  = size(Gamma_mats,1)
     Lmats = size(Gamma_mats,3)
     !Testing part:
-    call assert_shape(Gamma_mats,[Nlso,Nlso,Lmats],"dmft_set_Gamma_matsubara_lattice","Gamma_mats")
+    call assert_shape(Gamma_mats,[Nlso,Nlso,Lmats],"dmft_set_Gamma_matsubara_ineq","Gamma_mats")
     !
     if(allocated(lattice_Gamma_mats))deallocate(lattice_Gamma_mats)
     if(allocated(lattice_Gamma_real))deallocate(lattice_Gamma_real)
@@ -1222,7 +1194,7 @@ contains
     !
     write(*,"(A)")"Set lattice Gamma_mats"
     lattice_Gamma_mats = Gamma_mats
-  end subroutine dmft_set_Gamma_matsubara_lattice
+  end subroutine dmft_set_Gamma_matsubara_ineq
 
   subroutine dmft_set_Gamma_matsubara_local(Gamma_mats)
     complex(8),dimension(:,:,:,:),optional          :: Gamma_mats![Nlat][Nspin*Norb][Nspin*Norb][Lmats]
@@ -1241,13 +1213,13 @@ contains
     local_Gamma_mats = Gamma_mats
   end subroutine dmft_set_Gamma_matsubara_local
 
-  subroutine dmft_set_Gamma_realaxis_lattice(Gamma_real)
+  subroutine dmft_set_Gamma_realaxis_ineq(Gamma_real)
     complex(8),dimension(:,:,:) :: Gamma_real![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lreal]
     integer                     :: Nlso,Lreal
     Nlso  = size(Gamma_real,1)
     Lreal = size(Gamma_real,3)
     !Testing part:
-    call assert_shape(Gamma_real,[Nlso,Nlso,Lreal],"dmft_set_Gamma_realaxis_lattice","Gamma_real")
+    call assert_shape(Gamma_real,[Nlso,Nlso,Lreal],"dmft_set_Gamma_realaxis_ineq","Gamma_real")
     !
     if(allocated(lattice_Gamma_mats))deallocate(lattice_Gamma_mats)
     if(allocated(lattice_Gamma_real))deallocate(lattice_Gamma_real)
@@ -1255,7 +1227,7 @@ contains
     !
     write(*,"(A)")"Set lattice Gamma_real"
     lattice_Gamma_real = Gamma_real
-  end subroutine dmft_set_Gamma_realaxis_lattice
+  end subroutine dmft_set_Gamma_realaxis_ineq
 
   subroutine dmft_set_Gamma_realaxis_local(Gamma_real)
     complex(8),dimension(:,:,:,:),optional          :: Gamma_real![Nlat][Nspin*Norb][Nspin*Norb][Lreal]
@@ -1279,16 +1251,7 @@ contains
 
 
 
-
-  !--------------------------------------------------------------------!
-  ! PURPOSE: Print Glocal and Gij
-  !--------------------------------------------------------------------!
-  !SET THE GLOC SUFFIX
-  subroutine dmft_gloc_set_suffix(string)
-    character(len=*) :: string
-    gloc_suffix=reg(string)
-  end subroutine dmft_gloc_set_suffix
-
+  
 
 
 
@@ -1414,7 +1377,7 @@ contains
 
 
   !PRINT GLOC LATTICE
-  subroutine dmft_gloc_print_matsubara_lattice(w,Gmats,fname,iprint)
+  subroutine dmft_gloc_print_matsubara_ineq(w,Gmats,fname,iprint)
     complex(8),dimension(:,:,:,:,:,:),intent(in) :: Gmats
     real(8),dimension(size(Gmats,6))             :: w        
     character(len=*),intent(in)                  :: fname
@@ -1423,7 +1386,7 @@ contains
     Nlat  = size(Gmats,1)
     Nspin = size(Gmats,2)
     Norb  = size(Gmats,4)
-    call assert_shape(Gmats,[Nlat,Nspin,Nspin,Norb,Norb,size(Gmats,6)],"dmft_gloc_print_matsubara_lattice",reg(fname)//"_mats")
+    call assert_shape(Gmats,[Nlat,Nspin,Nspin,Norb,Norb,size(Gmats,6)],"dmft_gloc_print_matsubara_ineq",reg(fname)//"_mats")
     !
     select case(iprint)
     case (0)
@@ -1523,9 +1486,9 @@ contains
        enddo
        !
     end select
-  end subroutine dmft_gloc_print_matsubara_lattice
+  end subroutine dmft_gloc_print_matsubara_ineq
 
-  subroutine dmft_gloc_print_realaxis_lattice(w,Greal,fname,iprint)
+  subroutine dmft_gloc_print_realaxis_ineq(w,Greal,fname,iprint)
     complex(8),dimension(:,:,:,:,:,:),intent(in) :: Greal
     real(8),dimension(size(Greal,6))             :: w
     character(len=*),intent(in)                  :: fname
@@ -1534,7 +1497,7 @@ contains
     Nlat  = size(Greal,1)
     Nspin = size(Greal,2)
     Norb  = size(Greal,4)
-    call assert_shape(Greal,[Nlat,Nspin,Nspin,Norb,Norb,size(Greal,6)],"dmft_gloc_print_realaxis_lattice",reg(fname)//"_real")
+    call assert_shape(Greal,[Nlat,Nspin,Nspin,Norb,Norb,size(Greal,6)],"dmft_gloc_print_realaxis_ineq",reg(fname)//"_real")
     !
     select case(iprint)
     case (0)
@@ -1634,7 +1597,7 @@ contains
        enddo
        !
     end select
-  end subroutine dmft_gloc_print_realaxis_lattice
+  end subroutine dmft_gloc_print_realaxis_ineq
 
 
   !PRINT GLOC FULL LATTICE

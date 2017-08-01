@@ -1,4 +1,3 @@
-
 subroutine dmft_get_gloc_realaxis_normal_main_mpi(MpiComm,Hk,Wtk,Greal,Sreal,iprint,mpi_split,hk_symm)
   integer                                       :: MpiComm
   complex(8),dimension(:,:,:),intent(in)        :: Hk        ![Nspin*Norb][Nspin*Norb][Lk]
@@ -75,8 +74,7 @@ subroutine dmft_get_gloc_realaxis_normal_main_mpi(MpiComm,Hk,Wtk,Greal,Sreal,ipr
 end subroutine dmft_get_gloc_realaxis_normal_main_mpi
 
 
-
-subroutine dmft_get_gloc_realaxis_normal_dos_main_mpi(MpiComm,Ebands,Dbands,Hloc,Greal,Sreal,iprint,mpi_split)
+subroutine dmft_get_gloc_realaxis_normal_dos_mpi(MpiComm,Ebands,Dbands,Hloc,Greal,Sreal,iprint,mpi_split)
   integer                                                     :: MpiComm
   real(8),dimension(:,:),intent(in)                           :: Ebands    ![Nspin*Norb][Lk]
   real(8),dimension(size(Ebands,1),size(Ebands,2)),intent(in) :: Dbands    ![Nspin*Norb][Lk]
@@ -166,12 +164,10 @@ subroutine dmft_get_gloc_realaxis_normal_dos_main_mpi(MpiComm,Ebands,Dbands,Hloc
   end select
   if(mpi_master)call stop_timer
   if(mpi_master)call dmft_gloc_print_realaxis(wm,Greal,"Gloc",iprint)
-end subroutine dmft_get_gloc_realaxis_normal_dos_main_mpi
+end subroutine dmft_get_gloc_realaxis_normal_dos_mpi
 
 
-
-
-subroutine dmft_get_gloc_realaxis_normal_lattice_main_mpi(MpiComm,Hk,Wtk,Greal,Sreal,iprint,tridiag,mpi_split,hk_symm)
+subroutine dmft_get_gloc_realaxis_normal_ineq_mpi(MpiComm,Hk,Wtk,Greal,Sreal,iprint,tridiag,mpi_split,hk_symm)
   integer                                         :: MpiComm
   complex(8),dimension(:,:,:),intent(in)          :: Hk        ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Nk]
   real(8),dimension(size(Hk,3)),intent(in)        :: Wtk       ![Nk]
@@ -215,9 +211,9 @@ subroutine dmft_get_gloc_realaxis_normal_lattice_main_mpi(MpiComm,Hk,Wtk,Greal,S
   Nso   = Nspin*Norb
   Nlso  = Nlat*Nspin*Norb
   !Testing part:
-  call assert_shape(Hk,[Nlso,Nlso,Lk],'dmft_get_gloc_realaxis_normal_lattice_main_mpi',"Hk")
-  call assert_shape(Sreal,[Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_normal_lattice_main_mpi',"Sreal")
-  call assert_shape(Greal,[Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_normal_lattice_main_mpi',"Greal")
+  call assert_shape(Hk,[Nlso,Nlso,Lk],'dmft_get_gloc_realaxis_normal_ineq_main_mpi',"Hk")
+  call assert_shape(Sreal,[Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_normal_ineq_main_mpi',"Sreal")
+  call assert_shape(Greal,[Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_normal_ineq_main_mpi',"Greal")
   !
   if(mpi_master)write(*,"(A)")"Get local Realaxis Green's function (print mode:"//reg(txtfy(iprint))//")"
   if(mpi_master)then
@@ -244,12 +240,12 @@ subroutine dmft_get_gloc_realaxis_normal_lattice_main_mpi(MpiComm,Hk,Wtk,Greal,S
   Greal=zero
   select case(mpi_split_)
   case default
-     stop "dmft_get_gloc_realaxis_normal_lattice_main_mpi: ! mpi_split_ in ['w','k'] "
+     stop "dmft_get_gloc_realaxis_normal_ineq_main_mpi: ! mpi_split_ in ['w','k'] "
      !
   case ('w')
      if(.not.tridiag_)then
         do ik=1,Lk
-           call invert_gk_normal_lattice_mpi(MpiComm,zeta_real,Hk(:,:,ik),hk_symm_(ik),Gkreal)
+           call invert_gk_normal_ineq_mpi(MpiComm,zeta_real,Hk(:,:,ik),hk_symm_(ik),Gkreal)
            Greal = Greal + Gkreal*Wtk(ik)
            if(mpi_master)call eta(ik,Lk)
         end do
@@ -265,7 +261,7 @@ subroutine dmft_get_gloc_realaxis_normal_lattice_main_mpi(MpiComm,Hk,Wtk,Greal,S
      allocate(Gtmp(Nlat,Nspin,Nspin,Norb,Norb,Lreal));Gtmp=zero
      if(.not.tridiag_)then
         do ik=1+mpi_rank,Lk,mpi_size
-           call invert_gk_normal_lattice(zeta_real,Hk(:,:,ik),hk_symm_(ik),Gkreal)
+           call invert_gk_normal_ineq(zeta_real,Hk(:,:,ik),hk_symm_(ik),Gkreal)
            Gtmp = Gtmp + Gkreal*Wtk(ik)
            if(mpi_master)call eta(ik,Lk)
         end do
@@ -281,15 +277,11 @@ subroutine dmft_get_gloc_realaxis_normal_lattice_main_mpi(MpiComm,Hk,Wtk,Greal,S
      !
   end select
   if(mpi_master)call stop_timer
-  if(mpi_master)call dmft_gloc_print_realaxis_lattice(wr,Greal,"LG",iprint)
-end subroutine dmft_get_gloc_realaxis_normal_lattice_main_mpi
+  if(mpi_master)call dmft_gloc_print_realaxis_ineq(wr,Greal,"LG",iprint)
+end subroutine dmft_get_gloc_realaxis_normal_ineq_mpi
 
 
-
-
-
-
-subroutine dmft_get_gloc_realaxis_normal_gij_main_mpi(MpiComm,Hk,Wtk,Greal,Sreal,iprint,mpi_split,hk_symm)
+subroutine dmft_get_gloc_realaxis_normal_gij_mpi(MpiComm,Hk,Wtk,Greal,Sreal,iprint,mpi_split,hk_symm)
   integer                                           :: MpiComm
   complex(8),dimension(:,:,:),intent(in)            :: Hk        ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Nk]
   real(8),dimension(size(Hk,3)),intent(in)          :: Wtk       ![Nk]
@@ -373,162 +365,10 @@ subroutine dmft_get_gloc_realaxis_normal_gij_main_mpi(MpiComm,Hk,Wtk,Greal,Sreal
   end select
   if(mpi_master)call stop_timer
   if(mpi_master)call dmft_gloc_print_realaxis_gij(wm,Greal,"Gij",iprint)
-end subroutine dmft_get_gloc_realaxis_normal_gij_main_mpi
+end subroutine dmft_get_gloc_realaxis_normal_gij_mpi
 
 
 
-!##################################################################
-!##################################################################
-!##################################################################
-
-
-
-
-
-
-
-
-subroutine dmft_get_gloc_realaxis_normal_1band_mpi(MpiComm,Hk,Wtk,Greal,Sreal,iprint,mpi_split,hk_symm)
-  integer                                   :: MpiComm
-  complex(8),dimension(:),intent(in)        :: Hk              ![Nk]
-  real(8),intent(in)                        :: Wtk(size(Hk))   ![Nk]
-  complex(8),intent(in)                     :: Sreal(:)
-  complex(8),intent(inout)                  :: Greal(size(Sreal))
-  logical,optional                          :: hk_symm(size(Hk,1))
-  logical                                   :: hk_symm_(size(Hk,1))
-  integer                                   :: iprint
-  character(len=*),optional                 :: mpi_split  
-  character(len=1)                          :: mpi_split_ 
-  !
-  complex(8),dimension(1,1,size(Hk))        :: Hk_             ![Norb*Nspin][Norb*Nspin][Nk]
-  complex(8),dimension(1,1,1,1,size(Sreal)) :: Greal_
-  complex(8),dimension(1,1,1,1,size(Sreal)) :: Sreal_
-  !
-  Hk_(1,1,:)        = Hk(:)
-  Sreal_(1,1,1,1,:) = Sreal(:)
-  mpi_split_='w'    ;if(present(mpi_split)) mpi_split_=mpi_split
-  hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
-  call dmft_get_gloc_realaxis_normal_main_mpi(MpiComm,Hk_,Wtk,Greal_,Sreal_,iprint,mpi_split_,hk_symm_)
-  Greal(:) = Greal_(1,1,1,1,:)
-end subroutine dmft_get_gloc_realaxis_normal_1band_mpi
-
-
-
-subroutine dmft_get_gloc_realaxis_normal_lattice_1band_mpi(MpiComm,Hk,Wtk,Greal,Sreal,iprint,tridiag,mpi_split,hk_symm)
-  integer                                                         :: MpiComm
-  complex(8),dimension(:,:,:),intent(in)                          :: Hk              ![Nlat][Nlat][Nk]
-  real(8),intent(in)                                              :: Wtk(size(Hk,3)) ![Nk]
-  complex(8),dimension(:,:),intent(in)                            :: Sreal           ![Nlat][Lreal]
-  complex(8),dimension(size(Sreal,1),size(Sreal,2)),intent(inout) :: Greal
-  integer                                                         :: iprint
-  logical,optional                                                :: tridiag
-  logical                                                         :: tridiag_
-  character(len=*),optional                                       :: mpi_split  
-  character(len=1)                                                :: mpi_split_ 
-  logical,optional                                                :: hk_symm(size(Hk,1))
-  logical                                                         :: hk_symm_(size(Hk,1))
-  !
-  complex(8),dimension(size(Sreal,1),1,1,1,1,size(Sreal,2))       :: Greal_
-  complex(8),dimension(size(Sreal,1),1,1,1,1,size(Sreal,2))       :: Sreal_
-  !
-  tridiag_=.false.;if(present(tridiag)) tridiag_=tridiag
-  mpi_split_='w'    ;if(present(mpi_split)) mpi_split_=mpi_split
-  hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
-  !
-  call assert_shape(Hk,[size(Hk,1),size(Hk,1),size(Hk,3)],'dmft_get_gloc_realaxis_normal_lattice_1band_mpi',"Hk")
-  call assert_shape(Sreal,[size(Hk,1),size(Sreal,2)],'dmft_get_gloc_realaxis_normal_lattice_1band_mpi',"Sreal")
-  Sreal_(:,1,1,1,1,:) = Sreal(:,:)
-  call dmft_get_gloc_realaxis_normal_lattice_main_mpi(MpiComm,Hk,Wtk,Greal_,Sreal_,iprint,tridiag_,mpi_split_,hk_symm_)
-  Greal(:,:) = Greal_(:,1,1,1,1,:)
-end subroutine dmft_get_gloc_realaxis_normal_lattice_1band_mpi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-subroutine dmft_get_gloc_realaxis_normal_Nband_mpi(MpiComm,Hk,Wtk,Greal,Sreal,iprint,mpi_split,hk_symm)
-  integer                                                                         :: MpiComm
-  complex(8),dimension(:,:,:),intent(in)                                          :: Hk              ![Norb][Norb][Nk]
-  real(8)                                                                         :: Wtk(size(Hk,3)) ![Nk]
-  complex(8),intent(in),dimension(:,:,:)                                          :: Sreal(:,:,:)    ![Norb][Norb][Lreal]
-  complex(8),intent(inout),dimension(:,:,:)                                       :: Greal
-  logical,optional                                                                :: hk_symm(size(Hk,3))
-  logical                                                                         :: hk_symm_(size(Hk,3))
-  integer                                                                         :: iprint
-  character(len=*),optional                                                       :: mpi_split  
-  character(len=1)                                                                :: mpi_split_ 
-  !
-  complex(8),dimension(1,1,size(Sreal,1),size(Sreal,2),size(Sreal,3)) :: Greal_
-  complex(8),dimension(1,1,size(Sreal,1),size(Sreal,2),size(Sreal,3)) :: Sreal_
-  integer                                                                         :: Nspin,Norb,Nso,Lreal
-  !
-  mpi_split_='w'    ;if(present(mpi_split)) mpi_split_=mpi_split
-  hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
-  !
-  Nspin = 1
-  Norb  = size(Sreal,1)
-  Lreal = size(Sreal,3)
-  Nso   = Nspin*Norb
-  call assert_shape(Hk,[Nso,Nso,size(Hk,3)],'dmft_get_gloc_realaxis_normal_Nband_mpi',"Hk")
-  call assert_shape(Sreal,[Nso,Nso,Lreal],'dmft_get_gloc_realaxis_normal_Nband_mpi',"Sreal")
-  call assert_shape(Greal,[Nso,Nso,Lreal],'dmft_get_gloc_realaxis_normal_Nband_mpi',"Greal")
-  !
-  Sreal_(1,1,:,:,:) = Sreal(:,:,:)
-  call dmft_get_gloc_realaxis_normal_main_mpi(MpiComm,Hk,Wtk,Greal_,Sreal_,iprint,mpi_split_,hk_symm_)
-  Greal(:,:,:) = Greal_(1,1,:,:,:)
-end subroutine dmft_get_gloc_realaxis_normal_Nband_mpi
-
-
-
-subroutine dmft_get_gloc_realaxis_normal_lattice_Nband_mpi(MpiComm,Hk,Wtk,Greal,Sreal,iprint,tridiag,mpi_split,hk_symm)
-  integer                                                                           :: MpiComm
-  complex(8),dimension(:,:,:),intent(in)                                            :: Hk              ![Nlat*Norb][Nlat*Norb][Nk]
-  real(8)                                                                           :: Wtk(size(Hk,3)) ![Nk]
-  complex(8),intent(in)                                                             :: Sreal(:,:,:,:)  ![Nlat][Norb][Norb][Lreal]
-  complex(8),intent(inout)                                                          :: Greal(:,:,:,:)
-  logical,optional                                                                  :: hk_symm(size(Hk,3))
-  logical                                                                           :: hk_symm_(size(Hk,3))
-  integer                                                                           :: iprint
-  logical,optional                                                                  :: tridiag
-  logical                                                                           :: tridiag_
-  character(len=*),optional                                                         :: mpi_split  
-  character(len=1)                                                                  :: mpi_split_ 
-  !
-  complex(8),dimension(size(Sreal,1),1,1,size(Sreal,2),size(Sreal,3),size(Sreal,4)) :: Greal_ ![Nlat][1][1][Norb][Norb][Lreal]
-  complex(8),dimension(size(Sreal,1),1,1,size(Sreal,2),size(Sreal,3),size(Sreal,4)) :: Sreal_![Nlat][1][1][Norb][Norb][Lreal]
-  !
-  integer                                                                           :: Nspin,Norb,Nso,Nlso,Lreal
-  !
-  !
-  tridiag_=.false.;if(present(tridiag)) tridiag_=tridiag
-  mpi_split_='w'    ;if(present(mpi_split)) mpi_split_=mpi_split
-  hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
-  !
-  Nspin = 1    
-  Nlat  = size(Sreal,1)
-  Norb  = size(Sreal,2)
-  Lreal = size(Sreal,4)
-  Nso   = Nspin*Norb
-  Nlso  = Nlat*Nspin*Norb
-  call assert_shape(Hk,[Nlso,Nlso,size(Hk,3)],'dmft_get_gloc_realaxis_normal_lattice_Nband_mpi',"Hk")
-  call assert_shape(Sreal,[Nlat,Nso,Nso,Lreal],'dmft_get_gloc_realaxis_normal_lattice_Nband_mpi',"Sreal")
-  call assert_shape(Greal,[Nlat,Nso,Nso,Lreal],'dmft_get_gloc_realaxis_normal_lattice_Nband_mpi',"Greal")
-  !
-  Sreal_(:,1,1,:,:,:) = Sreal(:,:,:,:)
-  call dmft_get_gloc_realaxis_normal_lattice_main_mpi(MpiComm,Hk,Wtk,Greal_,Sreal_,iprint,tridiag_,mpi_split_,hk_symm_)
-  Greal(:,:,:,:) = Greal_(:,1,1,:,:,:)
-end subroutine dmft_get_gloc_realaxis_normal_lattice_Nband_mpi
 
 
 
