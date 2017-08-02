@@ -110,7 +110,7 @@ end subroutine build_hk_model_Nkvec_c
 
 
 
-subroutine build_hkr_model_kgrid_d(hk,hkr_model,Nlat,Norb,pbc,kgrid)
+subroutine build_hkr_model_kgrid_d(hk,hkr_model,Nlat,Norb,kgrid,pbc)
   integer                                              :: Nlat,Norb
   logical                                              :: pbc
   real(8),dimension(:,:)                               :: kgrid ![Nktot][Ndim]
@@ -134,7 +134,7 @@ subroutine build_hkr_model_kgrid_d(hk,hkr_model,Nlat,Norb,pbc,kgrid)
   !
 end subroutine build_hkr_model_kgrid_d
 
-subroutine build_hkr_model_kgrid_c(hk,hkr_model,Nlat,Norb,pbc,kgrid)
+subroutine build_hkr_model_kgrid_c(hk,hkr_model,Nlat,Norb,kgrid,pbc)
   integer                                                 :: Nlat,Norb
   logical                                                 :: pbc
   real(8),dimension(:,:)                                  :: kgrid ![Nktot][Ndim]
@@ -171,7 +171,7 @@ end subroutine build_hkr_model_kgrid_c
 
 
 
-subroutine build_hkr_model_nkvec_d(hk,hkr_model,Nlat,Norb,pbc,Nkvec)
+subroutine build_hkr_model_nkvec_d(hk,hkr_model,Nlat,Norb,Nkvec,pbc)
   integer                                               :: Nlat,Norb
   logical                                               :: pbc
   integer,dimension(:),intent(in)                       :: Nkvec
@@ -198,7 +198,7 @@ subroutine build_hkr_model_nkvec_d(hk,hkr_model,Nlat,Norb,pbc,Nkvec)
   !
 end subroutine build_hkr_model_nkvec_d
 
-subroutine build_hkr_model_nkvec_c(hk,hkr_model,Nlat,Norb,pbc,Nkvec)
+subroutine build_hkr_model_nkvec_c(hk,hkr_model,Nlat,Norb,Nkvec,pbc)
   integer                                                  :: Nlat,Norb
   logical                                                  :: pbc
   integer,dimension(:),intent(in)                          :: Nkvec
@@ -307,7 +307,7 @@ end subroutine build_hk_path_c
 
 
 
-subroutine build_hkR_path_d(hk,hkr_model,Nlat,Norb,pbc,kpath,Nkpath)
+subroutine build_hkR_path_d(hk,hkr_model,Nlat,Norb,kpath,Nkpath,pbc)
   integer                                                          :: Nlat,Norb
   logical                                                          :: pbc
   real(8),dimension(:,:)                                           :: kpath ![Npts][Ndim]
@@ -336,7 +336,7 @@ subroutine build_hkR_path_d(hk,hkr_model,Nlat,Norb,pbc,kpath,Nkpath)
   !
 end subroutine build_hkR_path_d
 
-subroutine build_hkR_path_c(hk,hkr_model,Nlat,Norb,pbc,kpath,Nkpath)
+subroutine build_hkR_path_c(hk,hkr_model,Nlat,Norb,kpath,Nkpath,pbc)
   integer                                                             :: Nlat,Norb
   logical                                                             :: pbc
   real(8),dimension(:,:)                                              :: kpath ![Npts][Ndim]

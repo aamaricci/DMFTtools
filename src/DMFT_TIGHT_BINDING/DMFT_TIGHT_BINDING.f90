@@ -58,14 +58,14 @@ module DMFT_TIGHT_BINDING
 
   interface TB_build_kgrid
      module procedure ::   build_kgrid
-  !   module procedure :: f_build_kgrid
      module procedure ::   kgrid_from_path_grid
-  !   module procedure :: f_kgrid_from_path_grid
      module procedure ::   kgrid_from_path_dim
-  !   module procedure :: f_kgrid_from_path_dim
   end interface TB_build_kgrid
 
 
+  interface TB_build_Rgrid
+     module procedure ::   build_Rgrid
+  end interface TB_build_Rgrid
 
 
 
@@ -81,20 +81,35 @@ module DMFT_TIGHT_BINDING
   real(8),dimension(3),public,parameter :: kpoint_r=[1,1,1]*pi
 
 
+  real(8),dimension(3),save             :: ei_x=[1d0,0d0,0d0]
+  real(8),dimension(3),save             :: ei_y=[0d0,1d0,0d0]
+  real(8),dimension(3),save             :: ei_z=[0d0,0d0,1d0]
+
   real(8),dimension(3),save             :: bk_x=[1d0,0d0,0d0]*pi2
   real(8),dimension(3),save             :: bk_y=[0d0,1d0,0d0]*pi2
   real(8),dimension(3),save             :: bk_z=[0d0,0d0,1d0]*pi2
 
+
+  logical,save                          :: set_eivec=.false.
   logical,save                          :: set_bkvec=.false.
 
+
   public :: TB_set_bk
+  public :: TB_set_ei
+  !
+  public :: TB_build_kgrid
+  public :: TB_build_Rgrid
+  !
   public :: TB_build_model
   public :: TB_solve_model
+  !
   public :: TB_write_hk
   public :: TB_read_hk
+  !
   public :: TB_write_hloc
   public :: TB_read_hloc
-  public :: TB_build_kgrid
+
+
 
 
 
@@ -109,11 +124,40 @@ contains
     real(8),dimension(:),intent(in),optional :: bky
     real(8),dimension(:),intent(in),optional :: bkz
     bk_x = 0d0
-    bk_x = bkx
-    if(present(bky))bk_y(1:size(bky)) = bky
-    if(present(bkz))bk_z(1:size(bkz)) = bkz
+    bk_x(1:size(bkx)) = bkx
+    !
+    if(present(bky))then
+       bk_y = 0d0
+       bk_y(1:size(bky)) = bky
+    endif
+    !
+    if(present(bkz))then
+       bk_z = 0d0
+       bk_z(1:size(bkz)) = bkz
+    endif
+    !
     set_bkvec=.true.
   end subroutine TB_set_bk
+
+  subroutine TB_set_ei(eix,eiy,eiz)
+    real(8),dimension(:),intent(in)          :: eix
+    real(8),dimension(:),intent(in),optional :: eiy
+    real(8),dimension(:),intent(in),optional :: eiz
+    ei_x = 0d0
+    ei_x(1:size(eix)) = eix
+    !
+    if(present(eiy))then
+       ei_y = 0d0
+       ei_y(1:size(eiy)) = eiy
+    endif
+    !
+    if(present(eiz))then
+       ei_z = 0d0
+       ei_z(1:size(eiz)) = eiz
+    endif
+    !
+    set_eivec=.true.
+  end subroutine TB_set_ei
 
 
   subroutine print_bk(pfile)
@@ -122,11 +166,26 @@ contains
     unit=6
     if(present(pfile))open(free_unit(unit),file=reg(pfile))
     write(unit,"(A)")"Using Reciprocal Lattice vectors:"
-    write(unit,"(A,3F7.4,A1)")"bk_x = [",(bk_x(i),i=1,3),"]"
-    write(unit,"(A,3F7.4,A1)")"bk_y = [",(bk_y(i),i=1,3),"]"
-    write(unit,"(A,3F7.4,A1)")"bk_z = [",(bk_z(i),i=1,3),"]"
+    write(unit,"(A,3F8.4,A1)")"bk_x = [",(bk_x(i),i=1,3),"]"
+    write(unit,"(A,3F8.4,A1)")"bk_y = [",(bk_y(i),i=1,3),"]"
+    write(unit,"(A,3F8.4,A1)")"bk_z = [",(bk_z(i),i=1,3),"]"
     if(present(pfile))close(unit)
   end subroutine print_bk
+
+
+  subroutine print_ei(pfile)
+    character(len=*),optional :: pfile
+    integer                   :: unit,i
+    unit=6
+    if(present(pfile))open(free_unit(unit),file=reg(pfile))
+    write(unit,"(A)")"Using Direct Lattice vectors:"
+    write(unit,"(A,3F8.4,A1)")"ei_x = [",(ei_x(i),i=1,3),"]"
+    write(unit,"(A,3F8.4,A1)")"ei_y = [",(ei_y(i),i=1,3),"]"
+    write(unit,"(A,3F8.4,A1)")"ei_z = [",(ei_z(i),i=1,3),"]"
+    if(present(pfile))close(unit)
+  end subroutine print_ei
+
+
 
 
   !-------------------------------------------------------------------------------------------
@@ -134,6 +193,7 @@ contains
   ! from the function user defined hk_model procedure.
   !-------------------------------------------------------------------------------------------
   include "tight_binding_build_hk_model.f90"
+
 
 
 
@@ -198,42 +258,41 @@ contains
     enddo
   end subroutine build_kgrid
 
-  function f_build_kgrid(Nkvec,check_bk) result(kgrid)
-    integer,dimension(:)                          :: Nkvec ! Nk=product(Nkvec);Ndim=size(Nkvec)
-    logical,intent(in),optional                   :: check_bk
-    real(8),dimension(product(Nkvec),size(Nkvec)) :: kgrid ![Nk][Ndim]
-    logical                                       :: check_bk_
-    real(8),dimension(size(Nkvec))                :: kvec  ![Ndim]
-    integer                                       :: ik,ix,iy,iz,Nk(3)
-    real(8)                                       :: kx,ky,kz
+
+  subroutine build_rgrid(Nrvec,Rgrid,check_ei)
+    integer,dimension(:)                          :: Nrvec ! Nr=product(Nrvec);Ndim=size(Nrvec)
+    real(8),dimension(product(Nrvec),size(Nrvec)) :: Rgrid ![Nk][Ndim]
+    logical,intent(in),optional                   :: check_ei
+    logical                                       :: check_ei_
+    real(8),dimension(size(Nrvec))                :: Rvec  ![Ndim]
+    integer                                       :: ir,ix,iy,iz,Nr(3)
+    real(8)                                       :: rx,ry,rz
     !
-    check_bk_=.false.;if(present(check_bk))check_bk_=check_bk
+    check_ei_=.false.;if(present(check_ei))check_ei_=check_ei
     !
-    Nk=1
-    do ik=1,size(Nkvec)
-       Nk(ik)=Nkvec(ik)
+    Nr=1
+    do ir=1,size(Nrvec)
+       Nr(ir)=Nrvec(ir)
     enddo
-    if(product(Nk)/=product(Nkvec))stop "TB_build_grid ERROR: product(Nkvec) != product(Nk)"
+    if(product(Nr)/=product(Nrvec))stop "TB_build_Rgrid ERROR: product(Nrvec) != product(Nr)"
     !
-    call print_bk()
-    if(check_bk_.AND..not.set_bkvec)stop "TB_build_grid ERROR: bk vectors not set"
+    call print_ei()
+    if(check_ei_.AND..not.set_eivec)stop "TB_build_Rgrid ERROR: Ei vectors not set"
     !
-    ik=0
-    do iz=1,Nk(3)
-       kz = dble(iz-1)/Nk(3)
-       do iy=1,Nk(2)
-          ky = dble(iy-1)/Nk(2)
-          do ix=1,Nk(1)
-             kx = dble(ix-1)/Nk(1)
-             kvec = kx*bk_x + ky*bk_y + kz*bk_z
-             ik=ik+1
-             kgrid(ik,:)=kvec
+    ir=0
+    do iz=1,Nr(3)
+       rz = dble(iz-1)
+       do iy=1,Nr(2)
+          ry = dble(iy-1)
+          do ix=1,Nr(1)
+             rx = dble(ix-1)
+             Rvec = rx*ei_x + ry*ei_y + rz*ei_z
+             ir=ir+1
+             Rgrid(ir,:)=Rvec
           enddo
        enddo
     enddo
-  end function f_build_kgrid
-
-
+  end subroutine build_rgrid
 
 
 
@@ -257,30 +316,6 @@ contains
     enddo
   end subroutine kgrid_from_path_grid
 
-  function f_kgrid_from_path_grid(kpath,Nkpath) result(kgrid)
-    real(8),dimension(:,:)                                    :: kpath ![Npts][Ndim]
-    integer                                                   :: Nkpath
-    real(8),dimension((size(kpath,1)-1)*Nkpath,size(kpath,2)) :: kgrid ![(Npts-1)*Nkpath][Ndim]
-    real(8),dimension(size(kpath,2))                          :: kstart,kstop,kpoint,kdiff
-    integer                                                   :: ipts,ik,ic,dim,Npts
-    Npts = size(kpath,1)
-    ic=0
-    do ipts=1,Npts-1
-       kstart = kpath(ipts,:)
-       kstop  = kpath(ipts+1,:)
-       kdiff  = (kstop-kstart)/dble(Nkpath)
-       do ik=1,Nkpath
-          ic=ic+1
-          kpoint = kstart + (ik-1)*kdiff
-          kgrid(ic,:)=kpoint
-       enddo
-    enddo
-  end function f_kgrid_from_path_grid
-
-
-
-
-
   subroutine kgrid_from_path_dim(kpath,Nkpath,dim,kxpath)
     real(8),dimension(:,:)                      :: kpath ![Npts][Ndim]
     integer                                     :: Nkpath
@@ -302,27 +337,6 @@ contains
        enddo
     enddo
   end subroutine kgrid_from_path_dim
-
-  function f_kgrid_from_path_dim(kpath,Nkpath,dim) result(kxpath)
-    real(8),dimension(:,:)                      :: kpath ![Npts][Ndim]
-    integer                                     :: Nkpath
-    real(8),dimension((size(kpath,1)-1)*Nkpath) :: kxpath ![(Npts-1)*Nkpath][Ndim]
-    real(8),dimension(size(kpath,2))            :: kstart,kstop,kpoint,kdiff
-    integer                                     :: ipts,ik,ic,dim,Npts
-    Npts = size(kpath,1)
-    if(dim>size(kpath,2))stop "TB_build_grid ERROR: dim > Ndim"
-    ic=0
-    do ipts=1,Npts-1
-       kstart = kpath(ipts,:)
-       kstop  = kpath(ipts+1,:)
-       kdiff  = (kstop-kstart)/dble(Nkpath)
-       do ik=1,Nkpath
-          ic=ic+1
-          kpoint = kstart + (ik-1)*kdiff
-          kxpath(ic)=kpoint(dim)
-       enddo
-    enddo
-  end function f_kgrid_from_path_dim
 
 
 

@@ -124,12 +124,6 @@ subroutine dmft_get_gk_matsubara_normal_ineq(Hk,Wtk,Gkmats,Smats,tridiag)
   call assert_shape(Smats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gk_matsubara_normal_ineq_main',"Smats")
   call assert_shape(Gkmats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gk_matsubara_normal_ineq_main',"Gkmats")
   !
-  if(.not.tridiag_)then
-     write(*,"(A)")"Direct Inversion algorithm:"
-  else
-     write(*,"(A)")"Quantum Zipper algorithm:"
-  endif
-  !
   allocate(zeta_mats(Nlat,Nso,Nso,Lmats))
   if(allocated(wm))deallocate(wm);allocate(wm(Lmats))
   wm = pi/beta*(2*arange(1,Lmats)-1)
