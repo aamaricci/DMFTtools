@@ -373,6 +373,76 @@ end subroutine build_hkR_path_c
 
 
 
+!##################################################################
+!##################################################################
+!##################################################################
+
+
+
+
+
+
+
+subroutine build_Hij_Nrvec(Hij,ts_model,Nso,Nrvec,Links,pbc)
+  integer                                                     :: Nso
+  integer,dimension(:),intent(in)                             :: Nrvec
+  integer,dimension(:,:),intent(in)                           :: Links ![Nlink][dim]
+  logical,optional                                            :: pbc
+  logical                                                     :: pbc_
+  integer,dimension(product(Nrvec),size(Nrvec))               :: RNgrid
+  integer                                                     :: Nlat,Nlink
+  integer                                                     :: ilat,jlat
+  integer,dimension(size(Nrvec))                              :: Ri,Rj
+  integer                                                     :: i,ilink
+  complex(8),dimension(Nso,Nso,product(Nrvec),product(Nrvec)) :: Hij
+  integer                                                     :: ir,ix,iy,iz,Nr(3)
+  !
+  interface
+     function ts_model(link,Nso)
+       integer                       :: link
+       integer                       :: Nso
+       complex(8),dimension(Nso,Nso) :: ts_model
+     end function ts_model
+  end interface
+  !
+  pbc_ = .true. ; if(present(pbc))pbc_=pbc
+  !
+  if(size(Nrvec)/=size(Links,2))stop "TB_build_Hij ERROR: size(Nvec) != size(Links,2)"
+  !
+  Nlat  = product(Nrvec)
+  Nlink = size(Links,1)
+  !
+  call TB_build_CoordGrid(Nrvec,RNgrid)
+  !
+  Hij = zero
+  !
+  do_lattice: do ilat = 1,Nlat
+     Hij(:,:,ilat,ilat) = Hij(:,:,ilat,ilat) + ts_model(0,Nso)
+     Ri = RNgrid(ilat,:)
+     do_links: do ilink=1,Nlink
+        Rj = Ri + Links(ilink,:)
+        if(pbc_)then
+           do i=1,size(Nrvec)
+              if( Rj(i)==0 )Rj(i)=Nrvec(i)
+              if( Rj(i)==Nrvec(i)+1)Rj(i)=1
+           enddo
+        endif
+        jlat = TB_find_IndxCoord(Rj,Nrvec)
+        if(jlat==0)cycle do_links
+        !
+        print*,ilat,jlat
+        !>Build Hij
+        Hij(:,:,ilat,jlat) = Hij(:,:,ilat,jlat) + ts_model(ilink,Nso)
+     enddo do_links
+     print*,""
+  enddo do_lattice
+  return
+end subroutine build_Hij_Nrvec
+
+
+
+
+
 ! subroutine build_hk_model_1d_d(hk,hk_model,Nkvec,check_bk)
 !   interface 
 !      function hk_model(kpoint)

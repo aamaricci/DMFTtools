@@ -2,6 +2,7 @@ module DMFT_GFIO
   USE SF_CONSTANTS, only: one,xi,zero,pi
   USE SF_IOTOOLS,   only: reg,txtfy,splot,file_gzip
   USE SF_MISC,      only: assert_shape
+  USE SF_ARRAYS,    only: arange,linspace
   implicit none
   private
 
@@ -27,15 +28,16 @@ module DMFT_GFIO
   public :: dmft_print_gij_realaxis
 
 
+  real(8),dimension(:),allocatable          :: wm !Matsubara frequencies
+  real(8),dimension(:),allocatable          :: wr !Real frequencies
+
   character(len=128)                        :: suffix
   character(len=128)                        :: gf_suffix='.dat'
   integer                                   :: Lk,Nlso,Nlat,Nspin,Norb,Nso,Lreal,Lmats
   integer                                   :: i,j,ik,ilat,jlat,iorb,jorb,ispin,jspin,io,jo,is,js
   !
   real(8)                                   :: beta
-  real(8)                                   :: xmu,eps
   real(8)                                   :: wini,wfin 
-
 
 
 
@@ -52,15 +54,21 @@ contains
 
 
   !PRINT GLOC SINGLE SITE
-  subroutine dmft_gf_print_matsubara_main(w,Gmats,fname,iprint)
+  subroutine dmft_gf_print_matsubara_main(Gmats,fname,iprint)
     complex(8),dimension(:,:,:,:,:),intent(in) :: Gmats
-    real(8),dimension(size(Gmats,5))           :: w
     character(len=*),intent(in)                :: fname
     integer,intent(in)                         :: iprint
     !
+    !Retrieve parameters:
+    call get_ctrl_var(beta,"BETA")
+    !    
     Nspin = size(Gmats,1)
     Norb  = size(Gmats,3)
-    call assert_shape(Gmats,[Nspin,Nspin,Norb,Norb,size(Gmats,5)],"dmft_gloc_print_matsubara",reg(fname)//"_mats")
+    Lmats = size(Gmats,5)
+    call assert_shape(Gmats,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_gloc_print_matsubara",reg(fname)//"_mats")
+    !
+    if(allocated(wm))deallocate(wm);allocate(wm(Lmats))
+    wm = pi/beta*(2*arange(1,Lmats)-1)
     !
     select case(iprint)
     case(1)                  !print only diagonal elements
@@ -71,7 +79,7 @@ contains
                   "_l"//reg(txtfy(iorb))//&
                   "_s"//reg(txtfy(ispin))//&
                   "_iw"//reg(gf_suffix)
-             call splot(reg(suffix),w,Gmats(ispin,ispin,iorb,iorb,:))
+             call splot(reg(suffix),wm,Gmats(ispin,ispin,iorb,iorb,:))
           enddo
        enddo
        !
@@ -84,7 +92,7 @@ contains
                      "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                      "_s"//reg(txtfy(ispin))//&
                      "_iw"//reg(gf_suffix)
-                call splot(reg(suffix),w,Gmats(ispin,ispin,iorb,jorb,:))
+                call splot(reg(suffix),wm,Gmats(ispin,ispin,iorb,jorb,:))
              enddo
           enddo
        enddo
@@ -99,7 +107,7 @@ contains
                         "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                         "_s"//reg(txtfy(ispin))//reg(txtfy(jspin))//&
                         "_iw"//reg(gf_suffix)
-                   call splot(reg(suffix),w,Gmats(ispin,jspin,iorb,jorb,:))
+                   call splot(reg(suffix),wm,Gmats(ispin,jspin,iorb,jorb,:))
                 enddo
              enddo
           enddo
@@ -109,16 +117,23 @@ contains
   end subroutine dmft_gf_print_matsubara_main
 
 
-  subroutine dmft_gf_print_matsubara_ineq(w,Gmats,fname,iprint)
+  subroutine dmft_gf_print_matsubara_ineq(Gmats,fname,iprint)
     complex(8),dimension(:,:,:,:,:,:),intent(in) :: Gmats
-    real(8),dimension(size(Gmats,6))             :: w        
     character(len=*),intent(in)                  :: fname
     integer,intent(in)                           :: iprint
+    !
+    !Retrieve parameters:
+    call get_ctrl_var(beta,"BETA")
+    !    
     !
     Nlat  = size(Gmats,1)
     Nspin = size(Gmats,2)
     Norb  = size(Gmats,4)
-    call assert_shape(Gmats,[Nlat,Nspin,Nspin,Norb,Norb,size(Gmats,6)],"dmft_gloc_print_matsubara_ineq",reg(fname)//"_mats")
+    Lmats = size(Gmats,6)
+    call assert_shape(Gmats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_gloc_print_matsubara_ineq",reg(fname)//"_mats")
+    !
+    if(allocated(wm))deallocate(wm);allocate(wm(Lmats))
+    wm = pi/beta*(2*arange(1,Lmats)-1)
     !
     select case(iprint)
     case(1)                  !print only diagonal elements
@@ -129,7 +144,7 @@ contains
                   "_l"//reg(txtfy(iorb))//&
                   "_s"//reg(txtfy(ispin))//&
                   "_iw"//reg(gf_suffix)
-             call splot(reg(suffix),w,Gmats(:,ispin,ispin,iorb,iorb,:))
+             call splot(reg(suffix),wm,Gmats(:,ispin,ispin,iorb,iorb,:))
              call file_gzip(reg(suffix))
           enddo
        enddo
@@ -143,7 +158,7 @@ contains
                      "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                      "_s"//reg(txtfy(ispin))//&
                      "_iw"//reg(gf_suffix)
-                call splot(reg(suffix),w,Gmats(:,ispin,ispin,iorb,jorb,:))
+                call splot(reg(suffix),wm,Gmats(:,ispin,ispin,iorb,jorb,:))
                 call file_gzip(reg(suffix))
              enddo
           enddo
@@ -159,7 +174,7 @@ contains
                         "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                         "_s"//reg(txtfy(ispin))//reg(txtfy(jspin))//&
                         "_iw"//reg(gf_suffix)
-                   call splot(reg(suffix),w,Gmats(:,ispin,jspin,iorb,jorb,:))
+                   call splot(reg(suffix),wm,Gmats(:,ispin,jspin,iorb,jorb,:))
                    call file_gzip(reg(suffix))
                 enddo
              enddo
@@ -175,7 +190,7 @@ contains
                      "_l"//reg(txtfy(iorb))//&
                      "_s"//reg(txtfy(ispin))//&
                      "_iw_indx"//reg(txtfy(ilat,6))//reg(gf_suffix)
-                call splot(reg(suffix),w,Gmats(ilat,ispin,ispin,iorb,iorb,:))
+                call splot(reg(suffix),wm,Gmats(ilat,ispin,ispin,iorb,iorb,:))
              enddo
           enddo
        enddo
@@ -190,7 +205,7 @@ contains
                         "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                         "_s"//reg(txtfy(ispin))//&
                         "_iw_indx"//reg(txtfy(ilat,6))//reg(gf_suffix)
-                   call splot(reg(suffix),w,Gmats(ilat,ispin,ispin,iorb,jorb,:))
+                   call splot(reg(suffix),wm,Gmats(ilat,ispin,ispin,iorb,jorb,:))
                 enddo
              enddo
           enddo
@@ -207,7 +222,7 @@ contains
                            "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                            "_s"//reg(txtfy(ispin))//reg(txtfy(jspin))//&
                            "_iw_indx"//reg(txtfy(ilat,6))//reg(gf_suffix)
-                      call splot(reg(suffix),w,Gmats(ilat,ispin,jspin,iorb,jorb,:))
+                      call splot(reg(suffix),wm,Gmats(ilat,ispin,jspin,iorb,jorb,:))
                    enddo
                 enddo
              enddo
@@ -223,16 +238,23 @@ contains
 
 
 
-  
-  subroutine dmft_gf_print_realaxis_main(w,Greal,fname,iprint)
+
+  subroutine dmft_gf_print_realaxis_main(Greal,fname,iprint)
     complex(8),dimension(:,:,:,:,:),intent(in) :: Greal
-    real(8),dimension(size(Greal,5))           :: w
     character(len=*),intent(in)                :: fname
     integer,intent(in)                         :: iprint
     !
+    !Retrieve parameters:
+    call get_ctrl_var(wini,"WINI")
+    call get_ctrl_var(wfin,"WFIN")
+    !
     Nspin = size(Greal,1)
     Norb  = size(Greal,3)
-    call assert_shape(Greal,[Nspin,Nspin,Norb,Norb,size(Greal,5)],"dmft_gloc_print_realaxis",reg(fname)//"_real")
+    Lreal = size(Greal,5)
+    call assert_shape(Greal,[Nspin,Nspin,Norb,Norb,Lreal],"dmft_gloc_print_realaxis",reg(fname)//"_real")
+    !
+    if(allocated(wr))deallocate(wr);allocate(wr(Lreal))
+    wr = linspace(wini,wfin,Lreal)
     !
     select case(iprint)
     case(1)                  !print only diagonal elements
@@ -243,7 +265,7 @@ contains
                   "_l"//reg(txtfy(iorb))//&
                   "_s"//reg(txtfy(ispin))//&
                   "_realw"//reg(gf_suffix)
-             call splot(reg(suffix),w,Greal(ispin,ispin,iorb,iorb,:))
+             call splot(reg(suffix),wr,Greal(ispin,ispin,iorb,iorb,:))
           enddo
        enddo
        !
@@ -256,7 +278,7 @@ contains
                      "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                      "_s"//reg(txtfy(ispin))//&
                      "_realw"//reg(gf_suffix)
-                call splot(reg(suffix),w,Greal(ispin,ispin,iorb,jorb,:))
+                call splot(reg(suffix),wr,Greal(ispin,ispin,iorb,jorb,:))
              enddo
           enddo
        enddo
@@ -271,7 +293,7 @@ contains
                         "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                         "_s"//reg(txtfy(ispin))//reg(txtfy(jspin))//&
                         "_realw"//reg(gf_suffix)
-                   call splot(reg(suffix),w,Greal(ispin,jspin,iorb,jorb,:))
+                   call splot(reg(suffix),wr,Greal(ispin,jspin,iorb,jorb,:))
                 enddo
              enddo
           enddo
@@ -280,16 +302,23 @@ contains
     end select
   end subroutine dmft_gf_print_realaxis_main
 
-  subroutine dmft_gf_print_realaxis_ineq(w,Greal,fname,iprint)
+  subroutine dmft_gf_print_realaxis_ineq(Greal,fname,iprint)
     complex(8),dimension(:,:,:,:,:,:),intent(in) :: Greal
-    real(8),dimension(size(Greal,6))             :: w
     character(len=*),intent(in)                  :: fname
     integer,intent(in)                           :: iprint
+    !
+    !Retrieve parameters:
+    call get_ctrl_var(wini,"WINI")
+    call get_ctrl_var(wfin,"WFIN")
     !
     Nlat  = size(Greal,1)
     Nspin = size(Greal,2)
     Norb  = size(Greal,4)
-    call assert_shape(Greal,[Nlat,Nspin,Nspin,Norb,Norb,size(Greal,6)],"dmft_gloc_print_realaxis_ineq",reg(fname)//"_real")
+    Lreal = size(Greal,6)
+    call assert_shape(Greal,[Nlat,Nspin,Nspin,Norb,Norb,Lreal],"dmft_gloc_print_realaxis_ineq",reg(fname)//"_real")
+    !
+    if(allocated(wr))deallocate(wr);allocate(wr(Lreal))
+    wr = linspace(wini,wfin,Lreal)
     !
     select case(iprint)
     case(1)                  !print only diagonal elements
@@ -300,7 +329,7 @@ contains
                   "_l"//reg(txtfy(iorb))//&
                   "_s"//reg(txtfy(ispin))//&
                   "_realw"//reg(gf_suffix)
-             call splot(reg(suffix),w,Greal(:,ispin,ispin,iorb,iorb,:))
+             call splot(reg(suffix),wr,Greal(:,ispin,ispin,iorb,iorb,:))
              call file_gzip(reg(suffix))
           enddo
        enddo
@@ -314,7 +343,7 @@ contains
                      "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                      "_s"//reg(txtfy(ispin))//&
                      "_realw"//reg(gf_suffix)
-                call splot(reg(suffix),w,Greal(:,ispin,ispin,iorb,jorb,:))
+                call splot(reg(suffix),wr,Greal(:,ispin,ispin,iorb,jorb,:))
                 call file_gzip(reg(suffix))
              enddo
           enddo
@@ -330,7 +359,7 @@ contains
                         "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                         "_s"//reg(txtfy(ispin))//reg(txtfy(jspin))//&
                         "_realw"//reg(gf_suffix)
-                   call splot(reg(suffix),w,Greal(:,ispin,jspin,iorb,jorb,:))
+                   call splot(reg(suffix),wr,Greal(:,ispin,jspin,iorb,jorb,:))
                    call file_gzip(reg(suffix))
                 enddo
              enddo
@@ -346,7 +375,7 @@ contains
                      "_l"//reg(txtfy(iorb))//&
                      "_s"//reg(txtfy(ispin))//&
                      "_realw_indx"//reg(txtfy(ilat,6))//reg(gf_suffix)
-                call splot(reg(suffix),w,Greal(ilat,ispin,ispin,iorb,iorb,:))
+                call splot(reg(suffix),wr,Greal(ilat,ispin,ispin,iorb,iorb,:))
              enddo
           enddo
        enddo
@@ -361,7 +390,7 @@ contains
                         "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                         "_s"//reg(txtfy(ispin))//&
                         "_realw_indx"//reg(txtfy(ilat,6))//reg(gf_suffix)
-                   call splot(reg(suffix),w,Greal(ilat,ispin,ispin,iorb,jorb,:))
+                   call splot(reg(suffix),wr,Greal(ilat,ispin,ispin,iorb,jorb,:))
                 enddo
              enddo
           enddo
@@ -378,7 +407,7 @@ contains
                            "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                            "_s"//reg(txtfy(ispin))//reg(txtfy(jspin))//&
                            "_realw_indx"//reg(txtfy(ilat,6))//reg(gf_suffix)
-                      call splot(reg(suffix),w,Greal(ilat,ispin,jspin,iorb,jorb,:))
+                      call splot(reg(suffix),wr,Greal(ilat,ispin,jspin,iorb,jorb,:))
                    enddo
                 enddo
              enddo
@@ -395,16 +424,23 @@ contains
 
 
   !PRINT GLOC FULL LATTICE
-  subroutine dmft_print_gij_matsubara(w,Gmats,fname,iprint)
+  subroutine dmft_print_gij_matsubara(Gmats,fname,iprint)
     complex(8),dimension(:,:,:,:,:,:,:),intent(in) :: Gmats ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats/Lreal]
     real(8),dimension(size(Gmats,7))               :: w
     character(len=*),intent(in)                    :: fname
     integer,intent(in)                             :: iprint
     !
+    !Retrieve parameters:
+    call get_ctrl_var(beta,"BETA")
+    !
     Nlat  = size(Gmats,1)
     Nspin = size(Gmats,3)
     Norb  = size(Gmats,5)
-    call assert_shape(Gmats,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(Gmats,7)],"dmft_gloc_print_matsubara_gij",reg(fname)//"_mats")
+    Lmats = size(Gmats,7)
+    call assert_shape(Gmats,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_gloc_print_matsubara_gij",reg(fname)//"_mats")
+    !
+    if(allocated(wm))deallocate(wm);allocate(wm(Lmats))
+    wm = pi/beta*(2*arange(1,Lmats)-1)
     !
     select case(iprint)
     case (0)
@@ -417,7 +453,7 @@ contains
                   "_l"//reg(txtfy(iorb))//&
                   "_s"//reg(txtfy(ispin))//&
                   "_iw"//reg(gf_suffix)
-             call splot(reg(suffix),w,Gmats(:,:,ispin,ispin,iorb,iorb,:))
+             call splot(reg(suffix),wm,Gmats(:,:,ispin,ispin,iorb,iorb,:))
              call file_gzip(reg(suffix))
           enddo
        enddo
@@ -430,7 +466,7 @@ contains
                      "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                      "_s"//reg(txtfy(ispin))//&
                      "_iw"//reg(gf_suffix)
-                call splot(reg(suffix),w,Gmats(:,:,ispin,ispin,iorb,jorb,:))
+                call splot(reg(suffix),wm,Gmats(:,:,ispin,ispin,iorb,jorb,:))
                 call file_gzip(reg(suffix))
              enddo
           enddo
@@ -445,7 +481,7 @@ contains
                         "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                         "_s"//reg(txtfy(ispin))//reg(txtfy(jspin))//&
                         "_iw"//reg(gf_suffix)
-                   call splot(reg(suffix),w,Gmats(:,:,ispin,jspin,iorb,jorb,:))
+                   call splot(reg(suffix),wm,Gmats(:,:,ispin,jspin,iorb,jorb,:))
                    call file_gzip(reg(suffix))
                 enddo
              enddo
@@ -454,17 +490,25 @@ contains
     end select
   end subroutine dmft_print_gij_matsubara
 
-  subroutine dmft_print_gij_realaxis(w,Greal,fname,iprint)
+  subroutine dmft_print_gij_realaxis(Greal,fname,iprint)
     complex(8),dimension(:,:,:,:,:,:,:),intent(in) :: Greal ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lreal/Lreal]
     real(8),dimension(size(Greal,7))               :: w
     character(len=*),intent(in)                    :: fname
     integer,intent(in)                             :: iprint
     integer                                        :: Nlat,Nspin,Norb,ispin,jspin,iorb,jorb,ilat,jlat
     !
+    !Retrieve parameters:
+    call get_ctrl_var(wini,"WINI")
+    call get_ctrl_var(wfin,"WFIN")
+    !
     Nlat  = size(Greal,1)
     Nspin = size(Greal,3)
     Norb  = size(Greal,5)
-    call assert_shape(Greal,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(Greal,7)],"dmft_gloc_print_realaxis_gij",reg(fname)//"_real")
+    Lreal = size(Greal,7)
+    call assert_shape(Greal,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal],"dmft_gloc_print_realaxis_gij",reg(fname)//"_real")
+    !
+    if(allocated(wr))deallocate(wr);allocate(wr(Lreal))
+    wr = linspace(wini,wfin,Lreal)
     !
     select case(iprint)
     case (0)
@@ -477,7 +521,7 @@ contains
                   "_l"//reg(txtfy(iorb))//&
                   "_s"//reg(txtfy(ispin))//&
                   "_realw"//reg(gf_suffix)
-             call splot(reg(suffix),w,Greal(:,:,ispin,ispin,iorb,iorb,:))
+             call splot(reg(suffix),wr,Greal(:,:,ispin,ispin,iorb,iorb,:))
              call file_gzip(reg(suffix))
           enddo
        enddo
@@ -490,7 +534,7 @@ contains
                      "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                      "_s"//reg(txtfy(ispin))//&
                      "_realw"//reg(gf_suffix)
-                call splot(reg(suffix),w,Greal(:,:,ispin,ispin,iorb,jorb,:))
+                call splot(reg(suffix),wr,Greal(:,:,ispin,ispin,iorb,jorb,:))
                 call file_gzip(reg(suffix))
              enddo
           enddo
@@ -505,7 +549,7 @@ contains
                         "_l"//reg(txtfy(iorb))//reg(txtfy(jorb))//&
                         "_s"//reg(txtfy(ispin))//reg(txtfy(jspin))//&
                         "_realw"//reg(gf_suffix)
-                   call splot(reg(suffix),w,Greal(:,:,ispin,jspin,iorb,jorb,:))
+                   call splot(reg(suffix),wr,Greal(:,:,ispin,jspin,iorb,jorb,:))
                    call file_gzip(reg(suffix))
                 enddo
              enddo

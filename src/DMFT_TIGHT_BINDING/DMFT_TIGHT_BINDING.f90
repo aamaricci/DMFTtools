@@ -23,6 +23,8 @@ module DMFT_TIGHT_BINDING
      !
      module procedure build_hkR_path_d
      module procedure build_hkR_path_c
+     !
+     module procedure build_Hij_Nrvec
   end interface TB_build_model
 
 
@@ -99,6 +101,9 @@ module DMFT_TIGHT_BINDING
   !
   public :: TB_build_kgrid
   public :: TB_build_Rgrid
+  !
+  public :: TB_build_CoordGrid
+  public :: TB_find_IndxCoord
   !
   public :: TB_build_model
   public :: TB_solve_model
@@ -266,7 +271,6 @@ contains
     logical                                       :: check_ei_
     real(8),dimension(size(Nrvec))                :: Rvec  ![Ndim]
     integer                                       :: ir,ix,iy,iz,Nr(3)
-    real(8)                                       :: rx,ry,rz
     !
     check_ei_=.false.;if(present(check_ei))check_ei_=check_ei
     !
@@ -281,18 +285,68 @@ contains
     !
     ir=0
     do iz=1,Nr(3)
-       rz = dble(iz-1)
        do iy=1,Nr(2)
-          ry = dble(iy-1)
           do ix=1,Nr(1)
-             rx = dble(ix-1)
-             Rvec = rx*ei_x + ry*ei_y + rz*ei_z
+             Rvec = ix*ei_x + iy*ei_y + iz*ei_z
              ir=ir+1
              Rgrid(ir,:)=Rvec
           enddo
        enddo
     enddo
   end subroutine build_rgrid
+
+
+  subroutine TB_build_CoordGrid(Nrvec,RNgrid)
+    integer,dimension(:)                          :: Nrvec  ! Nr=product(Nrvec);Ndim=size(Nrvec)
+    integer,dimension(product(Nrvec),size(Nrvec)) :: RNgrid ![Nr][Ndim]
+    integer                                       :: ir,ix,iy,iz,Nr(3),Rvec(3)
+    !
+    Nr=1
+    do ir=1,size(Nrvec)
+       Nr(ir)=Nrvec(ir)
+    enddo
+    !
+    ir=0
+    do iz=1,Nr(3)
+       do iy=1,Nr(2)
+          do ix=1,Nr(1)
+             ir=ir+1
+             Rvec = [ix,iy,iz]
+             RNgrid(ir,:) = Rvec(1:size(Nrvec))
+          enddo
+       enddo
+    enddo
+    ir=0
+  end subroutine TB_build_CoordGrid
+
+
+  function TB_find_IndxCoord(RNvec,Nrvec) result(ir)
+    integer,dimension(:)           :: Nrvec
+    integer,dimension(size(Nrvec)) :: RNvec
+    integer                        :: Nr(3),Rvec(3)
+    integer                        :: ir,ix,iy,iz
+    logical :: bool
+    !
+    Nr=1
+    Rvec=1
+    do ir=1,size(Nrvec)
+       Nr(ir)=Nrvec(ir)
+       Rvec(ir)=RNvec(ir)
+    enddo
+    !
+    ir=0
+    do iz=1,Nr(3)
+       do iy=1,Nr(2)
+          do ix=1,Nr(1)
+             ir=ir+1
+             bool = Rvec(1)==ix.AND.Rvec(2)==iy.AND.Rvec(3)==iz
+             if(bool)return
+          enddo
+       enddo
+    enddo
+    ir=0
+  end function TB_find_IndxCoord
+
 
 
 
