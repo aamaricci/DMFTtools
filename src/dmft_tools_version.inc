@@ -1,1 +1,1 @@
-character(len=41),parameter,public :: dmft_tools_version_sha1 = "9b4d358418a85f5cf15fef76514044fe95b8f831"
+character(len=41),parameter,public :: dmft_tools_version_sha1 = "306d496f81b910418bc852ba16f6d073c4e6411e"
