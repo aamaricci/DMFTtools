@@ -3,6 +3,8 @@ module DMFT_GFIO
   USE SF_IOTOOLS,   only: reg,txtfy,splot,file_gzip
   USE SF_MISC,      only: assert_shape
   USE SF_ARRAYS,    only: arange,linspace
+  USE DMFT_CTRL_VARS
+
   implicit none
   private
 
