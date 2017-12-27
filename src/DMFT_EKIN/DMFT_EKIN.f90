@@ -43,13 +43,17 @@ MODULE DMFT_EKIN
 #endif
      !NN-Shape ([Nlat])[Nspin][Nspin][Norb][Norb][L] for Sigma & Self
      module procedure :: dmft_kinetic_energy_normal_NN
+     module procedure :: dmft_kinetic_energy_normal_NN_dos
      module procedure :: dmft_kinetic_energy_normal_NN_lattice
      module procedure :: dmft_kinetic_energy_superc_NN
+     module procedure :: dmft_kinetic_energy_superc_NN_dos
      module procedure :: dmft_kinetic_energy_superc_NN_lattice
 #ifdef _MPI
      module procedure :: dmft_kinetic_energy_normal_NN_mpi
+     module procedure :: dmft_kinetic_energy_normal_NN_dos_mpi
      module procedure :: dmft_kinetic_energy_normal_NN_lattice_mpi
      module procedure :: dmft_kinetic_energy_superc_NN_mpi
+     module procedure :: dmft_kinetic_energy_superc_NN_dos_mpi
      module procedure :: dmft_kinetic_energy_superc_NN_lattice_mpi
 #endif
   end interface dmft_kinetic_energy
@@ -333,6 +337,39 @@ contains
     if(present(Eloc))Eloc=Eloc_
   end subroutine dmft_kinetic_energy_normal_NN
 
+  subroutine dmft_kinetic_energy_normal_NN_dos(Ebands,Dbands,Hloc,Sigma,Ekin,Eloc)
+    real(8),dimension(:,:)                           :: Ebands  ![Nspin*Norb][Lk]
+    real(8),dimension(size(Ebands,1),size(Ebands,2)) :: Dbands  ![Nspin*Norb][Lk]
+    real(8),dimension(size(Ebands,1))                :: Hloc    ![Nspin*Norb]
+    complex(8),dimension(:,:,:,:,:)                  :: Sigma  ![Nspin][Nspin][Norb][Norb][L]
+    complex(8),dimension(:,:,:),allocatable          :: Sigma_ ![Nspin*Norb][Nspin*Norb][L]
+    integer                                          :: Nspin,Norb,Lmats,Nso,i,iorb,jorb,ispin,jspin,is,js
+    real(8),dimension(size(Ebands,1)),optional       :: Ekin,Eloc
+    real(8),dimension(size(Ebands,1))                :: Ekin_,Eloc_
+    !
+    Nspin = size(Sigma,1)
+    Norb  = size(Sigma,3)
+    Lmats = size(Sigma,5)
+    Nso   = Nspin*Norb
+    call assert_shape(Sigma,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_kinetic_energy_normal_NN","Sigma")
+    allocate(Sigma_(Nso,Nso,Lmats))
+    Sigma_=zero
+    do ispin=1,Nspin
+       do jspin=1,Nspin
+          do iorb=1,Norb
+             do jorb=1,Norb
+                is = iorb + (ispin-1)*Norb  !spin-orbit stride
+                js = jorb + (jspin-1)*Norb  !spin-orbit stride
+                Sigma_(is,js,:) = Sigma(ispin,jspin,iorb,jorb,:)
+             enddo
+          enddo
+       enddo
+    enddo
+    call dmft_kinetic_energy_normal_dos(Ebands,Dbands,Hloc,Sigma_,Ekin_,Eloc_)
+    if(present(Ekin))Ekin=Ekin_
+    if(present(Eloc))Eloc=Eloc_
+  end subroutine dmft_kinetic_energy_normal_NN_dos
+
   subroutine dmft_kinetic_energy_normal_NN_lattice(Hk,Wtk,Sigma,Ekin,Eloc)
     complex(8),dimension(:,:,:)               :: Hk     ! [Nlat*Nspin*Norb][Nlat*Nspin*Norb][Nk]
     real(8),dimension(size(Hk,3))             :: wtk    ! [Nk]
@@ -405,6 +442,40 @@ contains
     if(present(Ekin))Ekin=Ekin_
     if(present(Eloc))Eloc=Eloc_
   end subroutine dmft_kinetic_energy_normal_NN_mpi
+
+  subroutine dmft_kinetic_energy_normal_NN_dos_mpi(MpiComm,Ebands,Dbands,Hloc,Sigma,Ekin,Eloc)
+    integer                                          :: MpiComm
+    real(8),dimension(:,:)                           :: Ebands  ![Nspin*Norb][Lk]
+    real(8),dimension(size(Ebands,1),size(Ebands,2)) :: Dbands  ![Nspin*Norb][Lk]
+    real(8),dimension(size(Ebands,1))                :: Hloc    ![Nspin*Norb]
+    complex(8),dimension(:,:,:,:,:)                  :: Sigma  ![Nspin][Nspin][Norb][Norb][L]
+    complex(8),dimension(:,:,:),allocatable          :: Sigma_ ![Nspin*Norb][Nspin*Norb][L]
+    integer                                          :: Nspin,Norb,Lmats,Nso,i,iorb,jorb,ispin,jspin,is,js
+    real(8),dimension(size(Ebands,1)),optional       :: Ekin,Eloc
+    real(8),dimension(size(Ebands,1))                :: Ekin_,Eloc_
+    !
+    Nspin = size(Sigma,1)
+    Norb  = size(Sigma,3)
+    Lmats = size(Sigma,5)
+    Nso   = Nspin*Norb
+    call assert_shape(Sigma,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_kinetic_energy_normal_NN","Sigma")
+    allocate(Sigma_(Nso,Nso,Lmats))
+    Sigma_=zero
+    do ispin=1,Nspin
+       do jspin=1,Nspin
+          do iorb=1,Norb
+             do jorb=1,Norb
+                is = iorb + (ispin-1)*Norb  !spin-orbit stride
+                js = jorb + (jspin-1)*Norb  !spin-orbit stride
+                Sigma_(is,js,:) = Sigma(ispin,jspin,iorb,jorb,:)
+             enddo
+          enddo
+       enddo
+    enddo
+    call dmft_kinetic_energy_normal_dos_mpi(MpiComm,Ebands,Dbands,Hloc,Sigma_,Ekin_,Eloc_)
+    if(present(Ekin))Ekin=Ekin_
+    if(present(Eloc))Eloc=Eloc_
+  end subroutine dmft_kinetic_energy_normal_NN_dos_mpi
 
   subroutine dmft_kinetic_energy_normal_NN_lattice_mpi(MpiComm,Hk,Wtk,Sigma,Ekin,Eloc)
     integer                                   :: MpiComm
@@ -491,6 +562,44 @@ contains
     if(present(Eloc))Eloc=Eloc_
   end subroutine dmft_kinetic_energy_superc_NN
 
+  subroutine dmft_kinetic_energy_superc_NN_dos(Ebands,Dbands,Hloc,Sigma,Self,Ekin,Eloc)
+    real(8),dimension(:,:)                           :: Ebands  ![Nspin*Norb][Lk]
+    real(8),dimension(size(Ebands,1),size(Ebands,2)) :: Dbands  ![Nspin*Norb][Lk]
+    real(8),dimension(size(Ebands,1))                :: Hloc    ![Nspin*Norb]
+    complex(8),dimension(:,:,:,:,:)                  :: Sigma  ![Nspin][Nspin][Norb][Norb][L]
+    complex(8),dimension(:,:,:,:,:)                  :: Self   ![Nspin][Nspin][Norb][Norb][L]
+    complex(8),dimension(:,:,:),allocatable          :: Sigma_ ![Nspin*Norb][Nspin*Norb][L]
+    complex(8),dimension(:,:,:),allocatable          :: Self_  ![Nspin*Norb][Nspin*Norb][L]
+    integer                                          :: Nspin,Norb,Lmats,Nso,i,iorb,jorb,ispin,jspin,is,js
+    real(8),dimension(size(Ebands,1)),optional       :: Ekin,Eloc
+    real(8),dimension(size(Ebands,1))                :: Ekin_,Eloc_
+    Nspin = size(Sigma,1)
+    Norb  = size(Sigma,3)
+    Lmats = size(Sigma,5)
+    Nso   = Nspin*Norb
+    call assert_shape(Sigma,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_kinetic_energy_superc_NN","Sigma")
+    call assert_shape(Self,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_kinetic_energy_superc_NN","Self")
+    allocate(Sigma_(Nso,Nso,Lmats))
+    allocate(Self_(Nso,Nso,Lmats))
+    Sigma_=zero
+    Self_=zero
+    do ispin=1,Nspin
+       do jspin=1,Nspin
+          do iorb=1,Norb
+             do jorb=1,Norb
+                is = iorb + (ispin-1)*Norb  !spin-orbit stride
+                js = jorb + (jspin-1)*Norb  !spin-orbit stride
+                Sigma_(is,js,:) =  Sigma(ispin,jspin,iorb,jorb,:)
+                Self_(is,js,:)= Self(ispin,jspin,iorb,jorb,:)
+             enddo
+          enddo
+       enddo
+    enddo
+    call dmft_kinetic_energy_superc_dos(Ebands,Dbands,Hloc,Sigma_,Self_,Ekin_,Eloc_)
+    if(present(Ekin))Ekin=Ekin_
+    if(present(Eloc))Eloc=Eloc_
+  end subroutine dmft_kinetic_energy_superc_NN_dos
+
   subroutine dmft_kinetic_energy_superc_NN_lattice(Hk,Wtk,Sigma,Self,Ekin,Eloc)
     complex(8),dimension(:,:,:)               :: Hk     ! [Nlat*Nspin*Norb][Nlat*Nspin*Norb][Nk]
     real(8),dimension(size(Hk,3))             :: wtk    ! [Nk]
@@ -575,6 +684,45 @@ contains
     if(present(Ekin))Ekin=Ekin_
     if(present(Eloc))Eloc=Eloc_
   end subroutine dmft_kinetic_energy_superc_NN_mpi
+
+  subroutine dmft_kinetic_energy_superc_NN_dos_mpi(MpiComm,Ebands,Dbands,Hloc,Sigma,Self,Ekin,Eloc)
+    integer                                          :: MpiComm
+    real(8),dimension(:,:)                           :: Ebands  ![Nspin*Norb][Lk]
+    real(8),dimension(size(Ebands,1),size(Ebands,2)) :: Dbands  ![Nspin*Norb][Lk]
+    real(8),dimension(size(Ebands,1))                :: Hloc    ![Nspin*Norb]
+    complex(8),dimension(:,:,:,:,:)                  :: Sigma  ![Nspin][Nspin][Norb][Norb][L]
+    complex(8),dimension(:,:,:,:,:)                  :: Self   ![Nspin][Nspin][Norb][Norb][L]
+    complex(8),dimension(:,:,:),allocatable          :: Sigma_ ![Nspin*Norb][Nspin*Norb][L]
+    complex(8),dimension(:,:,:),allocatable          :: Self_  ![Nspin*Norb][Nspin*Norb][L]
+    integer                                          :: Nspin,Norb,Lmats,Nso,i,iorb,jorb,ispin,jspin,is,js
+    real(8),dimension(size(Ebands,1)),optional       :: Ekin,Eloc
+    real(8),dimension(size(Ebands,1))                :: Ekin_,Eloc_
+    Nspin = size(Sigma,1)
+    Norb  = size(Sigma,3)
+    Lmats = size(Sigma,5)
+    Nso   = Nspin*Norb
+    call assert_shape(Sigma,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_kinetic_energy_superc_NN_mpi","Sigma")
+    call assert_shape(Self,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_kinetic_energy_superc_NN_mpi","Self")
+    allocate(Sigma_(Nso,Nso,Lmats))
+    allocate(Self_(Nso,Nso,Lmats))
+    Sigma_=zero
+    Self_=zero
+    do ispin=1,Nspin
+       do jspin=1,Nspin
+          do iorb=1,Norb
+             do jorb=1,Norb
+                is = iorb + (ispin-1)*Norb  !spin-orbit stride
+                js = jorb + (jspin-1)*Norb  !spin-orbit stride
+                Sigma_(is,js,:) =  Sigma(ispin,jspin,iorb,jorb,:)
+                Self_(is,js,:)= Self(ispin,jspin,iorb,jorb,:)
+             enddo
+          enddo
+       enddo
+    enddo
+    call dmft_kinetic_energy_superc_dos_mpi(MpiComm,Ebands,Dbands,Hloc,Sigma_,Self_,Ekin_,Eloc_)
+    if(present(Ekin))Ekin=Ekin_
+    if(present(Eloc))Eloc=Eloc_
+  end subroutine dmft_kinetic_energy_superc_NN_dos_mpi
 
   subroutine dmft_kinetic_energy_superc_NN_lattice_mpi(MpiComm,Hk,Wtk,Sigma,Self,Ekin,Eloc)
     integer                                   :: MpiComm

@@ -62,44 +62,47 @@ end subroutine dmft_get_gloc_realaxis_superc_main
 
 
 subroutine dmft_get_gloc_realaxis_superc_dos(Ebands,Dbands,Hloc,Greal,Sreal)
-  real(8),dimension(:,:,:),intent(in)                           :: Ebands    ![2][Nspin*Norb][Lk]
-  real(8),dimension(size(Ebands,1),size(Ebands,2)),intent(in)   :: Dbands    ![Nspin*Norb][Lk]
-  real(8),dimension(2,size(Ebands,1)),intent(in)                :: Hloc      ![2][Nspin*Norb]
-  complex(8),dimension(:,:,:,:,:,:),intent(in)                  :: Sreal     ![2][Nspin][Nspin][Norb][Norb][Lreal]
-  complex(8),dimension(:,:,:,:,:,:),intent(inout)               :: Greal     !as Sreal
-  !allocatable arrays
-  complex(8)                                                    :: gktmp(2),cdet
-  complex(8)                                                    :: zeta_11,zeta_12,zeta_22 
-  complex(8),dimension(:,:,:,:,:),allocatable                   :: zeta_real ![2][2][Nspin*Norb][Nspin*Norb][Lreal]
+  real(8),dimension(:,:),intent(in)                                     :: Ebands    ![Nspin*Norb][Lk]
+  real(8),dimension(size(Ebands,1),size(Ebands,2)),intent(in)           :: Dbands    ![Nspin*Norb][Lk]
+  real(8),dimension(size(Ebands,1)),intent(in)                          :: Hloc      ![Nspin*Norb]
+  complex(8),dimension(:,:,:,:,:,:),intent(in)                          :: Sreal     ![2][Nspin][Nspin][Norb][Norb][Lreal]
+  complex(8),dimension(:,:,:,:,:,:),intent(inout)                       :: Greal     !as Sreal
+  ! arrays
+  complex(8),dimension(2,2,size(Ebands,1),size(Ebands,1),size(Sreal,6)) :: zeta_real ![2][2][Nspin*Norb][Nspin*Norb][Lreal]
+  complex(8),dimension(2*size(Ebands,1),2*size(Ebands,1))               :: Gmatrix
   !
-  real(8)                                                       :: beta
-  real(8)                                                       :: xmu,eps
+  real(8)                                                               :: beta
+  real(8)                                                               :: xmu,wini,wfin,eps    
+  !
   !Retrieve parameters:
   call get_ctrl_var(beta,"BETA")
   call get_ctrl_var(xmu,"XMU")
+  call get_ctrl_var(wini,"WINI")
+  call get_ctrl_var(wfin,"WFIN")
+  call get_ctrl_var(eps,"EPS")
   !
   Nspin = size(Sreal,2)
   Norb  = size(Sreal,4)
   Lreal = size(Sreal,6)
-  Lk    = size(Ebands,3)
+  Lk    = size(Ebands,2)
   Nso   = Nspin*Norb
   !Testing part:
-  call assert_shape(Ebands,[2,Nso,Lk],'dmft_get_gloc_realaxis_superc_dos',"Ebands")
+  call assert_shape(Ebands,[Nso,Lk],'dmft_get_gloc_realaxis_superc_dos',"Ebands")
   call assert_shape(Sreal,[2,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_superc_main',"Sreal")
   call assert_shape(Greal,[2,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_superc_main',"Greal")
   !
-  allocate(zeta_real(2,2,Nso,Nso,Lreal))
+
   if(allocated(wr))deallocate(wr);allocate(wr(Lreal))
   wr = linspace(wini,wfin,Lreal)
   !
   do i=1,Lreal
-     zeta_real(1,1,:,:,i) = (dcmplx(wr(i),eps)+ xmu)*eye(Nso)                - &
+     zeta_real(1,1,:,:,i) = (dcmplx(wr(i),eps)+ xmu)*eye(Nso) - diag(Hloc)   - &
           nn2so_reshape(Sreal(1,:,:,:,:,i),Nspin,Norb)
      zeta_real(1,2,:,:,i) =                                                  - &
           nn2so_reshape(Sreal(2,:,:,:,:,i),Nspin,Norb)
      zeta_real(2,1,:,:,i) =                                                  - &
           nn2so_reshape(Sreal(2,:,:,:,:,i),Nspin,Norb)
-     zeta_real(2,2,:,:,i) = -conjg( dcmplx(wr(Lreal+1-i),eps)+xmu )*eye(Nso) + &
+     zeta_real(2,2,:,:,i) = -conjg( dcmplx(wr(Lreal+1-i),eps)+xmu )*eye(Nso) + diag(Hloc) + &
           conjg( nn2so_reshape(Sreal(1,:,:,:,:,Lreal+1-i),Nspin,Norb) )
   enddo
   !
@@ -107,27 +110,33 @@ subroutine dmft_get_gloc_realaxis_superc_dos(Ebands,Dbands,Hloc,Greal,Sreal)
   write(*,"(A)")"Get local Realaxis Superc Green's function (no print)"
   call start_timer
   Greal=zero
-  do i=1,Lreal
-     do ispin=1,Nspin
-        do iorb=1,Norb
-           io = iorb + (ispin-1)*Norb
-           zeta_11 = zeta_real(1,1,io,io,i)
-           zeta_12 = zeta_real(1,2,io,io,i)
-           zeta_12 = zeta_real(2,2,io,io,i)
-           do ik=1,Lk
-              !
-              cdet = (zeta_11-Hloc(1,io)-Ebands(1,io,ik))*(zeta_22-Hloc(2,io)-Ebands(2,io,ik)) - zeta_12**2
-              gktmp(1)=-(zeta_22-Hloc(2,io)-Ebands(2,io,ik))/cdet
-              gktmp(2)=  zeta_12/cdet
-              Greal(1,ispin,ispin,iorb,iorb,i) = Greal(1,ispin,ispin,iorb,iorb,i) + gktmp(1)*Dbands(io,ik)
-              Greal(2,ispin,ispin,iorb,iorb,i) = Greal(2,ispin,ispin,iorb,iorb,i) + gktmp(2)*Dbands(io,ik)
+  do ik=1,Lk
+     !
+     do i=1,Lreal
+        Gmatrix  = zero
+        Gmatrix(1:Nso,1:Nso)             = zeta_real(1,1,:,:,i) - diag(Ebands(:,ik))
+        Gmatrix(1:Nso,Nso+1:2*Nso)       = zeta_real(1,2,:,:,i)
+        Gmatrix(Nso+1:2*Nso,1:Nso)       = zeta_real(2,1,:,:,i)
+        Gmatrix(Nso+1:2*Nso,Nso+1:2*Nso) = zeta_real(2,2,:,:,i) + diag(Ebands(:,ik))
+        !
+        call inv(Gmatrix)  ! PAY ATTENTION HERE: it is not guaranteed that Gloc is a symmetric matrix
+        !
+        do ispin=1,Nspin
+           do iorb=1,Norb
+              io = iorb + (ispin-1)*Norb
+              Greal(1,ispin,ispin,iorb,iorb,i) = Greal(1,ispin,ispin,iorb,iorb,i) + Gmatrix(io,io)*Dbands(io,ik)
+              Greal(2,ispin,ispin,iorb,iorb,i) = Greal(2,ispin,ispin,iorb,iorb,i) + Gmatrix(io,Nso+io)*Dbands(io,ik)
            enddo
         enddo
+        !
      enddo
-     call eta(i,Lreal)
+     !
+     call eta(ik,Lk)
   enddo
   call stop_timer
 end subroutine dmft_get_gloc_realaxis_superc_dos
+
+
 
 
 

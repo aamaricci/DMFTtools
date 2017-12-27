@@ -3,6 +3,7 @@ module DMFT_TIGHT_BINDING
   USE SF_IOTOOLS
   USE SF_LINALG, only: eigh
   USE SF_COLORS
+  USE SF_TIMER, only:start_timer,stop_timer,eta
   implicit none
   private
 

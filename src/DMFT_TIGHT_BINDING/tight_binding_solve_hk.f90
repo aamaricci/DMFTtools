@@ -146,9 +146,11 @@ subroutine solve_HkR_along_BZpath(hkr_model,Nlat,Nso,kpath,Nkpath,colors_name,po
      rewind(unit_)
      close(unit_)
   enddo
-  open(free_unit(unit),file=reg(file_))
+
   !
   ic=0
+  ! open(free_unit(unit),file=reg(file_))
+  call start_timer()
   do ipts=1,Npts-1
      kstart = kpath(ipts,:)
      kstop  = kpath(ipts+1,:)
@@ -158,6 +160,7 @@ subroutine solve_HkR_along_BZpath(hkr_model,Nlat,Nso,kpath,Nkpath,colors_name,po
         kpoint = kstart + (ik-1)*kdiff
         h = hkr_model(kpoint,Nlat,Nso,pbc)
         call eigh(h,Eval)
+        call eta(ic,Nktot)
         do io=1,Nlso
            coeff(:)=h(:,io)*conjg(h(:,io))
            c(io) = coeff.dot.corb
@@ -165,10 +168,11 @@ subroutine solve_HkR_along_BZpath(hkr_model,Nlat,Nso,kpath,Nkpath,colors_name,po
            write(unit_,"(I12,F18.12,I18)")ic,Eval(io),rgb(c(io))
            close(unit_)
         enddo
-        write(unit,fmt)ic,(Eval(io),rgb(c(io)),io=1,Nlso)
+        ! write(unit,fmt)ic,(Eval(io),rgb(c(io)),io=1,Nlso)
      enddo
   enddo
-  close(unit)
+  call stop_timer()
+  ! close(unit)
   !
   xtics="'"//reg(points_name(1))//"'1,"
   do ipts=2,Npts-1

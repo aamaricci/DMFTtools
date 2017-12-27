@@ -9,3 +9,5 @@ _install/src/dmft_tools_version.inc
 install.log
 .# *Minibuf-1*
 build
+build_gnu_mpi_jarvis
+build_gnu_mpi_laptop

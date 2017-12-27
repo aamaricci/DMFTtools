@@ -53,18 +53,18 @@ end subroutine dmft_get_gloc_matsubara_superc_main
 
 
 subroutine dmft_get_gloc_matsubara_superc_dos(Ebands,Dbands,Hloc,Gmats,Smats)
-  real(8),dimension(:,:,:),intent(in)                           :: Ebands    ![2][Nspin*Norb][Lk]
-  real(8),dimension(size(Ebands,1),size(Ebands,2)),intent(in)   :: Dbands    ![Nspin*Norb][Lk]
-  real(8),dimension(2,size(Ebands,1)),intent(in)                :: Hloc      ![2][Nspin*Norb]
-  complex(8),dimension(:,:,:,:,:,:),intent(in)                  :: Smats     ![2][Nspin][Nspin][Norb][Norb][Lmats]
-  complex(8),dimension(:,:,:,:,:,:),intent(inout)               :: Gmats     !as Smats
-  !allocatable arrays
-  complex(8)                                                    :: gktmp(2),cdet
-  complex(8)                                                    :: zeta_11,zeta_12,zeta_22 
-  complex(8),dimension(:,:,:,:,:),allocatable                   :: zeta_mats ![2][2][Nspin*Norb][Nspin*Norb][Lmats]
+  real(8),dimension(:,:),intent(in)                                     :: Ebands    ![Nspin*Norb][Lk]
+  real(8),dimension(size(Ebands,1),size(Ebands,2)),intent(in)           :: Dbands    ![Nspin*Norb][Lk]
+  real(8),dimension(size(Ebands,1)),intent(in)                          :: Hloc      ![Nspin*Norb]
+  complex(8),dimension(:,:,:,:,:,:),intent(in)                          :: Smats     ![2][Nspin][Nspin][Norb][Norb][Lmats]
+  complex(8),dimension(:,:,:,:,:,:),intent(inout)                       :: Gmats     !as Smats
+  ! arrays
+  complex(8),dimension(2,2,size(Ebands,1),size(Ebands,1),size(Smats,6)) :: zeta_mats ![2][2][Nspin*Norb][Nspin*Norb][Lmats]
+  complex(8),dimension(2*size(Ebands,1),2*size(Ebands,1))               :: Gmatrix
   !
-  real(8)                                                       :: beta
-  real(8)                                                       :: xmu,eps
+  real(8)                                                               :: beta
+  real(8)                                                               :: xmu
+  !
   !Retrieve parameters:
   call get_ctrl_var(beta,"BETA")
   call get_ctrl_var(xmu,"XMU")
@@ -72,46 +72,50 @@ subroutine dmft_get_gloc_matsubara_superc_dos(Ebands,Dbands,Hloc,Gmats,Smats)
   Nspin = size(Smats,2)
   Norb  = size(Smats,4)
   Lmats = size(Smats,6)
-  Lk    = size(Ebands,3)
+  Lk    = size(Ebands,2)
   Nso   = Nspin*Norb
   !Testing part:
-  call assert_shape(Ebands,[2,Nso,Lk],'dmft_get_gloc_matsubara_superc_dos',"Ebands")
+  call assert_shape(Ebands,[Nso,Lk],'dmft_get_gloc_matsubara_superc_dos',"Ebands")
   call assert_shape(Smats,[2,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gloc_matsubara_superc_main',"Smats")
   call assert_shape(Gmats,[2,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gloc_matsubara_superc_main',"Gmats")
   !
-  allocate(zeta_mats(2,2,Nso,Nso,Lmats))
   if(allocated(wm))deallocate(wm);allocate(wm(Lmats))
   wm = pi/beta*(2*arange(1,Lmats)-1)
   !
+  zeta_mats=zero
   do i=1,Lmats
-     zeta_mats(1,1,:,:,i) = (xi*wm(i)+xmu)*eye(Nso) -        nn2so_reshape(Smats(1,:,:,:,:,i),Nspin,Norb)
-     zeta_mats(1,2,:,:,i) =                         -        nn2so_reshape(Smats(2,:,:,:,:,i),Nspin,Norb)
-     zeta_mats(2,1,:,:,i) =                         -        nn2so_reshape(Smats(2,:,:,:,:,i),Nspin,Norb)
-     zeta_mats(2,2,:,:,i) = (xi*wm(i)-xmu)*eye(Nso) + conjg( nn2so_reshape(Smats(1,:,:,:,:,i),Nspin,Norb) )
+     zeta_mats(1,1,:,:,i) = (xi*wm(i)+xmu)*eye(Nso) - diag(Hloc) -        nn2so_reshape(Smats(1,:,:,:,:,i),Nspin,Norb)
+     zeta_mats(1,2,:,:,i) =                                      -        nn2so_reshape(Smats(2,:,:,:,:,i),Nspin,Norb)
+     zeta_mats(2,1,:,:,i) =                                      -        nn2so_reshape(Smats(2,:,:,:,:,i),Nspin,Norb)
+     zeta_mats(2,2,:,:,i) = (xi*wm(i)-xmu)*eye(Nso) + diag(Hloc) + conjg( nn2so_reshape(Smats(1,:,:,:,:,i),Nspin,Norb) )
   enddo
   !
   !invert (Z-Hk) for each k-point
   write(*,"(A)")"Get local Matsubara Superc Green's function (no print)"
   call start_timer
   Gmats=zero
-  do i=1,Lmats
-     do ispin=1,Nspin
-        do iorb=1,Norb
-           io = iorb + (ispin-1)*Norb
-           zeta_11 = zeta_mats(1,1,io,io,i)
-           zeta_12 = zeta_mats(1,2,io,io,i)
-           zeta_12 = zeta_mats(2,2,io,io,i)
-           do ik=1,Lk
-              !
-              cdet = (zeta_11-Hloc(1,io)-Ebands(1,io,ik))*(zeta_22-Hloc(2,io)-Ebands(2,io,ik)) - zeta_12**2
-              gktmp(1)=-(zeta_22-Hloc(2,io)-Ebands(2,io,ik))/cdet
-              gktmp(2)=  zeta_12/cdet
-              Gmats(1,ispin,ispin,iorb,iorb,i) = Gmats(1,ispin,ispin,iorb,iorb,i) + gktmp(1)*Dbands(io,ik)
-              Gmats(2,ispin,ispin,iorb,iorb,i) = Gmats(2,ispin,ispin,iorb,iorb,i) + gktmp(2)*Dbands(io,ik)
+  do ik=1,Lk
+     !
+     do i=1,Lmats
+        Gmatrix  = zero
+        Gmatrix(1:Nso,1:Nso)             = zeta_mats(1,1,:,:,i) - diag(Ebands(:,ik))
+        Gmatrix(1:Nso,Nso+1:2*Nso)       = zeta_mats(1,2,:,:,i)
+        Gmatrix(Nso+1:2*Nso,1:Nso)       = zeta_mats(2,1,:,:,i)
+        Gmatrix(Nso+1:2*Nso,Nso+1:2*Nso) = zeta_mats(2,2,:,:,i) + diag(Ebands(:,ik))
+        !
+        call inv(Gmatrix)  ! PAY ATTENTION HERE: it is not guaranteed that Gloc is a symmetric matrix
+        !
+        do ispin=1,Nspin
+           do iorb=1,Norb
+              io = iorb + (ispin-1)*Norb
+              Gmats(1,ispin,ispin,iorb,iorb,i) = Gmats(1,ispin,ispin,iorb,iorb,i) + Gmatrix(io,io)*Dbands(io,ik)
+              Gmats(2,ispin,ispin,iorb,iorb,i) = Gmats(2,ispin,ispin,iorb,iorb,i) + Gmatrix(io,Nso+io)*Dbands(io,ik)
            enddo
         enddo
+        !
      enddo
-     call eta(i,Lmats)
+     !
+     call eta(ik,Lk)
   enddo
   call stop_timer
 end subroutine dmft_get_gloc_matsubara_superc_dos

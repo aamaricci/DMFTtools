@@ -2,7 +2,7 @@ module DMFT_GLOC
   USE SF_TIMER
   USE SF_CONSTANTS, only: one,xi,zero,pi
   USE SF_IOTOOLS,   only: reg,txtfy,splot,file_gzip
-  USE SF_LINALG,    only: eye,inv,inv_sym,inv_tridiag,get_tridiag
+  USE SF_LINALG,    only: eye,inv,inv_sym,inv_tridiag,get_tridiag,diag
   USE SF_ARRAYS,    only: linspace,arange
   USE SF_MISC,      only: assert_shape
   USE DMFT_CTRL_VARS
@@ -745,7 +745,7 @@ contains
 
 
   !
-  ! INVERT_GK_NORMAL(_MPI)
+  ! INVERT_GK_SUPERC(_MPI)
   !
   !SERIAL (OR PARALLEL ON K):
   subroutine invert_gk_superc(zeta,Hk,hk_symm,Gkout)
@@ -797,6 +797,7 @@ contains
     enddo
     Gkout = Gktmp
   end subroutine invert_gk_superc
+
 
   !PARALLEL ON FREQ:
 #ifdef _MPI
@@ -859,10 +860,8 @@ contains
 #endif
 
 
-
-
   !
-  ! INVERT_GK_NORMAL_INEQ(_MPI)
+  ! INVERT_GK_SUPERC_INEQ(_MPI)
   !
   !SERIAL (OR PARALLEL ON K)
   subroutine invert_gk_superc_ineq(zeta,Hk,hk_symm,Gkout)
