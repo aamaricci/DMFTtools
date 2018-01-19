@@ -1,7 +1,7 @@
 ##################################################
 # DMFT_TOOLS PROJECT
 ##################################################
-CMAKE_MINIMUM_REQUIRED(VERSION 3.0.2)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8.8)
 PROJECT(dmft_tools Fortran)
 SET(VERSION 0.7.2d)
 
@@ -201,13 +201,23 @@ SET(PERMISSION_777
   WORLD_WRITE WORLD_READ WORLD_EXECUTE)
 
 
+#Contains the functions used in the following:
+#BUILD_ENV_MODULE
+#BUILD_CONFIGVARS
+#BUILD_PKCONFIG
 INCLUDE(${CMAKE_MODULE_PATH}/PostBuildDmftTools.cmake)
 
+#Build the dmft_tools module for environment modules
 SET(TMP_ENV_MODULE_FILE ${DT_TMP_ETC}/modules/${PROJECT_NAME}/${FC_PLAT})
 BUILD_ENV_MODULE(${TMP_ENV_MODULE_FILE})
 
-SET(TMP_CONFIGVARS_FILE ${DT_TMP_BIN}/configvars.sh)
-BUILD_CONFIGVARS(${TMP_CONFIGVARS_FILE})
+#Build the user config script (sourced in user shell config file, i.e. .bashrc)
+SET(TMP_CONFIGVARS_USER_FILE ${DT_TMP_BIN}/dmft_tools_config_user.sh)
+BUILD_CONFIGVARS_USER(${TMP_CONFIGVARS_USER_FILE})
+
+#Build the global config script (sourced in system shell config file, i.e. /etc/bash.bashrc)
+SET(TMP_CONFIGVARS_GLOBAL_FILE ${DT_TMP_BIN}/dmft_tools_config_global.sh)
+BUILD_CONFIGVARS_GLOBAL(${TMP_CONFIGVARS_GLOBAL_FILE})
 
 SET(TMP_PKCONFIG_FILE ${DT_TMP_ETC}/${PROJECT_NAME}.pc)
 BUILD_PKCONFIG(${TMP_PKCONFIG_FILE})
@@ -220,7 +230,10 @@ INSTALL(TARGETS dmft_tools DESTINATION ${DT_TARGET_LIB})
 
 INSTALL(DIRECTORY ${DT_TMP_ETC}/ DESTINATION ${DT_TARGET_ETC})
 
-INSTALL(FILES ${TMP_CONFIGVARS_FILE} DESTINATION ${DT_TARGET_BIN}/
+INSTALL(FILES ${TMP_CONFIGVARS_USER_FILE} DESTINATION ${DT_TARGET_BIN}/
+  PERMISSIONS ${PERMISSION_777} SETUID)
+
+INSTALL(FILES ${TMP_CONFIGVARS_GLOBAL_FILE} DESTINATION ${DT_TARGET_BIN}/
   PERMISSIONS ${PERMISSION_777} SETUID)
 
 MESSAGE( STATUS "${Yellow}To conclude installation:${ColourReset} 
