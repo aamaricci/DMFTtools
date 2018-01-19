@@ -21,15 +21,21 @@ FILE(INSTALL ${PKCONFIG_FILE} DESTINATION $ENV{HOME}/.pkgconfig.d
 
 MESSAGE( STATUS "After installation usage options:")
 MESSAGE( STATUS
-  "Pick one choice (put it in your bash profile file to make it permanent):
-${Yellow}A. source the file: ${DT_TARGET_BIN}/configvars.sh, i.e. ${ColourReset}
-$ source ${DT_TARGET_BIN}/configvars.sh
+  "
+${Red} GLOBAL INSTALLATION${ColourReset}:
+${Yellow} Add this line to the system shell configuration file (i.e. /etc/bash.bashrc)${ColourReset}:
+   source ${DT_TARGET_BIN}/dmft_tools_config_global.sh
 
-${Yellow}B. use the provided ${PROJECT_NAME} environment module in ${DT_TARGET_ETC}, i.e.${ColourReset}
-$ module use $HOME/.modules.d
-$ module load ${PROJECT_NAME}/${FC_PLAT}
+${Red} USER INSTALLATION${ColourReset}:
+Pick ONE choice or add in your bash profile (i.e. ~/.bashrc):
+${Yellow}A. source the config script: ${DT_TARGET_BIN}/dmft_tools_config_user.sh${ColourReset}:
+   source ${DT_TARGET_BIN}/dmft_tools_config_user.sh
 
-${Yellow}C. use pkg-config with the provided ${PROJECT_NAME}.pc in ${DT_TARGET_ETC}, i.e. ${ColourReset}
-$ export PKG_CONFIG_PATH=${DT_TARGET_ETC}/:$PKG_CONFIG_PATH
-$ pkg-config --cflags --libs ${PROJECT_NAME} (to get lib info)
+${Yellow}B. use the provided ${PROJECT_NAME} environment module in ${DT_TARGET_ETC}${ColourReset}:
+   module use $HOME/.modules.d
+   module load ${PROJECT_NAME}/${FC_PLAT}
+
+${Yellow}C. use pkg-config with the provided ${PROJECT_NAME}.pc in ${DT_TARGET_ETC}${ColourReset}:
+   export PKG_CONFIG_PATH=${DT_TARGET_ETC}/:$PKG_CONFIG_PATH
+   pkg-config --cflags --libs ${PROJECT_NAME} (to get lib info)
 ")
