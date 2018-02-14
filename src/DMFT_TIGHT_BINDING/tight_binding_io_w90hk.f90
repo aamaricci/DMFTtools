@@ -93,16 +93,16 @@ end subroutine write_hk_w90_array
 
 
 subroutine read_hk_w90_array(hk,file,No,Nd,Np,Nineq,Nkvec,kgrid)
-  character(len=*)                           :: file
-  integer                                    :: No,Nd,Np,Nineq
-  integer                                    :: Nkvec(:)
-  real(8),dimension(3,product(Nkvec))        :: kgrid
-  integer                                    :: Nktot,unit,Nk(3),Nk_
-  integer                                    :: ik,ix,iy,iz,iorb,jorb
-  real(8)                                    :: kx,ky,kz,kvec(3)
-  complex(8),dimension(No,No,product(Nkvec)) :: Hk
-  logical                                    :: ioexist
-  character(len=1)                           :: achar
+  character(len=*)                              :: file
+  integer                                       :: No,Nd,Np,Nineq
+  integer                                       :: Nkvec(:)
+  real(8),dimension(product(Nkvec),size(Nkvec)) :: kgrid ![Nk][Ndim]
+  integer                                       :: Nktot,unit,Nk(3),Nk_
+  integer                                       :: ik,ix,iy,iz,iorb,jorb
+  real(8)                                       :: kx,ky,kz,kvec(3)
+  complex(8),dimension(No,No,product(Nkvec))    :: Hk
+  logical                                       :: ioexist
+  character(len=1)                              :: achar
   inquire(file=reg(file),exist=ioexist)
   if(.not.ioexist)then
      write(*,*)"can not find file:"//reg(file)
@@ -110,7 +110,7 @@ subroutine read_hk_w90_array(hk,file,No,Nd,Np,Nineq,Nkvec,kgrid)
   endif
   !
   open(free_unit(unit),file=reg(file))
-  read(unit,'(10(A10,1x))')Nktot,No,Nd,Np,Nineq
+  read(unit,'(10(A10,1x))')!Nktot,No,Nd,Np,Nineq
   read(unit,'(1A1,3(I12,1x))')achar,( Nk(ik),ik=1,3 )
   Nktot  = product(Nk)
   if(Nktot/=product(Nkvec))stop "read_hk_w90_ ERROR: product(Nkvec) != Nktot"
@@ -121,7 +121,7 @@ subroutine read_hk_w90_array(hk,file,No,Nd,Np,Nineq,Nkvec,kgrid)
         do ix=1,Nk(1)
            ik = ik+1
            read(unit,"(3(F15.9,1x))")kx,ky,kz
-           kgrid(:,ik) = [kx,ky,kz]
+           kgrid(ik,:) = [kx,ky,kz]
            do iorb=1,No
               read(unit,"(20(2F15.9,1x))")(Hk(iorb,jorb,ik),jorb=1,No)
            enddo

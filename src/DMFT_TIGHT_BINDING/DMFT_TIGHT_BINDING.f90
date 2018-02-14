@@ -29,12 +29,10 @@ module DMFT_TIGHT_BINDING
   end interface TB_build_model
 
 
-
   interface TB_solve_model
      module procedure solve_Hk_along_BZpath
      module procedure solve_HkR_along_BZpath
   end interface TB_solve_model
-
 
 
   interface TB_write_hk
@@ -42,9 +40,15 @@ module DMFT_TIGHT_BINDING
      module procedure write_hk_w90_array
   end interface TB_write_hk
 
+
   interface TB_read_hk
      module procedure read_hk_w90_array
   end interface TB_read_hk
+
+
+  interface TB_hr_to_hk
+     module procedure hk_from_w90_hr
+  end interface TB_hr_to_hk
 
 
   interface TB_write_Hloc
@@ -135,6 +139,8 @@ module DMFT_TIGHT_BINDING
   !
   public :: TB_write_hk
   public :: TB_read_hk
+  !
+  public :: TB_hr_to_hk
   !
   public :: TB_write_hloc
   public :: TB_read_hloc
@@ -377,6 +383,13 @@ contains
   !PURPOSE:  read/write the Hamiltonian matrix H(k)
   !-------------------------------------------------------------------------------------------
   include "tight_binding_io_w90hk.f90"
+
+
+
+  !-------------------------------------------------------------------------------------------
+  !PURPOSE:  read the real space hopping matrix from Wannier90 output and create H(k)
+  !-------------------------------------------------------------------------------------------
+  include "tight_binding_io_w90hr.f90"
 
 
 
