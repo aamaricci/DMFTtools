@@ -12,3 +12,4 @@ build
 build_gnu_mpi_jarvis
 build_gnu_mpi_laptop
 build_gnu_mpi/
+../src/dmft_tools_current_sha1.inc
