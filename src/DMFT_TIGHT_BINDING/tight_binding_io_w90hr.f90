@@ -90,7 +90,7 @@
       enddo
    enddo
    close(106)
-   write(*,*)"  H(R) readed from",w90_file
+   write(*,*)"  H(R) readed from: ",w90_file
    !
    !4) Fourier Transform
    do iktot=1,num_kpts 
@@ -98,9 +98,9 @@
          do j=1,num_wann*nspin
             do inrpts=1,nrpts
                rdotk=0.d0
-               rdotk= bkx(1) * ( kpt_latt(iktot,1)*irvec(inrpts,1) ) + &
-                      bky(2) * ( kpt_latt(iktot,2)*irvec(inrpts,2) ) + &
-                      bkz(3) * ( kpt_latt(iktot,3)*irvec(inrpts,3) )
+               rdotk= ( kpt_latt(iktot,1)*irvec(inrpts,1) + &
+                        kpt_latt(iktot,2)*irvec(inrpts,2) + &
+                        kpt_latt(iktot,3)*irvec(inrpts,3) )
                !
                ham_k(i,j,iktot)=ham_k(i,j,iktot)+ham_r(i,j,inrpts)*dcmplx(cos(rdotk),-sin(rdotk))/ndegen(inrpts)
                !
@@ -117,7 +117,7 @@
    if(present(Kpointfile))then
       open(unit=107,file=Kpointfile,status="unknown",action="write",position="rewind")
       do iktot=1,num_kpts
-         write(107,'(3F15.7)') (kpt_latt(iktot,i)*(2.*pi),i=1,3)
+         write(107,'(3F15.7)') (kpt_latt(iktot,i),i=1,3)
       enddo
       close(107)
       write(*,*)"  Kpoints used written on: ",Hkfile
