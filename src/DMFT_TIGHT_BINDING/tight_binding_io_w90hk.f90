@@ -64,7 +64,7 @@ subroutine write_hk_w90_array(Hk,file,No,Nd,Np,Nineq,Nkvec)
      kvec(:size(Nkvec)) = kgrid(ik,:size(Nkvec))
      write(unit,"(3(F15.9,1x))")(kvec(i),i=1,3) 
      do iorb=1,No
-        write(unit,"(20(2F15.9,1x))")(Hk(iorb,jorb,ik),jorb=1,No)
+        write(unit,"(1000(2F15.9,1x))")(Hk(iorb,jorb,ik),jorb=1,No)
      enddo
   enddo
   close(unit)
@@ -123,7 +123,7 @@ subroutine read_hk_w90_array(hk,file,No,Nd,Np,Nineq,Nkvec,kgrid)
            read(unit,"(3(F15.9,1x))")kx,ky,kz
            kgrid(ik,:) = [kx,ky,kz]
            do iorb=1,No
-              read(unit,"(20(2F15.9,1x))")(Hk(iorb,jorb,ik),jorb=1,No)
+              read(unit,"(1000(2F15.9,1x))")(Hk(iorb,jorb,ik),jorb=1,No)
            enddo
         enddo
      enddo
