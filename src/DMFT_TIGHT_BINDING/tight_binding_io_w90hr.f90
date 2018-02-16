@@ -337,39 +337,31 @@ subroutine read_Hr_w90_solve_Hk_along_BZpath(       w90_file           &      !o
      xtics=reg(xtics)//"'"//reg(points_name(ipts))//"'"//reg(txtfy((ipts-1)*Nk+1))//","
   enddo
   xtics=reg(xtics)//"'"//reg(points_name(Npts))//"'"//reg(txtfy((Npts-1)*Nk))//""
-  open(unit,file=reg(file_)//".gp")
-  write(unit,*)"set term wxt"
-  write(unit,*)"#set terminal pngcairo size 350,262 enhanced font 'Verdana,10'"
-  write(unit,*)"#set out '"//reg(file_)//".png'"
-  write(unit,*)""
-  write(unit,*)"#set terminal svg size 350,262 fname 'Verdana, Helvetica, Arial, sans-serif'"
-  write(unit,*)"#set out '"//reg(file_)//".svg'"
-  write(unit,*)""
-  write(unit,*)"#set term postscript eps enhanced color 'Times'"
-  write(unit,*)"#set output '|ps2pdf - "//reg(file_)//".pdf'"
-  write(unit,*)"unset key"
-  write(unit,*)"set xtics ("//reg(xtics)//")"
-  write(unit,*)"set grid noytics xtics"
-  !
-  do iorb=1,Norb
-     chpoint=str(0.95d0-(iorb-1)*0.05d0)
-     write(unit,"(A)")str("set label 'Orb "//str(iorb)//"' tc rgb "//str(rgb(corb(iorb)))//&
-          " at graph 0.9,"//reg(chpoint)//" font 'Times-Italic,11'")
-  enddo
-  !
-  write(unit,*)"plot '"//reg(file_)//"' u 1:2:3 w l lw 3 lc rgb variable,\"
-  do iorb=2,Norb-1
-     u1=2+(iorb-1)*2
-     u2=3+(iorb-1)*2
-     write(unit,*)"'"//reg(file_)//"' u 1:"&
-          //reg(txtfy(u1))//":"//reg(txtfy(u2))//" w l lw 3 lc rgb variable,\"
-  enddo
-  u1=2+(Norb-1)*2
-  u2=3+(Norb-1)*2
-  write(unit,*)"'"//reg(file_)//"' u 1:"&
-       //reg(txtfy(u1))//":"//reg(txtfy(u2))//" w l lw 3 lc rgb variable"
-  !
-  close(unit)
+     open(unit,file=reg(file_)//".gp")
+     write(unit,*)"set term wxt"
+     write(unit,*)"#set terminal pngcairo size 350,262 enhanced font 'Verdana,10'"
+     write(unit,*)"#set out '"//reg(file_)//".png'"
+     write(unit,*)""
+     write(unit,*)"#set terminal svg size 350,262 fname 'Verdana, Helvetica, Arial, sans-serif'"
+     write(unit,*)"#set out '"//reg(file_)//".svg'"
+     write(unit,*)""
+     write(unit,*)"#set term postscript eps enhanced color 'Times'"
+     write(unit,*)"#set output '|ps2pdf - "//reg(file_)//".pdf'"
+     write(unit,*)"unset key"
+     write(unit,*)"set xtics ("//reg(xtics)//")"
+     write(unit,*)"set grid noytics xtics"
+     !
+     write(unit,*)"plot '"//reg(file_)//"' u 1:2:3 w l lw 3 lc rgb variable,\"
+     do i=2,num_wann*nspin-1
+        u1=2+(i-1)*2
+        u2=3+(i-1)*2
+        write(unit,*)"'"//reg(file_)//"' u 1:"//reg(txtfy(u1))//":"//reg(txtfy(u2))//" w l lw 3 lc rgb variable,\"
+     enddo
+     u1=2+(num_wann*nspin-1)*2
+     u2=3+(num_wann*nspin-1)*2
+     write(unit,*)"'"//reg(file_)//"' u 1:"//reg(txtfy(u1))//":"//reg(txtfy(u2))//" w l lw 3 lc rgb variable"
+     !
+     close(unit)
   call system("chmod +x "//reg(file_)//".gp")
   !
   if(present(Smats_correction_))then
@@ -407,23 +399,15 @@ subroutine read_Hr_w90_solve_Hk_along_BZpath(       w90_file           &      !o
      write(unit,*)"set xtics ("//reg(xtics)//")"
      write(unit,*)"set grid noytics xtics"
      !
-     do iorb=1,Norb
-        chpoint=str(0.95d0-(iorb-1)*0.05d0)
-       write(unit,"(A)")str("set label 'Orb "//str(iorb)//"' tc rgb "//str(rgb(corb(iorb)))//&
-             " at graph 0.9,"//reg(chpoint)//" font 'Times-Italic,11'")
-     enddo
-     !
      write(unit,*)"plot '"//reg(file_)//"' u 1:2:3 w l lw 3 lc rgb variable,\"
-     do iorb=2,Norb-1
-        u1=2+(iorb-1)*2
-        u2=3+(iorb-1)*2
-        write(unit,*)"'"//reg(file_)//"' u 1:"&
-             //reg(txtfy(u1))//":"//reg(txtfy(u2))//" w l lw 3 lc rgb variable,\"
+     do i=2,num_wann*nspin-1
+        u1=2+(i-1)*2
+        u2=3+(i-1)*2
+        write(unit,*)"'"//reg(file_)//"' u 1:"//reg(txtfy(u1))//":"//reg(txtfy(u2))//" w l lw 3 lc rgb variable,\"
      enddo
-     u1=2+(Norb-1)*2
-     u2=3+(Norb-1)*2
-     write(unit,*)"'"//reg(file_)//"' u 1:"&
-          //reg(txtfy(u1))//":"//reg(txtfy(u2))//" w l lw 3 lc rgb variable"
+     u1=2+(num_wann*nspin-1)*2
+     u2=3+(num_wann*nspin-1)*2
+     write(unit,*)"'"//reg(file_)//"' u 1:"//reg(txtfy(u1))//":"//reg(txtfy(u2))//" w l lw 3 lc rgb variable"
      !
      close(unit)
      call system("chmod +x "//reg(file_)//".gp")
