@@ -1,7 +1,7 @@
 module DMFT_TIGHT_BINDING
   USE SF_CONSTANTS, only: pi,pi2,xi,one,zero
   USE SF_IOTOOLS
-  USE SF_LINALG, only: eigh,det
+  USE SF_LINALG, only: eigh,det,eye
   USE SF_COLORS
   USE SF_TIMER, only:start_timer,stop_timer,eta
   implicit none
@@ -32,17 +32,20 @@ module DMFT_TIGHT_BINDING
   interface TB_solve_model
      module procedure solve_Hk_along_BZpath
      module procedure solve_HkR_along_BZpath
+     module procedure read_Hr_w90_solve_Hk_along_BZpath
   end interface TB_solve_model
 
 
   interface TB_write_hk
      module procedure write_hk_w90_func
      module procedure write_hk_w90_array
+     module procedure write_hk_w90_path
   end interface TB_write_hk
 
 
   interface TB_read_hk
      module procedure read_hk_w90_array
+     module procedure read_hk_w90_path
   end interface TB_read_hk
 
 
