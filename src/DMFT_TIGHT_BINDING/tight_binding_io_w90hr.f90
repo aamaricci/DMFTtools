@@ -131,10 +131,12 @@
       write(*,*)"  Kpoints used written on: ",Kpointfile
    endif
    !
-!   Hloc=sum(ham_k,dim=3)/num_kpts
-!   write(*,*)"  Hloc produced"
-!   call TB_write_Hloc(Hloc,"Hloc.dat")
-!   write(*,*)"  Hloc written on","Hlocfile.dat"
+   deallocate(ndegen)
+   deallocate(irvec)
+   deallocate(ham_r)
+   deallocate(ham_aux)
+   deallocate(Hloc)
+   if(.not.present(kpt_latt))deallocate(kpt_latt)
    !
 end subroutine hk_from_w90_hr
 
@@ -318,6 +320,7 @@ subroutine read_Hr_w90_solve_Hk_along_BZpath(       w90_file           &      !o
   !
   file_="Eigenbands.tb"
   if(present(file_eigenband))file_=file_eigenband
+  write(*,*)"  Printing eigenbands on: ",file_
   unit=free_unit()
   open(unit,file=reg(file_))
   !
@@ -365,7 +368,8 @@ subroutine read_Hr_w90_solve_Hk_along_BZpath(       w90_file           &      !o
   call system("chmod +x "//reg(file_)//".gp")
   !
   if(present(Smats_correction_))then
-     file_=file_//"_smats"
+     file_=reg(file_)//"_smats"
+     write(*,*)"  Printing impS corrected eigenbands on: ",file_
      Smats_correction=Smats_correction_
      unit=free_unit()
      open(unit,file=reg(file_))
@@ -412,6 +416,15 @@ subroutine read_Hr_w90_solve_Hk_along_BZpath(       w90_file           &      !o
      close(unit)
      call system("chmod +x "//reg(file_)//".gp")
   endif
+  !
+  deallocate(kpt_latt)
+  deallocate(ndegen)
+  deallocate(irvec)
+  deallocate(ham_r)
+  deallocate(ham_aux)
+  if(.not.present(ham_k))deallocate(ham_k)
+  if(.not.present(kpt_latt))deallocate(kpt_latt)
+  !
 end subroutine read_Hr_w90_solve_Hk_along_BZpath
 
 
