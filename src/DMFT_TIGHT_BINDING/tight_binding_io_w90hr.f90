@@ -151,7 +151,7 @@ subroutine read_Hr_w90_solve_Hk_along_BZpath(       w90_file           &      !o
                                                 ,   file_eigenband     &      !Name of the file where to save the bands                    (optional)
                                                 ,   Hkpathfile         &      !Name of the file where to save the H(k) on the path         (optional)
                                                 ,   Kpointpathfile     &      !Name of the file where to save the Kpoints on the path      (optional)
-                                                ,   Smats_correction_  &      !Re{impSigma(w=0)}                                           (optional)
+                                                ,   S_correction_  &      !Re{impSigma(w=0)}                                           (optional)
                                                 ,   ham_k              &      !k-space hamiltonian on path                                 (optional)
                                                 ,   kpt_latt           )      !Kpoint path                                                 (optional)
 
@@ -160,31 +160,27 @@ subroutine read_Hr_w90_solve_Hk_along_BZpath(       w90_file           &      !o
   integer               ,intent(in)            ::   Nspin,Norb,Nlat
   real(8)   ,allocatable,intent(in)            ::   kpath(:,:)
   integer               ,intent(in)            ::   Nk
-
-  type(rgb_color)       ,intent(in)            ::   colors_name(Nspin*Norb*Nlat)
+  type(rgb_color)       ,intent(in)            ::   colors_name(Norb*Nlat)
   character(len=*),dimension(size(kpath,1))    ::   points_name
   integer               ,intent(in) ,optional  ::   Porder(Nspin*Norb*Nlat,Nspin*Norb*Nlat)
   character(len=*)      ,intent(in) ,optional  ::   file_eigenband
   character(len=*)      ,intent(in) ,optional  ::   Hkpathfile
   character(len=*)      ,intent(in) ,optional  ::   Kpointpathfile
-  real(8)   ,allocatable,intent(in) ,optional  ::   Smats_correction_(:,:) ![Nspin*Norb*Nlat,Nspin*Norb*Nlat]
+  real(8)   ,allocatable,intent(in) ,optional  ::   S_correction_(:,:) ![Nspin*Norb*Nlat,Nspin*Norb*Nlat]
   complex(8),allocatable,intent(out),optional  ::   ham_k(:,:,:)   !(num_wann*nspin,num_wann*nspin,num_kpts)
   real(8)   ,allocatable,intent(out),optional  ::   kpt_latt(:,:)
   integer                                      ::   i,j,ndx1,ndx2
   integer                                      ::   ipts,ik,ic,u1,u2
   integer                                      ::   ispin,jspin,iorb,jorb,ilat,iktot
   integer                                      ::   inrpts,ndim,num_kpts
-  character(len=256)                           ::   file_,xtics
+  character(len=256)                           ::   file_,file_s1,file_s2,file_corr_s1,file_corr_s2,xtics
   integer                                      ::   Npts
   integer                                      ::   unit
   real(8),dimension(size(kpath,2))             ::   kstart,kstop,kdiff,kpoint
-
   integer                                      ::   P(Nspin*Norb*Nlat,Nspin*Norb*Nlat)
-  real(8)                                      ::   eval(Norb*Nspin*Nlat),coeff(Norb*Nspin*Nlat)
-  real(8)                                      ::   Smats_correction(Norb*Nspin*Nlat,Norb*Nspin*Nlat)
-  complex(8)                                   ::   h(Norb*Nspin*Nlat,Norb*Nspin*Nlat)
-  complex(8)                                   ::   u(Norb*Nspin*Nlat,Norb*Nspin*Nlat)
-  type(rgb_color)                              ::   corb(Norb*Nspin*Nlat),c(Norb*Nspin*Nlat)
+  real(8)                                      ::   U(Nspin*Norb*Nlat,Nspin*Norb*Nlat)
+  real(8)                                      ::   Udag(Nspin*Norb*Nlat,Nspin*Norb*Nlat)
+  type(rgb_color)                              ::   corb(Norb*Nlat),c(Norb*Nlat)
   character(len=10)                            ::   chpoint
   character(len=32) :: fmt
   !
@@ -291,12 +287,14 @@ subroutine read_Hr_w90_solve_Hk_along_BZpath(       w90_file           &      !o
   !5) re-ordering from w90 user defined to the code standard [[[Norb],Nspin],Nlat]
   if (present(Porder))then
      P=Porder
+     U=float(P);Udag=transpose(U)
   else
      P=eye(Nspin*Norb*Nlat)
+     U=float(P);Udag=transpose(U)
   endif
   ham_aux=zero;ham_aux=ham_k;ham_k=zero
   do iktot=1,num_kpts
-     ham_k(:,:,iktot)=matmul(transpose(float(P)),matmul(ham_aux(:,:,iktot),float(P)))
+     ham_k(:,:,iktot)=matmul(Udag,matmul(ham_aux(:,:,iktot),U))
   enddo
   !
   if(present(Hkpathfile))then
@@ -313,117 +311,115 @@ subroutine read_Hr_w90_solve_Hk_along_BZpath(       w90_file           &      !o
      write(*,*)"  Kpoints on path used written on: ",Kpointpathfile
   endif
   !
-  !6) Coloured Eigenbands on path
-  do i=1,num_wann*nspin
+  !6) Coloured Eigenbands on path for the two different spins
+  do i=1,num_wann
      corb(i) = colors_name(i)
   enddo
   !
-  file_="Eigenbands.tb"
+  file_="Eigenbands"
   if(present(file_eigenband))file_=file_eigenband
-  write(*,*)"  Printing eigenbands on: ",file_
-  unit=free_unit()
-  open(unit,file=reg(file_))
   !
-  do iktot=1,num_kpts
-     h=zero
-     h=ham_k(:,:,iktot)
-     call eigh(h,Eval)
-     do i=1,num_wann*nspin
-        coeff(:)=h(:,i)*conjg(h(:,i))
-        c(i) = coeff.dot.corb
-     enddo
-     write(unit,'(I12,100(F18.12,I18))')iktot,(Eval(i),rgb(c(i)),i=1,num_wann*nspin)
-  enddo
-  close(unit)
-  xtics="'"//reg(points_name(1))//"'1,"
-  do ipts=2,Npts-1
-     xtics=reg(xtics)//"'"//reg(points_name(ipts))//"'"//reg(txtfy((ipts-1)*Nk+1))//","
-  enddo
-  xtics=reg(xtics)//"'"//reg(points_name(Npts))//"'"//reg(txtfy((Npts-1)*Nk))//""
-     open(unit,file=reg(file_)//".gp")
-     write(unit,*)"set term wxt"
-     write(unit,*)"#set terminal pngcairo size 350,262 enhanced font 'Verdana,10'"
-     write(unit,*)"#set out '"//reg(file_)//".png'"
-     write(unit,*)""
-     write(unit,*)"#set terminal svg size 350,262 fname 'Verdana, Helvetica, Arial, sans-serif'"
-     write(unit,*)"#set out '"//reg(file_)//".svg'"
-     write(unit,*)""
-     write(unit,*)"#set term postscript eps enhanced color 'Times'"
-     write(unit,*)"#set output '|ps2pdf - "//reg(file_)//".pdf'"
-     write(unit,*)"unset key"
-     write(unit,*)"set xtics ("//reg(xtics)//")"
-     write(unit,*)"set grid noytics xtics"
-     !
-     write(unit,*)"plot '"//reg(file_)//"' u 1:2:3 w l lw 3 lc rgb variable,\"
-     do i=2,num_wann*nspin-1
-        u1=2+(i-1)*2
-        u2=3+(i-1)*2
-        write(unit,*)"'"//reg(file_)//"' u 1:"//reg(txtfy(u1))//":"//reg(txtfy(u2))//" w l lw 3 lc rgb variable,\"
-     enddo
-     u1=2+(num_wann*nspin-1)*2
-     u2=3+(num_wann*nspin-1)*2
-     write(unit,*)"'"//reg(file_)//"' u 1:"//reg(txtfy(u1))//":"//reg(txtfy(u2))//" w l lw 3 lc rgb variable"
-     !
-     close(unit)
-  call system("chmod +x "//reg(file_)//".gp")
+  file_s1=reg(file_)//"_s1"
+  call solve_bands(reg(file_s1),1)
   !
-  if(present(Smats_correction_))then
-     file_=reg(file_)//"_smats"
-     write(*,*)"  Printing impS corrected eigenbands on: ",file_
-     Smats_correction=Smats_correction_
-     unit=free_unit()
-     open(unit,file=reg(file_))
-     do iktot=1,num_kpts
-        h=zero
-        h=ham_k(:,:,iktot)+Smats_correction
-        call eigh(h,Eval)
-        do i=1,num_wann*nspin
-           coeff(:)=h(:,i)*conjg(h(:,i))
-           c(i) = coeff.dot.corb
-        enddo
-        write(unit,'(I12,100(F18.12,I18))')iktot,(Eval(i),rgb(c(i)),i=1,num_wann*nspin)
-     enddo
-     close(unit)
-     xtics="'"//reg(points_name(1))//"'1,"
-     do ipts=2,Npts-1
-        xtics=reg(xtics)//"'"//reg(points_name(ipts))//"'"//reg(txtfy((ipts-1)*Nk+1))//","
-     enddo
-     xtics=reg(xtics)//"'"//reg(points_name(Npts))//"'"//reg(txtfy((Npts-1)*Nk))//""
-     open(unit,file=reg(file_)//".gp")
-     write(unit,*)"set term wxt"
-     write(unit,*)"#set terminal pngcairo size 350,262 enhanced font 'Verdana,10'"
-     write(unit,*)"#set out '"//reg(file_)//".png'"
-     write(unit,*)""
-     write(unit,*)"#set terminal svg size 350,262 fname 'Verdana, Helvetica, Arial, sans-serif'"
-     write(unit,*)"#set out '"//reg(file_)//".svg'"
-     write(unit,*)""
-     write(unit,*)"#set term postscript eps enhanced color 'Times'"
-     write(unit,*)"#set output '|ps2pdf - "//reg(file_)//".pdf'"
-     write(unit,*)"unset key"
-     write(unit,*)"set xtics ("//reg(xtics)//")"
-     write(unit,*)"set grid noytics xtics"
+  if(Nspin.gt.1)then
      !
-     write(unit,*)"plot '"//reg(file_)//"' u 1:2:3 w l lw 3 lc rgb variable,\"
-     do i=2,num_wann*nspin-1
-        u1=2+(i-1)*2
-        u2=3+(i-1)*2
-        write(unit,*)"'"//reg(file_)//"' u 1:"//reg(txtfy(u1))//":"//reg(txtfy(u2))//" w l lw 3 lc rgb variable,\"
-     enddo
-     u1=2+(num_wann*nspin-1)*2
-     u2=3+(num_wann*nspin-1)*2
-     write(unit,*)"'"//reg(file_)//"' u 1:"//reg(txtfy(u1))//":"//reg(txtfy(u2))//" w l lw 3 lc rgb variable"
+     file_s2=reg(file_)//"_s2"
+     call solve_bands(reg(file_s2),2)
      !
-     close(unit)
-     call system("chmod +x "//reg(file_)//".gp")
+     if(present(S_correction_))then
+        !
+        file_corr_s1=reg(file_)//"_Sreal_s1"
+        call solve_bands(reg(file_corr_s1),1,S_correction_)
+        !
+        file_corr_s2=reg(file_)//"_Sreal_s2"
+        call solve_bands(reg(file_corr_s2),2,S_correction_)
+        !
+     endif
+  else
+     if(present(S_correction_))then
+        !
+        file_corr_s1=reg(file_)//"_Sreal_s1"
+        call solve_bands(reg(file_corr_s1),1,S_correction_)
+        !
+     endif
   endif
+
+
+
+  contains
+
+  subroutine solve_bands(file_print_,spindx,S)
+    implicit none
+    character(len=*),intent(in)                  ::   file_print_
+    integer         ,intent(in)                  ::   spindx
+    real(8)   ,allocatable,intent(in) ,optional  ::   S(:,:)
+    character(len=256)                           ::   file_print
+    integer                                      ::   i
+    real(8)                                      ::   S_correction(Norb*Nspin*Nlat,Norb*Nspin*Nlat)
+    real(8)                                      ::   eval(Norb*Nlat),coeff(Norb*Nlat)
+    complex(8)                                   ::   h(Norb*Nspin*Nlat,Norb*Nspin*Nlat)
+    complex(8) ,dimension(Norb*Nlat,Norb*Nlat)   ::   h1,h2,hdiag
+    !
+    file_print=file_print_//".dat"
+    write(*,*)"  Printing eigenbands on: ",reg(file_print)
+    unit=free_unit()
+    open(unit,file=reg(file_print))
+    !
+    S_correction=0d0
+    if(present(S))S_correction=S
+    !
+    do iktot=1,num_kpts
+       h=zero
+       h=ham_k(:,:,iktot)+S_correction
+       !reshape with spin external block (usual for w90) so as to diagonalize a block matrix
+       h=matmul(U,matmul(h,Udag))
+       !identify different spins
+       h1(:,:)=h(1:num_wann,1:num_wann)
+       h2(:,:)=h(1+num_wann:Nspin*num_wann,1+num_wann:Nspin*num_wann)
+       if(spindx==1)hdiag=h1
+       if(spindx==2)hdiag=h2
+       call eigh(hdiag,Eval)
+       do i=1,num_wann
+          coeff(:)=hdiag(:,i)*conjg(hdiag(:,i))
+          c(i) = coeff.dot.corb
+       enddo
+       write(unit,'(I12,100(F18.12,I18))')iktot,(Eval(i),rgb(c(i)),i=1,num_wann)
+    enddo
+    close(unit)
+    xtics="'"//reg(points_name(1))//"'1,"
+    do ipts=2,Npts-1
+       xtics=reg(xtics)//"'"//reg(points_name(ipts))//"'"//reg(txtfy((ipts-1)*Nk+1))//","
+    enddo
+    xtics=reg(xtics)//"'"//reg(points_name(Npts))//"'"//reg(txtfy((Npts-1)*Nk))//""
+       open(unit,file=reg(file_print)//".gp")
+       write(unit,*)"set term wxt"
+       write(unit,*)"#set terminal pngcairo size 350,262 enhanced font 'Verdana,10'"
+       write(unit,*)"#set out '"//reg(file_print)//".png'"
+       write(unit,*)""
+       write(unit,*)"#set terminal svg size 350,262 fname 'Verdana, Helvetica, Arial, sans-serif'"
+       write(unit,*)"#set out '"//reg(file_print)//".svg'"
+       write(unit,*)""
+       write(unit,*)"#set term postscript eps enhanced color 'Times'"
+       write(unit,*)"#set output '|ps2pdf - "//reg(file_print)//".pdf'"
+       write(unit,*)"unset key"
+       write(unit,*)"set xtics ("//reg(xtics)//")"
+       write(unit,*)"set grid noytics xtics"
+       !
+       write(unit,*)"plot '"//reg(file_print)//"' u 1:2:3 w l lw 3 lc rgb variable,\"
+       do i=2,num_wann-1
+          u1=2+(i-1)*2
+          u2=3+(i-1)*2
+          write(unit,*)"'"//reg(file_print)//"' u 1:"//reg(txtfy(u1))//":"//reg(txtfy(u2))//" w l lw 3 lc rgb variable,\"
+       enddo
+       u1=2+(num_wann-1)*2
+       u2=3+(num_wann-1)*2
+       write(unit,*)"'"//reg(file_print)//"' u 1:"//reg(txtfy(u1))//":"//reg(txtfy(u2))//" w l lw 3 lc rgb variable"
+       !
+       close(unit)
+    call system("chmod +x "//reg(file_print)//".gp")
+  end subroutine solve_bands
   !
-  deallocate(kpt_latt)
-  deallocate(ndegen)
-  deallocate(irvec)
-  deallocate(ham_r)
-  deallocate(ham_aux)
-  if(.not.present(ham_k))deallocate(ham_k)
-  if(.not.present(kpt_latt))deallocate(kpt_latt)
   !
 end subroutine read_Hr_w90_solve_Hk_along_BZpath
 
