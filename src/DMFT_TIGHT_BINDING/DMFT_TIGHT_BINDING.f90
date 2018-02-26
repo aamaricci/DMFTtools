@@ -1,7 +1,7 @@
 module DMFT_TIGHT_BINDING
   USE SF_CONSTANTS, only: pi,pi2,xi,one,zero
   USE SF_IOTOOLS
-  USE SF_LINALG, only: eigh,det
+  USE SF_LINALG, only: eigh,det,eye
   USE SF_COLORS
   USE SF_TIMER, only:start_timer,stop_timer,eta
   USE SF_MISC, only: assert_shape
@@ -30,22 +30,29 @@ module DMFT_TIGHT_BINDING
   end interface TB_build_model
 
 
-
   interface TB_solve_model
      module procedure solve_Hk_along_BZpath
      module procedure solve_HkR_along_BZpath
+     module procedure read_Hr_w90_solve_Hk_along_BZpath
   end interface TB_solve_model
-
 
 
   interface TB_write_hk
      module procedure write_hk_w90_func
      module procedure write_hk_w90_array
+     module procedure write_hk_w90_path
   end interface TB_write_hk
+
 
   interface TB_read_hk
      module procedure read_hk_w90_array
+     module procedure read_hk_w90_path
   end interface TB_read_hk
+
+
+  interface TB_hr_to_hk
+     module procedure hk_from_w90_hr
+  end interface TB_hr_to_hk
 
 
   interface TB_write_Hloc
@@ -136,6 +143,8 @@ module DMFT_TIGHT_BINDING
   !
   public :: TB_write_hk
   public :: TB_read_hk
+  !
+  public :: TB_hr_to_hk
   !
   public :: TB_write_hloc
   public :: TB_read_hloc
@@ -378,6 +387,13 @@ contains
   !PURPOSE:  read/write the Hamiltonian matrix H(k)
   !-------------------------------------------------------------------------------------------
   include "tight_binding_io_w90hk.f90"
+
+
+
+  !-------------------------------------------------------------------------------------------
+  !PURPOSE:  read the real space hopping matrix from Wannier90 output and create H(k)
+  !-------------------------------------------------------------------------------------------
+  include "tight_binding_io_w90hr.f90"
 
 
 
