@@ -4,6 +4,7 @@ module DMFT_TIGHT_BINDING
   USE SF_LINALG, only: eigh,det
   USE SF_COLORS
   USE SF_TIMER, only:start_timer,stop_timer,eta
+  USE SF_MISC, only: assert_shape
   implicit none
   private
 

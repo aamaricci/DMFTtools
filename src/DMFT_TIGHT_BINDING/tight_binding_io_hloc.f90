@@ -39,9 +39,8 @@ subroutine write_hloc_2(hloc,file) ![Nspin][Nspin][Norb][Norb]
      open(unit,file=reg(file))
   endif
   Nspin=size(Hloc,1)
-  if(size(Hloc,2)/=Nspin)stop "write_hloc error: size[Hloc,2] != size[Hloc,1] == Nspin"
   Norb=size(Hloc,3)
-  if(size(Hloc,4)/=Nspin)stop "write_hloc error: size[Hloc,4] != size[Hloc,3] == Norb"
+  call assert_shape(Hloc,[Nspin,Nspin,Norb,Norb],"Write_Hloc_2","Hloc")
   if(present(file))then
      do ispin=1,Nspin
         do iorb=1,Norb

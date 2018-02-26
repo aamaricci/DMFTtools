@@ -172,7 +172,7 @@ ADD_LIBRARY(dmft_tools
   $<TARGET_OBJECTS:DMFT_TOOLSLIB>
   )
 
-SET(DT_VERSION_FILE ${DT_SRC}/${PROJECT_NAME}_current_sha1.inc)
+SET(DT_VERSION_FILE ${DT_SRC}/${PROJECT_NAME}_version_current_sha1.inc)
 ADD_CUSTOM_COMMAND(OUTPUT ${DT_VERSION_FILE}
   COMMAND ${CMAKE_COMMAND} -E echo "character(len=41),parameter,public :: ${PROJECT_NAME}_version_sha1 = \"${GIT_SHA1}\"" > ${DT_VERSION_FILE}
   COMMENT "${Yellow}Creating ${DT_VERSION_FILE}: ${ColourReset}"

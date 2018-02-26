@@ -1,6 +1,6 @@
 MODULE DMFT_VERSION
   implicit none
-  include "dmft_tools_current_sha1.inc"
+  include "dmft_tools_version_current_sha1.inc"
 
 contains
 
