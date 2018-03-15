@@ -11,11 +11,11 @@ subroutine write_hloc_1(hloc,file) ![Nlso][Nlso]
   Nj=size(Hloc,2)
   if(present(file))then
      do iorb=1,Ni
-        write(unit,"(90F12.6)")(dreal(Hloc(iorb,jorb)),jorb=1,Nj)
+        write(unit,"(9000F12.6)")(dreal(Hloc(iorb,jorb)),jorb=1,Nj)
      enddo
      write(unit,*)""
      do iorb=1,Ni
-        write(unit,"(90F12.6)")(dimag(Hloc(iorb,jorb)),jorb=1,Nj)
+        write(unit,"(9000F12.6)")(dimag(Hloc(iorb,jorb)),jorb=1,Nj)
      enddo
      write(unit,*)""
      close(unit)
@@ -44,13 +44,13 @@ subroutine write_hloc_2(hloc,file) ![Nspin][Nspin][Norb][Norb]
   if(present(file))then
      do ispin=1,Nspin
         do iorb=1,Norb
-           write(unit,"(90F12.6)")((dreal(Hloc(ispin,jspin,iorb,jorb)),jorb=1,Norb),jspin=1,Nspin)
+           write(unit,"(9000F12.6)")((dreal(Hloc(ispin,jspin,iorb,jorb)),jorb=1,Norb),jspin=1,Nspin)
         enddo
      enddo
      write(unit,*)""
      do ispin=1,Nspin
         do iorb=1,Norb
-           write(unit,"(90F12.6)")((dimag(Hloc(ispin,jspin,iorb,jorb)),jorb=1,Norb),jspin=1,Nspin)
+           write(unit,"(9000F12.6)")((dimag(Hloc(ispin,jspin,iorb,jorb)),jorb=1,Norb),jspin=1,Nspin)
         enddo
      enddo
      write(unit,*)""
@@ -91,11 +91,11 @@ subroutine read_hloc_1(hloc,file)
   Ni=size(Hloc,1)
   Nj=size(Hloc,2)
   do iorb=1,Ni
-     read(unit,"(90F12.6)")(reHloc(iorb,jorb),jorb=1,Nj)
+     read(unit,"(9000F12.6)")(reHloc(iorb,jorb),jorb=1,Nj)
   enddo
   write(unit,*)""
   do iorb=1,Ni
-     read(unit,"(90F12.6)")(imHloc(iorb,jorb),jorb=1,Nj)
+     read(unit,"(9000F12.6)")(imHloc(iorb,jorb),jorb=1,Nj)
   enddo
   close(unit)
   Hloc = dcmplx(reHloc,imHloc)
@@ -115,13 +115,13 @@ subroutine read_hloc_2(hloc,file)
   if(size(Hloc,4)/=Nspin)stop "read_hloc error: size[Hloc,4] != size[Hloc,3] == Norb"
   do ispin=1,Nspin
      do iorb=1,Norb
-        read(unit,"(1000F12.6)")((reHloc(ispin,jspin,iorb,jorb),jorb=1,Norb),jspin=1,Nspin)
+        read(unit,"(9000F12.6)")((reHloc(ispin,jspin,iorb,jorb),jorb=1,Norb),jspin=1,Nspin)
      enddo
   enddo
   read(unit,*)
   do ispin=1,Nspin
      do iorb=1,Norb
-        read(unit,"(1000F12.6)")((imHloc(ispin,jspin,iorb,jorb),jorb=1,Norb),jspin=1,Nspin)
+        read(unit,"(9000F12.6)")((imHloc(ispin,jspin,iorb,jorb),jorb=1,Norb),jspin=1,Nspin)
      enddo
   enddo
   close(unit)

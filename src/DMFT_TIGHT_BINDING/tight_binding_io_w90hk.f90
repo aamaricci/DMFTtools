@@ -30,7 +30,7 @@ subroutine write_hk_w90_func(hk_model,file,No,Nd,Np,Nineq,Nkvec)
      kvec(:size(Nkvec)) = kgrid(ik,:size(Nkvec))
      write(unit,"(3(F15.9,1x))")(kvec(i),i=1,3) 
      do iorb=1,No
-        write(unit,"(20(2F15.9,1x))")(Hk(iorb,jorb),jorb=1,No)
+        write(unit,"(1000(2F15.9,1x))")(Hk(iorb,jorb),jorb=1,No)
      enddo
   enddo
   close(unit)
