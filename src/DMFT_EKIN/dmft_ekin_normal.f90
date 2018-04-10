@@ -186,7 +186,7 @@ subroutine dmft_kinetic_energy_normal_dos(Ebands,Dbands,Hloc,Sigma,Ekin,Eloc)
         Ak = Ebands(iso,ik)
         Bk =-Ebands(iso,ik) - Sigma_HF(iso,iso) 
         do i=1,Liw
-           Gk = (xi*wm(i)+xmu) - Sigma(iso,iso,i) - Ebands(iso,ik)
+           Gk = (xi*wm(i)+xmu) - Sigma(iso,iso,i) - Ebands(iso,ik) - Hloc(iso)
            Gk = 1d0/Gk
            Tk = 1d0/(xi*wm(i)) - Bk/(xi*wm(i))**2
            Ck = Ak*(Gk - Tk)

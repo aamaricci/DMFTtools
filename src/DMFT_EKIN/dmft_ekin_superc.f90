@@ -214,18 +214,18 @@ subroutine dmft_kinetic_energy_superc_dos(Ebands,Dbands,Hloc,Sigma,Self,Ekin,Elo
         Ak = Ebands(is,ik)
         do i=1,Liw
            Gknambu=zero
-           Gknambu(1,1) = (xi*wm(i) + xmu)  - Sigma(is,is,i)        - Ebands(is,ik)
+           Gknambu(1,1) = (xi*wm(i) + xmu)  - Sigma(is,is,i)        - Ebands(is,ik) - Hloc(is)
            Gknambu(1,2) =                   - Self(is,is,i)
            Gknambu(2,1) =                   - Self(is,is,i)
-           Gknambu(2,2) = (xi*wm(i) - xmu)  + conjg(Sigma(is,is,i)) + Ebands(is,ik)
+           Gknambu(2,2) = (xi*wm(i) - xmu)  + conjg(Sigma(is,is,i)) + Ebands(is,ik) + Hloc(is)
            call inv(Gknambu)
            Gk  = Gknambu(1,1) !Gk(iw)
            !
            Gknambu=zero
-           Gknambu(1,1) = (xi*wm(i) + xmu)  - Sigma_hf(is,is)  - Ebands(is,ik)
+           Gknambu(1,1) = (xi*wm(i) + xmu)  - Sigma_hf(is,is)  - Ebands(is,ik) - Hloc(is)
            Gknambu(1,2) =                   - Self_hf(is,is)
            Gknambu(2,1) =                   - Self_hf(is,is)
-           Gknambu(2,2) = (xi*wm(i) - xmu)  + Sigma_hf(is,is)  + Ebands(is,ik)
+           Gknambu(2,2) = (xi*wm(i) - xmu)  + Sigma_hf(is,is)  + Ebands(is,ik) + Hloc(is)
            call inv(Gknambu)
            Tk = Gknambu(1,1) !G0k(iw)
            !
