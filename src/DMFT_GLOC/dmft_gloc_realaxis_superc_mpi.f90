@@ -212,7 +212,6 @@ subroutine dmft_get_gloc_realaxis_superc_ineq_mpi(MpiComm,Hk,Wtk,Greal,Sreal,mpi
   call assert_shape(Greal,[2,Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_superc_ineq_main_mpi',"Greal")
   !
   if(mpi_master)write(*,"(A)")"Get local Realaxis Superc Green's function (no print)"
-  if(mpi_master)call start_timer
   !
   allocate(Gkreal(2,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
   allocate(zeta_real(2,2,Nlat,Nso,Nso,Lreal))

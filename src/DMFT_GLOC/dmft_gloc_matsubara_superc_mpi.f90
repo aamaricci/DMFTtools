@@ -198,7 +198,6 @@ subroutine dmft_get_gloc_matsubara_superc_ineq_mpi(MpiComm,Hk,Wtk,Gmats,Smats,mp
   call assert_shape(Gmats,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gloc_matsubara_superc_ineq_main_mpi',"Gmats")
   !
   if(mpi_master)write(*,"(A)")"Get local Matsubara Superc Green's function (no print)"
-  if(mpi_master)call start_timer
   !
   allocate(Gkmats(2,Nlat,Nspin,Nspin,Norb,Norb,Lmats))
   allocate(zeta_mats(2,2,Nlat,Nso,Nso,Lmats))
