@@ -413,10 +413,12 @@ contains
     logical,intent(in),optional                   :: check_bk
     logical                                       :: check_bk_
     real(8),dimension(size(Nkvec))                :: kvec  ![Ndim]
-    integer                                       :: ik,ix,iy,iz,Nk(3)
+    integer                                       :: ik,ix,iy,iz,Nk(3),ndim
     real(8)                                       :: kx,ky,kz
     !
     check_bk_=.false.;if(present(check_bk))check_bk_=check_bk
+    !
+    ndim = size(Nkvec)          !dimension of the grid to be built
     !
     Nk=1
     do ik=1,size(Nkvec)
@@ -434,7 +436,7 @@ contains
           ky = dble(iy-1)/Nk(2)
           do ix=1,Nk(1)
              kx = dble(ix-1)/Nk(1)
-             kvec = kx*bk_x + ky*bk_y + kz*bk_z
+             kvec = kx*bk_x(:ndim) + ky*bk_y(:ndim) + kz*bk_z(:ndim)
              ik=ik+1
              kgrid(ik,:)=kvec
           enddo

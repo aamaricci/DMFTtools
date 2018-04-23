@@ -1,4 +1,4 @@
-subroutine solve_Hk_along_BZpath(hk_model,Norb,kpath,Nk,colors_name,points_name,file)
+subroutine solve_Hk_along_BZpath(hk_model,Nlso,kpath,Nk,colors_name,points_name,file)
   interface 
      function hk_model(kpoint,N)
        real(8),dimension(:)      :: kpoint
@@ -6,25 +6,25 @@ subroutine solve_Hk_along_BZpath(hk_model,Norb,kpath,Nk,colors_name,points_name,
        complex(8),dimension(N,N) :: hk_model
      end function hk_model
   end interface
-  integer                                   :: Norb
+  integer                                   :: Nlso
   real(8),dimension(:,:)                    :: kpath
   integer                                   :: Nk
-  type(rgb_color),dimension(Norb)           :: colors_name
+  type(rgb_color),dimension(Nlso)           :: colors_name
   character(len=*),dimension(size(kpath,1)) :: points_name
   character(len=*),optional                 :: file
   character(len=256)                        :: file_,xtics
   integer                                   :: Npts,Nrot
   integer                                   :: ipts,ik,ic,unit,u1,u2,iorb
   real(8),dimension(size(kpath,2))          :: kstart,kstop,kpoint,kdiff
-  real(8)                                   :: eval(Norb),coeff(Norb)
-  complex(8)                                :: h(Norb,Norb),u(Norb,Norb)
-  type(rgb_color)                           :: corb(Norb),c(Norb)
+  real(8)                                   :: eval(Nlso),coeff(Nlso)
+  complex(8)                                :: h(Nlso,Nlso),u(Nlso,Nlso)
+  type(rgb_color)                           :: corb(Nlso),c(Nlso)
   character(len=10)                         :: chpoint
   character(len=32) :: fmt
   !
   file_="Eigenbands.tb";if(present(file))file_=file
   Npts=size(kpath,1)
-  do iorb=1,Norb
+  do iorb=1,Nlso
      corb(iorb) = colors_name(iorb)
   enddo
   unit=free_unit()
@@ -44,13 +44,13 @@ subroutine solve_Hk_along_BZpath(hk_model,Norb,kpath,Nk,colors_name,points_name,
      do ik=1,Nk
         ic=ic+1
         kpoint = kstart + (ik-1)*kdiff
-        h = hk_model(kpoint,Norb)
+        h = hk_model(kpoint,Nlso)
         call eigh(h,Eval)
-        do iorb=1,Norb
+        do iorb=1,Nlso
            coeff(:)=h(:,iorb)*conjg(h(:,iorb))
            c(iorb) = coeff.dot.corb
         enddo
-        write(unit,'(I12,100(F18.12,I18))')ic,(Eval(iorb),rgb(c(iorb)),iorb=1,Norb)
+        write(unit,'(I12,100(F18.12,I18))')ic,(Eval(iorb),rgb(c(iorb)),iorb=1,Nlso)
      enddo
   enddo
   close(unit)
@@ -73,21 +73,23 @@ subroutine solve_Hk_along_BZpath(hk_model,Norb,kpath,Nk,colors_name,points_name,
   write(unit,*)"set xtics ("//reg(xtics)//")"
   write(unit,*)"set grid noytics xtics"
   !
-  do iorb=1,Norb
-     chpoint=str(0.95d0-(iorb-1)*0.05d0)
-     write(unit,"(A)")str("set label 'Orb "//str(iorb)//"' tc rgb "//str(rgb(corb(iorb)))//&
-          " at graph 0.9,"//reg(chpoint)//" font 'Times-Italic,11'")
-  enddo
+  if(Nlso<10)then !a safe compromise to have all orbitals key readable.
+     do iorb=1,Nlso
+        chpoint=str(0.95d0-(iorb-1)*0.05d0)
+        write(unit,"(A)")str("set label 'Orb "//str(iorb)//"' tc rgb "//str(rgb(corb(iorb)))//&
+             " at graph 0.9,"//reg(chpoint)//" font 'Times-Italic,11'")
+     enddo
+  endif
   !
   write(unit,*)"plot '"//reg(file_)//"' u 1:2:3 w l lw 3 lc rgb variable,\"
-  do iorb=2,Norb-1
+  do iorb=2,Nlso-1
      u1=2+(iorb-1)*2
      u2=3+(iorb-1)*2
      write(unit,*)"'"//reg(file_)//"' u 1:"&
           //reg(txtfy(u1))//":"//reg(txtfy(u2))//" w l lw 3 lc rgb variable,\"
   enddo
-  u1=2+(Norb-1)*2
-  u2=3+(Norb-1)*2
+  u1=2+(Nlso-1)*2
+  u2=3+(Nlso-1)*2
   write(unit,*)"'"//reg(file_)//"' u 1:"&
        //reg(txtfy(u1))//":"//reg(txtfy(u2))//" w l lw 3 lc rgb variable"
   !
