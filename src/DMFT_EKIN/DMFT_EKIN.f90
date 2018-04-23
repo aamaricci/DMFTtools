@@ -961,6 +961,7 @@ contains
     integer,optional                   :: Nlat
     integer                            :: Nso,Nlso
     integer                            :: i,iso,ilat,unit
+    
 
     if(.not.present(Nlat))then
        !
@@ -1002,6 +1003,9 @@ contains
              Eloc_(ilat,iso) = Eloc(i)
           enddo
        enddo
+       !
+       unit = free_unit()
+       open(unit,file="dmft_kinetic_energy.dat")       
        write(unit,"(90F15.9)")sum(Ekin_)/Nlat,sum(Eloc_)/Nlat
        do ilat=1,Nlat
           write(unit,"(100F15.9)")sum(Ekin_(ilat,:)),sum(Eloc_(ilat,:)),&
