@@ -16,7 +16,7 @@ subroutine solve_Hk_along_BZpath(hk_model,Nlso,kpath,Nk,colors_name,points_name,
   integer                                   :: Npts,Nrot
   integer                                   :: ipts,ik,ic,unit,u1,u2,iorb
   real(8),dimension(size(kpath,2))          :: kstart,kstop,kpoint,kdiff
-  real(8)                                   :: eval(Nlso),coeff(Nlso)
+  real(8)                                   :: eval(Nlso),coeff(Nlso),klen,ktics(size(Kpath,1))
   complex(8)                                :: h(Nlso,Nlso),u(Nlso,Nlso)
   type(rgb_color)                           :: corb(Nlso),c(Nlso)
   character(len=10)                         :: chpoint
@@ -37,10 +37,12 @@ subroutine solve_Hk_along_BZpath(hk_model,Nlso,kpath,Nk,colors_name,points_name,
   enddo
   !
   ic = 0
+  klen=0d0  
   do ipts=1,Npts-1
      kstart = kpath(ipts,:)
      kstop  = kpath(ipts+1,:)
      kdiff  = (kstop-kstart)/dble(Nk)
+     ktics(ipts)  = klen
      do ik=1,Nk
         ic=ic+1
         kpoint = kstart + (ik-1)*kdiff
@@ -49,16 +51,20 @@ subroutine solve_Hk_along_BZpath(hk_model,Nlso,kpath,Nk,colors_name,points_name,
         do iorb=1,Nlso
            coeff(:)=h(:,iorb)*conjg(h(:,iorb))
            c(iorb) = coeff.dot.corb
-        enddo
-        write(unit,'(I12,100(F18.12,I18))')ic,(Eval(iorb),rgb(c(iorb)),iorb=1,Nlso)
+        enddo       
+        write(unit,'(F18.12,100(F18.12,I18))')klen,(Eval(iorb),rgb(c(iorb)),iorb=1,Nlso)
+        klen = klen + sqrt(dot_product(kdiff,kdiff))
      enddo
   enddo
+  ktics(Npts) = klen
   close(unit)
-  xtics="'"//reg(points_name(1))//"'1,"
+  !
+  xtics="'"//reg(points_name(1))//"'"//str(ktics(1))//","
   do ipts=2,Npts-1
-     xtics=reg(xtics)//"'"//reg(points_name(ipts))//"'"//reg(txtfy((ipts-1)*Nk+1))//","
+     xtics=reg(xtics)//"'"//reg(points_name(ipts))//"'"//str(ktics(ipts))//","
   enddo
-  xtics=reg(xtics)//"'"//reg(points_name(Npts))//"'"//reg(txtfy((Npts-1)*Nk))//""
+  xtics=reg(xtics)//"'"//reg(points_name(Npts))//"'"//str(ktics(Npts))//""
+  !
   open(unit,file=reg(file_)//".gp")
   write(unit,*)"set term wxt"
   write(unit,*)"#set terminal pngcairo size 350,262 enhanced font 'Verdana,10'"
@@ -119,7 +125,7 @@ subroutine solve_HkR_along_BZpath(hkr_model,Nlat,Nso,kpath,Nkpath,colors_name,po
   character(len=256)                           :: file_,xtics
   integer                                      :: Npts!,units(Nlat*Nso)
   integer                                      :: ipts,ik,ic,unit,unit_,iorb,ilat,io,nrot,u1,u2
-  real(8)                                      :: coeff(Nlat*Nso)
+  real(8)                                      :: coeff(Nlat*Nso),klen,ktics(size(Kpath,1))
   type(rgb_color)                              :: corb(Nlat*Nso),c(Nlat*Nso)
   real(8),dimension(size(kpath,2))             :: kstart,kstop,kpoint,kdiff
   complex(8),dimension(Nlat*Nso,Nlat*Nso)      :: h
@@ -151,36 +157,37 @@ subroutine solve_HkR_along_BZpath(hkr_model,Nlat,Nso,kpath,Nkpath,colors_name,po
 
   !
   ic=0
-  ! open(free_unit(unit),file=reg(file_))
+  klen = 0d0
   call start_timer()
   do ipts=1,Npts-1
      kstart = kpath(ipts,:)
      kstop  = kpath(ipts+1,:)
      kdiff  = (kstop-kstart)/Nkpath
+     ktics(ipts)  = klen
      do ik=1,Nkpath
         ic=ic+1
         kpoint = kstart + (ik-1)*kdiff
         h = hkr_model(kpoint,Nlat,Nso,pbc)
         call eigh(h,Eval)
-        call eta(ic,Nktot)
+        call eta(ic,Nktot)       
         do io=1,Nlso
            coeff(:)=h(:,io)*conjg(h(:,io))
            c(io) = coeff.dot.corb
            open(free_unit(unit_),file="site_"//str(io,4)//"_"//str(file_),position="append")
-           write(unit_,"(I12,F18.12,I18)")ic,Eval(io),rgb(c(io))
+           write(unit_,"(F18.12,F18.12,I18)")klen,Eval(io),rgb(c(io))
            close(unit_)
         enddo
-        ! write(unit,fmt)ic,(Eval(io),rgb(c(io)),io=1,Nlso)
+        klen = klen + sqrt(dot_product(kdiff,kdiff))
      enddo
   enddo
   call stop_timer()
-  ! close(unit)
   !
-  xtics="'"//reg(points_name(1))//"'1,"
+  xtics="'"//reg(points_name(1))//"'"//str(ktics(1))//","
   do ipts=2,Npts-1
-     xtics=reg(xtics)//"'"//reg(points_name(ipts))//"'"//reg(txtfy((ipts-1)*Nkpath+1))//","
+     xtics=reg(xtics)//"'"//reg(points_name(ipts))//"'"//str(ktics(ipts))//","
   enddo
-  xtics=reg(xtics)//"'"//reg(points_name(Npts))//"'"//reg(txtfy((Npts-1)*Nkpath))//""
+  xtics=reg(xtics)//"'"//reg(points_name(Npts))//"'"//str(ktics(Npts))//""
+  !
   open(unit,file=reg(file_)//".gp")
   write(unit,*)"set term wxt"
   write(unit,*)"#set terminal pngcairo size 350,262 enhanced font 'Verdana,10'"
