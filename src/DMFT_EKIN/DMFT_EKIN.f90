@@ -954,12 +954,12 @@ contains
   !+-------------------------------------------------------------------+
   !PURPOSE  : Write energies to file
   !+-------------------------------------------------------------------+
-  subroutine write_kinetic_value(Ekin,Eloc,Nlat)
+  subroutine write_kinetic_value(Ekin,Eloc,Nlat,Nso)
     real(8),dimension(:)               :: Ekin
     real(8),dimension(size(Ekin))      :: Eloc
     real(8),dimension(:,:),allocatable :: Ekin_,Eloc_
-    integer,optional                   :: Nlat
-    integer                            :: Nso,Nlso
+    integer,optional                   :: Nlat,Nso
+    integer                            :: Nlso
     integer                            :: i,iso,ilat,unit
     
 
@@ -982,8 +982,10 @@ contains
        !
     else
        !
+       if(.not.present(Nso))stop "ERROR write_kinetic_value: Nlat present but Nso not present."
+       !
        Nlso = size(Ekin)
-       Nso  = Nlso/Nlat
+       if(Nlso /= Nlat*Nso)stop "Error write_kinetic_value: Nlso != Nlat*Nso" 
        !
        unit = free_unit()
        open(unit,file="dmft_kinetic_energy.info")
@@ -1008,7 +1010,7 @@ contains
        open(unit,file="dmft_kinetic_energy.dat")       
        write(unit,"(90F15.9)")sum(Ekin_)/Nlat,sum(Eloc_)/Nlat
        do ilat=1,Nlat
-          write(unit,"(100F15.9)")sum(Ekin_(ilat,:)),sum(Eloc_(ilat,:)),&
+          write(unit,"(100000F15.9)")sum(Ekin_(ilat,:)),sum(Eloc_(ilat,:)),&
                (Ekin_(ilat,i),i=1,Nso),&
                (Eloc_(ilat,i),i=1,Nso)
        enddo

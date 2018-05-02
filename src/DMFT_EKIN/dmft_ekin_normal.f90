@@ -367,7 +367,7 @@ subroutine dmft_kinetic_energy_normal_lattice(Hk,Wtk,Sigma,Ekin,Eloc)
   Eloc_=Hl+Lail0+Lail1
   !
   call write_kinetic_info()
-  call write_kinetic_value(Ekin_,Eloc_,Nlat)
+  call write_kinetic_value(Ekin_,Eloc_,Nlat,Nso)
   if(present(Ekin))Ekin=Ekin_
   if(present(Eloc))Eloc=Eloc_
   !

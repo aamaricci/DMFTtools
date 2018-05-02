@@ -492,7 +492,7 @@ subroutine dmft_kinetic_energy_superc_lattice_mpi(MpiComm,Hk,Wtk,Sigma,Self,Ekin
   Eloc_=Hl+Hlfree
   !
   if(mpi_master)call write_kinetic_info()
-  if(mpi_master)call write_kinetic_value(Ekin_,Eloc_,Nlat)
+  if(mpi_master)call write_kinetic_value(Ekin_,Eloc_,Nlat,Nso)
   if(present(Ekin))Ekin=Ekin_
   if(present(Eloc))Eloc=Eloc_
   !

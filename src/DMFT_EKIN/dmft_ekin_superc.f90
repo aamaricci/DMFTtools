@@ -447,7 +447,7 @@ subroutine dmft_kinetic_energy_superc_lattice(Hk,Wtk,Sigma,Self,Ekin,Eloc)
   Eloc_=Hl+Hlfree
   !
   call write_kinetic_info()
-  call write_kinetic_value(Ekin_,Eloc_,Nlat)
+  call write_kinetic_value(Ekin_,Eloc_,Nlat,Nso)
   if(present(Ekin))Ekin=Ekin_
   if(present(Eloc))Eloc=Eloc_
   !

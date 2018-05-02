@@ -417,7 +417,7 @@ subroutine dmft_kinetic_energy_normal_lattice_mpi(MpiComm,Hk,Wtk,Sigma,Ekin,Eloc
   Eloc_=Hl+Lail0+Lail1
   !
   if(mpi_master)call write_kinetic_info()
-  if(mpi_master)call write_kinetic_value(Ekin_,Eloc_,Nlat)
+  if(mpi_master)call write_kinetic_value(Ekin_,Eloc_,Nlat,Nso)
   if(present(Ekin))Ekin=Ekin_
   if(present(Eloc))Eloc=Eloc_
   !
