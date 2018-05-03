@@ -961,23 +961,21 @@ contains
     integer,optional                   :: Nlat,Nso
     integer                            :: Nlso
     integer                            :: i,iso,ilat,unit
-    
-
     if(.not.present(Nlat))then
        !
-       Nso = size(Ekin)
+       Nlso = size(Ekin)
        !
        unit = free_unit()
        open(unit,file="dmft_kinetic_energy.info")
        write(unit,"(A1,90(A14,1X))")"#",&
             str(1)//"<K>",str(2)//"<Eloc>",&
-            (str(2+i)//"<K"//str(i)//">",i=1,Nso),&
-            (str(2+Nso+i)//"<Eloc"//str(i)//">",i=1,Nso)
+            (str(2+i)//"<K"//str(i)//">",i=1,Nlso),&
+            (str(2+Nlso+i)//"<Eloc"//str(i)//">",i=1,Nlso)
        close(unit)
        !
        unit = free_unit()
        open(unit,file="dmft_kinetic_energy.dat")
-       write(unit,"(90F15.9)")sum(Ekin),sum(Eloc),(Ekin(i),i=1,Nso),(Eloc(i),i=1,Nso)
+       write(unit,"(90F15.9)")sum(Ekin),sum(Eloc),(Ekin(i),i=1,Nlso),(Eloc(i),i=1,Nlso)
        close(unit)
        !
     else
