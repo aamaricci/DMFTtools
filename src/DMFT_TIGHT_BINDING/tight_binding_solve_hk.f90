@@ -180,8 +180,10 @@ subroutine solve_HkR_along_BZpath(hkr_model,Nlat,Nso,kpath,Nkpath,colors_name,po
         klen = klen + sqrt(dot_product(kdiff,kdiff))
      enddo
   enddo
+  ktics(Npts) = klen
   call stop_timer()
   !
+  xtics=""
   xtics="'"//reg(points_name(1))//"'"//str(ktics(1))//","
   do ipts=2,Npts-1
      xtics=reg(xtics)//"'"//reg(points_name(ipts))//"'"//str(ktics(ipts))//","
