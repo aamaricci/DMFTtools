@@ -8,6 +8,9 @@ module DMFT_TIGHT_BINDING
   USE DMFT_CTRL_VARS
   USE DMFT_GLOC
   USE DMFT_GFIO
+#ifdef _MPI
+  USE MPI
+#endif
   implicit none
   private
 
@@ -55,6 +58,9 @@ module DMFT_TIGHT_BINDING
 
   interface TB_hr_to_hk
      module procedure hk_from_w90_hr
+#ifdef _MPI
+     module procedure hk_from_w90_hr_mpi
+#endif  
   end interface TB_hr_to_hk
 
 
@@ -72,6 +78,7 @@ module DMFT_TIGHT_BINDING
 
   interface TB_build_kgrid
      module procedure ::   build_kgrid
+     module procedure ::   build_kgrid_generic
      module procedure ::   kgrid_from_path_grid
      module procedure ::   kgrid_from_path_dim
   end interface TB_build_kgrid
@@ -89,6 +96,14 @@ module DMFT_TIGHT_BINDING
   interface TB_print_ei
      module procedure :: print_ei
   end interface TB_print_ei
+
+
+  interface TB_dipole
+     module procedure :: dipole_t2g_LDA
+#ifdef _MPI
+     module procedure :: dipole_t2g_LDA_mpi
+#endif
+  end interface TB_dipole
 
 
 
@@ -157,7 +172,8 @@ module DMFT_TIGHT_BINDING
   !
   public :: TB_write_hloc
   public :: TB_read_hloc
-
+  !
+  public :: TB_dipole
 
 
 
@@ -403,6 +419,22 @@ contains
   !PURPOSE:  read the real space hopping matrix from Wannier90 output and create H(k)
   !-------------------------------------------------------------------------------------------
   include "tight_binding_io_w90hr.f90"
+#ifdef _MPI
+  include "tight_binding_io_w90hr_mpi.f90"
+#endif
+
+
+  !-------------------------------------------------------------------------------------------
+  !PURPOSE:  read the real space lattice position and compute the space integrals
+  !          <t2g| [x,y,z] |t2g> using atomic orbital as a subset.
+
+
+
+  !-------------------------------------------------------------------------------------------
+  include "dipole_w90hr.f90"
+#ifdef _MPI
+  include "dipole_w90hr_mpi.f90"
+#endif
 
 
 
@@ -452,6 +484,46 @@ contains
        enddo
     enddo
   end subroutine build_kgrid
+
+  subroutine build_kgrid_generic(Nkvec,kgrid_x,kgrid_y,kgrid_z,check_bk)
+    integer,dimension(:)                          :: Nkvec   ! Nk=product(Nkvec);Ndim=size(Nkvec)
+    real(8),dimension(product(Nkvec),size(Nkvec)) :: kgrid_x ![Nk][Ndim]
+    real(8),dimension(product(Nkvec),size(Nkvec)) :: kgrid_y ![Nk][Ndim]
+    real(8),dimension(product(Nkvec),size(Nkvec)) :: kgrid_z ![Nk][Ndim]
+    logical,intent(in),optional                   :: check_bk
+    logical                                       :: check_bk_
+    real(8),dimension(size(Nkvec))                :: kvec    ![Ndim]
+    integer                                       :: ik,ix,iy,iz,Nk(3),ndim
+    real(8)                                       :: kx,ky,kz
+    !
+    check_bk_=.false.;if(present(check_bk))check_bk_=check_bk
+    !
+    ndim = size(Nkvec)          !dimension of the grid to be built
+    !
+    Nk=1
+    do ik=1,size(Nkvec)
+       Nk(ik)=Nkvec(ik)
+    enddo
+    if(product(Nk)/=product(Nkvec))stop "TB_build_grid ERROR: product(Nkvec) != product(Nk)"
+    !
+    call print_bk()
+    if(check_bk_.AND..not.set_bkvec)stop "TB_build_grid ERROR: bk vectors not set"
+    !
+    ik=0
+    do iz=1,Nk(3)
+       kz = dble(iz-1)/Nk(3)
+       do iy=1,Nk(2)
+          ky = dble(iy-1)/Nk(2)
+          do ix=1,Nk(1)
+             kx = dble(ix-1)/Nk(1)
+             ik=ik+1
+             kgrid_x(ik,:)=kx*bk_x(:ndim)
+             kgrid_y(ik,:)=ky*bk_y(:ndim)
+             kgrid_z(ik,:)=kz*bk_z(:ndim)
+          enddo
+       enddo
+    enddo
+  end subroutine build_kgrid_generic
 
 
   subroutine build_rgrid(Nrvec,Rgrid,check_ei)
@@ -606,6 +678,28 @@ contains
     dos_file = reg(file)
   end subroutine TB_set_dos_file
 
+#ifdef _MPI
+  function MPI_Get_size(comm) result(size)
+    integer :: comm
+    integer :: size,ierr
+    call MPI_Comm_size(comm,size,ierr)
+  end function MPI_Get_size
+
+  function MPI_Get_rank(comm) result(rank)
+    integer :: comm
+    integer :: rank,ierr
+    call MPI_Comm_rank(comm,rank,ierr)
+  end function MPI_Get_rank
+
+  function MPI_Get_master(comm) result(master)
+    integer :: comm
+    logical :: master
+    integer :: rank,ierr
+    call MPI_Comm_rank(comm,rank,ierr)
+    master=.false.
+    if(rank==0)master=.true.
+  end function MPI_Get_master
+#endif
 
 
 END MODULE DMFT_TIGHT_BINDING
