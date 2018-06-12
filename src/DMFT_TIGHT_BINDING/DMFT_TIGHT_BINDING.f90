@@ -1,10 +1,11 @@
 module DMFT_TIGHT_BINDING
-  USE SF_CONSTANTS, only: pi,pi2,xi,one,zero
+  USE SF_CONSTANTS, only: pi,pi2,xi,one,zero,Planck_constant_in_eV_s
   USE SF_IOTOOLS
-  USE SF_LINALG, only: eigh,det,eye,zeros
+  USE SF_LINALG, only: eigh,det,eye,zeros,eig
   USE SF_COLORS
   USE SF_TIMER, only:start_timer,stop_timer,eta
   USE SF_MISC, only: assert_shape
+  USE SF_OPTIMIZE, only:fmin_cgminimize
   USE DMFT_CTRL_VARS
   USE DMFT_GLOC
   USE DMFT_GFIO
@@ -60,6 +61,8 @@ module DMFT_TIGHT_BINDING
      module procedure hk_from_w90_hr
 #ifdef _MPI
      module procedure hk_from_w90_hr_mpi
+     module procedure hkt_from_w90_hr_mpi
+     module procedure hloct_from_w90_hr_mpi
 #endif  
   end interface TB_hr_to_hk
 

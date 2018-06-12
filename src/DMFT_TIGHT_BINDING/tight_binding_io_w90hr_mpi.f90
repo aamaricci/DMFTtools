@@ -1,9 +1,10 @@
-  subroutine hk_from_w90_hr_mpi(MpiComm,Rx,Ry,Rz,ham_k,w90_file,Nspin,Norb,Nlat,Nkvec,Porder,kpt_latt,Hkfile,Kpointfile)
+  subroutine hk_from_w90_hr_mpi(MpiComm,R1,R2,R3,ham_k,ham_loc,w90_file,Nspin,Norb,Nlat,Nkvec,Porder,kpt_latt,Hkfile,Kpointfile)
    implicit none
    integer               ,intent(in)            ::   MpiComm
-   real(8)               ,intent(in)            ::   Rx(:),Ry(:),Rz(:)
-   complex(8),allocatable,intent(out)           ::   ham_k(:,:,:)         !(num_wann*nspin,num_wann*nspin,num_kpts)
-   character(len=*)      ,intent(in)            ::   w90_file             !"seedname_hr.dat"
+   real(8)               ,intent(in)            ::   R1(:),R2(:),R3(:)
+   complex(8),allocatable,intent(inout)         ::   ham_k(:,:,:)
+   complex(8),allocatable,intent(inout)         ::   ham_loc(:,:)
+   character(len=*)      ,intent(in)            ::   w90_file
    integer               ,intent(in)            ::   Nspin,Norb,Nlat
    integer(4),allocatable,intent(in)            ::   Nkvec(:)             ![Nkx,Nky,Nkz]
    integer               ,intent(in) ,optional  ::   Porder(Nlat*Nspin*Norb,Nlat*Nspin*Norb)
@@ -15,31 +16,25 @@
    integer                                      ::   mpi_rank
    integer                                      ::   mpi_size
    logical                                      ::   mpi_master
+   !
+   logical                                      ::   IOfile
+   integer                                      ::   unitIO
    integer                                      ::   i,j,ndx1,ndx2
-   integer                                      ::   ispin,jspin,iorb,jorb,ilat,iktot
-   integer                                      ::   Nkx,Nky,Nkz,num_kpts
+   integer                                      ::   Nkx,Nky,Nkz
+   integer                                      ::   iktot,num_kpts
    integer                                      ::   inrpts
    integer                                      ::   P(Nspin*Norb*Nlat,Nspin*Norb*Nlat)
-   real(8)                                      ::   bk_x(size(Rx)),bk_y(size(Ry)),bk_z(size(Rz))
-   real(8),dimension(product(Nkvec),size(Nkvec))::   kpt_x,kpt_y,kpt_z
-   !---- W90 specific ----
-   !
-   !Number of Wannier orbitals
-   integer                                      ::   num_wann       !=Norb*Nlat
-   !Wigner-Seitz grid points
-   integer                                      ::   nrpts          !=147
-   !Degeneracy of the Wigner-Seitz grid points
-   integer(4),allocatable                       ::   ndegen(:)      !(nrpts)
-   !real space vector
-   real(8)   ,allocatable                       ::   irvec(:,:)     !(3,nrpts)
-   !real-space Hamiltonian
-   complex(8),allocatable                       ::   ham_r(:,:,:)   !(num_wann*nspin,num_wann*nspin,nrpts)
-   complex(8),allocatable                       ::   ham_aux(:,:,:)
-   !local Hamiltonian
-   complex(8),allocatable                       ::   Hloc(:,:)      !(num_wann*nspin,num_wann*nspin)
-   !dummy vars
+   real(8)                                      ::   bk1(size(R1)),bk2(size(R2)),bk3(size(R3))
+   real(8),dimension(product(Nkvec),size(Nkvec))::   kpt1,kpt2,kpt3
    real(8)                                      ::   a,b,rdotk
    integer                                      ::   rst,qst
+   !---- W90 specific ----
+   integer                                      ::   num_wann       !=Norb*Nlat
+   integer                                      ::   nrpts
+   integer(4),allocatable                       ::   ndegen(:)      !(nrpts)
+   integer   ,allocatable                       ::   irvec(:,:)     !(3,nrpts)
+   complex(8),allocatable                       ::   ham_r(:,:,:)
+   complex(8),allocatable                       ::   ham_aux(:,:,:)
    !
    !
    !MPI setup:
@@ -53,13 +48,16 @@
    Nkz=Nkvec(3)
    num_kpts=Nkx*Nky*Nkz
    !
-   open(unit=106,file=w90_file,status="unknown",action="read")
-   read(106,*)
-   read(106,*) num_wann
-   read(106,*) nrpts
+   unitIO=free_unit()
+   open(unit=unitIO,file=w90_file,status="old",action="read")
+   read(unitIO,*)
+   read(unitIO,*) num_wann
+   read(unitIO,*) nrpts
    rst=mod(nrpts,15)
    qst=int(nrpts/15)
    if(mpi_master)then
+      write(*,*)
+      write(*,'(1A)')         "-------------- H_LDA --------------"
       write(*,'(A,I6)')      "  number of Wannier functions:   ",num_wann
       write(*,'(A,I6)')      "  number of Wigner-Seitz vectors:",nrpts
       write(*,'(A,I6,A,I6)') "  rows:",qst,"  last row elements:",rst
@@ -70,46 +68,50 @@
    if(allocated(ndegen))  deallocate(ndegen)  ;allocate(ndegen(nrpts))                                  ;ndegen=0
    if(allocated(irvec))   deallocate(irvec)   ;allocate(irvec(nrpts,3))                                 ;irvec=0
    if(allocated(ham_r))   deallocate(ham_r)   ;allocate(ham_r(num_wann*Nspin,num_wann*Nspin,nrpts))     ;ham_r=zero
-   if(allocated(ham_k))   deallocate(ham_k)   ;allocate(ham_k(num_wann*Nspin,num_wann*Nspin,num_kpts))  ;ham_k =zero
-   if(allocated(ham_aux)) deallocate(ham_aux) ;allocate(ham_aux(num_wann*Nspin,num_wann*Nspin,num_kpts));ham_aux =zero
-   if(allocated(Hloc))    deallocate(Hloc)    ;allocate(Hloc(num_wann*Nspin,num_wann*Nspin))            ;Hloc =zero
+   if(allocated(ham_aux)) deallocate(ham_aux) ;allocate(ham_aux(num_wann*Nspin,num_wann*Nspin,num_kpts));ham_aux=zero
    !
    !1) k-points mesh
-   call TB_set_ei(Rx,Ry,Rz)
-   call TB_get_bk(bk_x,bk_y,bk_z)
-   call TB_set_bk(bk_x,bk_y,bk_z)
-   call TB_build_kgrid(Nkvec,kpt_x,kpt_y,kpt_z,.true.)
-   if(present(kpt_latt))kpt_latt=kpt_x+kpt_y+kpt_z
+   call TB_set_ei(R1,R2,R3)
+   call TB_get_bk(bk1,bk2,bk3)
+   call TB_set_bk(bk1,bk2,bk3)
+   call TB_build_kgrid(Nkvec,kpt1,kpt2,kpt3,.true.)
+   if(present(kpt_latt))kpt_latt=kpt1+kpt2+kpt3
    !
    !2) read WS degeneracies
    do i=1,qst
-      read(106,*)(ndegen(j+(i-1)*15),j=1,15)
+      read(unitIO,*)(ndegen(j+(i-1)*15),j=1,15)
    enddo
-   read(106,*)(ndegen(j+qst*15),j=1,rst)
-   if(mpi_master)write(*,'(A)')"  degen readed"
+   if(rst.ne.0)read(unitIO,*)(ndegen(j+qst*15),j=1,rst)
+   if(mpi_master)write(*,'(1A)')"  degen readed"
    !
    !3) read real-space Hamiltonian (no spinup-spindw hybridizations assumed)
+   ham_loc=zero
    do inrpts=1,nrpts
       do i=1,num_wann
          do j=1,num_wann
-            read(106,*)irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3),ndx1,ndx2,a,b
+            read(unitIO,*)irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3),ndx1,ndx2,a,b
             !spin up
             ham_r(ndx1,ndx2,inrpts)=dcmplx(a,b)
             !spin dw
             if(Nspin==2)ham_r(ndx1+num_wann,ndx2+num_wann,inrpts)=dcmplx(a,b)
+            !Hloc
+            if(irvec(inrpts,1)==0.and.irvec(inrpts,2)==0.and.irvec(inrpts,3)==0)then
+               ham_loc(ndx1,ndx2)=dcmplx(a,b)
+               if(Nspin==2)ham_loc(ndx1+num_wann,ndx2+num_wann)=dcmplx(a,b)
+            endif
          enddo
       enddo
    enddo
-   close(106)
+   close(unitIO)
    if(mpi_master)write(*,'(2A)')"  H(R) readed from: ",w90_file
    !
    !4) Fourier Transform
    do iktot = 1+mpi_rank, num_kpts, mpi_size
       do inrpts=1,nrpts
          rdotk=0.d0
-         rdotk= ( irvec(inrpts,1)*dot_product(kpt_x(iktot,:),Rx) +  &
-                  irvec(inrpts,2)*dot_product(kpt_y(iktot,:),Ry) +  &
-                  irvec(inrpts,3)*dot_product(kpt_z(iktot,:),Rz) )
+         rdotk= ( irvec(inrpts,1)*dot_product(kpt1(iktot,:),R1) +  &
+                  irvec(inrpts,2)*dot_product(kpt2(iktot,:),R2) +  &
+                  irvec(inrpts,3)*dot_product(kpt3(iktot,:),R3) )
          do i=1,num_wann*nspin
             do j=1,num_wann*nspin
                !
@@ -132,20 +134,22 @@
    do iktot=1,num_kpts
       ham_k(:,:,iktot)=matmul(transpose(dble(P)),matmul(ham_aux(:,:,iktot),dble(P)))
    enddo
+   ham_loc=matmul(transpose(dble(P)),matmul(ham_loc,dble(P)))
    !
    if(mpi_master)then
-      write(*,'(A)')"  H(k) produced"
+      write(*,'(1A)')"  H(k) produced"
       if(present(Hkfile))then
          call TB_write_hk(ham_k,Hkfile,Nspin*Norb*Nlat,1,1,Nlat,[Nkx,Nky,Nkz])
          write(*,'(2A)')"  H(k) written on: ",Hkfile
       endif
       !
       if(present(Kpointfile))then
-         open(unit=107,file=Kpointfile,status="unknown",action="write",position="rewind")
+         unitIO=free_unit()
+         open(unit=unitIO,file=Kpointfile,status="unknown",action="write",position="rewind")
          do iktot=1,num_kpts
-            write(107,'(3F15.7)') (kpt_latt(iktot,i),i=1,3)
+            write(unitIO,'(3F15.7)') (kpt_latt(iktot,i),i=1,3)
          enddo
-         close(107)
+         close(unitIO)
          write(*,'(2A)')"  Kpoints used written on: ",Kpointfile
       endif
    endif
@@ -154,8 +158,589 @@
    deallocate(irvec)
    deallocate(ham_r)
    deallocate(ham_aux)
-   deallocate(Hloc)
    if(.not.present(kpt_latt))deallocate(kpt_latt)
    !
   end subroutine hk_from_w90_hr_mpi
+
+
+
+
+
+
+  subroutine hkt_from_w90_hr_mpi(MpiComm,field,gauge,R1,R2,R3,Ruc,ham_kt,w90_file,dipole_file,Nspin,Norb,Nlat,Nt,Nkvec,Porder)
+   implicit none
+   integer               ,intent(in)            ::   MpiComm
+   real(8)               ,intent(in)            ::   field(:,:,:) ![Nt,dim,2] 1=Efield 2=Afield
+   character(len=*)      ,intent(in)            ::   gauge
+   real(8)               ,intent(in)            ::   R1(:),R2(:),R3(:)
+   real(8)               ,intent(in)            ::   Ruc(:,:)
+   complex(8),allocatable,intent(inout)         ::   ham_kt(:,:,:,:)
+   character(len=*)      ,intent(in)            ::   w90_file
+   character(len=*)      ,intent(in)            ::   dipole_file
+   integer               ,intent(in)            ::   Nspin,Norb,Nlat,Nt
+   integer(4),allocatable,intent(in)            ::   Nkvec(:)             ![Nkx,Nky,Nkz]
+   integer               ,intent(in) ,optional  ::   Porder(Nlat*Nspin*Norb,Nlat*Nspin*Norb)
+   !
+   integer                                      ::   mpi_ierr
+   integer                                      ::   mpi_rank
+   integer                                      ::   mpi_size
+   logical                                      ::   mpi_master
+   !
+   logical                                      ::   IOfile
+   integer                                      ::   unitIO1,unitIO2
+   integer                                      ::   i,j,it
+   integer                                      ::   ndx1_H,ndx2_H,ndx1_D,ndx2_D
+   integer                                      ::   Nkx,Nky,Nkz
+   integer                                      ::   iktot,num_kpts
+   integer                                      ::   inrpts
+   integer                                      ::   P(Nspin*Norb*Nlat,Nspin*Norb*Nlat)
+   real(8)                                      ::   bk1(size(R1)),bk2(size(R2)),bk3(size(R3))
+   real(8),dimension(product(Nkvec),size(Nkvec))::   kpt1,kpt2,kpt3
+   real(8)                                      ::   a,b,Dx,Dy,Dz,rdotk,exparg,Afact
+   integer                                      ::   rst,qst,limit,kvec_ndx
+   integer                                      ::   auxndx,dumR1,dumR2,dumR3
+   !---- light matter ----
+   integer   ,allocatable,dimension(:)          ::   Kvec
+   integer   ,allocatable,dimension(:,:)        ::   site_ndx
+   integer   ,allocatable,dimension(:,:,:)      ::   veclist
+   complex(8),allocatable,dimension(:,:,:)      ::   ham_r,StructFact
+   complex(8),allocatable,dimension(:,:,:,:)    ::   lightmat_r,dip_r,ham_auxt,ham_rt
+   !---- W90 specific ----
+   integer                                      ::   num_wann       !=Norb*Nlat
+   integer                                      ::   nrpts
+   integer(4),allocatable                       ::   ndegen(:)      !(nrpts)
+   integer   ,allocatable                       ::   irvec(:,:)     !(3,nrpts)
+   !
+   !
+   !MPI setup:
+   mpi_size  = MPI_Get_size(MpiComm)
+   mpi_rank =  MPI_Get_rank(MpiComm)
+   mpi_master= MPI_Get_master(MpiComm)
+   !
+   !
+   Nkx=Nkvec(1)
+   Nky=Nkvec(2)
+   Nkz=Nkvec(3)
+   num_kpts=Nkx*Nky*Nkz
+   Afact=2.d0*pi/(Planck_constant_in_eV_s*1e15)
+   !
+   unitIO1=free_unit()
+   open(unit=unitIO1,file=w90_file,status="old",action="read")
+   unitIO2=free_unit()
+   open(unit=unitIO2,file=dipole_file,status="old",action="read")
+   read(unitIO1,*)
+   read(unitIO1,*) num_wann
+   read(unitIO1,*) nrpts
+   rst=mod(nrpts,15)
+   qst=int(nrpts/15)
+   if(mpi_master)then
+      write(*,*)
+      write(*,'(1A)')         "-------------- Ht_LDA --------------"
+      write(*,'(A,I6)')      "  number of Wannier functions:   ",num_wann
+      write(*,'(A,I6)')      "  number of Wigner-Seitz vectors:",nrpts
+      write(*,'(A,I6,1A,I6)') "  rows:",qst,"  last row elements:",rst
+   endif
+   if(num_wann.ne.Nlat*Norb)stop "hk_from_w90_hr. Something is wrong"
+   !
+   if(allocated(ndegen))    deallocate(ndegen)    ;allocate(ndegen(nrpts))                                       ;ndegen=0
+   if(allocated(irvec))     deallocate(irvec)     ;allocate(irvec(nrpts,3))                                      ;irvec=0
+   if(allocated(Kvec))      deallocate(Kvec)      ;allocate(Kvec(3))                                             ;Kvec=0
+   if(allocated(veclist))   deallocate(veclist)   ;allocate(veclist(-10:10,-10:10,-10:10))                       ;veclist=0
+   if(allocated(site_ndx))  deallocate(site_ndx)  ;allocate(site_ndx(nrpts,2))                                   ;site_ndx=0
+   if(allocated(ham_r))     deallocate(ham_r)     ;allocate(ham_r(num_wann,num_wann,nrpts))                      ;ham_r=zero
+   if(allocated(dip_r))     deallocate(dip_r)     ;allocate(dip_r(num_wann,num_wann,nrpts,3))                    ;dip_r=zero
+   if(allocated(StructFact))deallocate(StructFact);allocate(StructFact(Nlat,Nlat,Nt))                            ;StructFact=zero
+   if(allocated(lightmat_r))deallocate(lightmat_r);allocate(lightmat_r(num_wann,num_wann,nrpts,3))               ;lightmat_r=zero
+   !
+   if(allocated(ham_rt))    deallocate(ham_rt)    ;allocate(ham_rt(num_wann,num_wann,nrpts,Nt))                  ;ham_rt=zero
+   if(allocated(ham_auxt))  deallocate(ham_auxt)  ;allocate(ham_auxt(num_wann*Nspin,num_wann*Nspin,num_kpts,Nt)) ;ham_auxt=zero
+   !
+   !1) k-points mesh
+   call TB_set_ei(R1,R2,R3)
+   call TB_get_bk(bk1,bk2,bk3)
+   call TB_set_bk(bk1,bk2,bk3)
+   call TB_build_kgrid(Nkvec,kpt1,kpt2,kpt3,.true.)
+   !
+   !2) read WS degeneracies
+   do i=1,qst
+      read(unitIO1,*)(ndegen(j+(i-1)*15),j=1,15)
+   enddo
+   if(rst.ne.0)read(unitIO1,*)(ndegen(j+qst*15),j=1,rst)
+   if(mpi_master)write(*,'(1A)')"  degen readed"
+   !
+   !3) read real-space quantities
+   limit=0
+   do inrpts=1,nrpts
+      do i=1,num_wann
+         do j=1,num_wann
+            !
+            !read H(R) & D(R)
+            read(unitIO1,*)irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3),ndx1_H,ndx2_H,a,b
+            read(unitIO2,*)           dumR1,         dumR2,          dumR3,ndx1_D,ndx2_D,Dx,Dy,Dz
+            !
+            !consistency check
+            auxndx = sum([irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3),ndx1_H,ndx2_H]-[dumR1,dumR2,dumR3,ndx1_D,ndx2_D])
+            if(auxndx.ne.0)then
+               write(*,'(10A)') "  Something is wrong between ",w90_file," and ",dipole_file," indexing"
+               write(*,'(10I5)')irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3),ndx1_H,ndx2_H
+               write(*,'(10I5)')dumR1,dumR2,dumR3,ndx1_D,ndx2_D
+               stop
+            endif
+            !
+            if(abs(dumR1).gt.limit)limit=abs(dumR1)
+            veclist(irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3))=inrpts
+            !
+            site_ndx(inrpts,1)=floor((ndx1_H-0.01)/Norb)+1
+            site_ndx(inrpts,2)=floor((ndx1_H-0.01)/Norb)+1
+            !
+            ham_r(ndx1_H,ndx2_H,inrpts)=dcmplx(a,b)
+            dip_r(ndx1_D,ndx2_D,inrpts,1)=dcmplx(Dx,0.d0)
+            dip_r(ndx1_D,ndx2_D,inrpts,2)=dcmplx(Dy,0.d0)
+            dip_r(ndx1_D,ndx2_D,inrpts,3)=dcmplx(Dz,0.d0)
+            !
+         enddo
+      enddo
+   enddo
+   close(unitIO1)
+   close(unitIO2)
+   if(mpi_master)write(*,'(1A)')"  H(R) and D(R) readed"
+   !
+   !4) build light-matter interaction
+   if(gauge=="A")then
+      !
+      do i=1,nrpts
+         do j=1,nrpts
+            !
+            Kvec(1)=irvec(i,1)-irvec(j,1)
+            Kvec(2)=irvec(i,2)-irvec(j,2)
+            Kvec(3)=irvec(i,3)-irvec(j,3)
+            !
+            if((abs(Kvec(1)).gt.limit) .or. &
+               (abs(Kvec(2)).gt.limit) .or. &
+               (abs(Kvec(3)).gt.limit)      )cycle
+            !
+            Kvec_ndx=veclist(Kvec(1),Kvec(2),Kvec(3))
+            !
+            lightmat_r(:,:,i,1) = matmul(dip_r(:,:,Kvec_ndx,1),ham_r(:,:,j))*Xi
+            lightmat_r(:,:,i,2) = matmul(dip_r(:,:,Kvec_ndx,2),ham_r(:,:,j))*Xi
+            lightmat_r(:,:,i,3) = matmul(dip_r(:,:,Kvec_ndx,3),ham_r(:,:,j))*Xi
+            !
+         enddo
+      enddo
+      !
+      do i=1,nrpts
+         do j=1,nrpts
+            !
+            Kvec(1)=irvec(i,1)-irvec(j,1)
+            Kvec(2)=irvec(i,2)-irvec(j,2)
+            Kvec(3)=irvec(i,3)-irvec(j,3)
+            !
+            if((abs(Kvec(1)).gt.limit) .or. &
+               (abs(Kvec(2)).gt.limit) .or. &
+               (abs(Kvec(3)).gt.limit)      )cycle
+            !
+            Kvec_ndx=veclist(Kvec(1),Kvec(2),Kvec(3))
+            !
+            lightmat_r(:,:,i,1) = lightmat_r(:,:,i,1) - matmul(ham_r(:,:,Kvec_ndx),dip_r(:,:,j,1))*Xi
+            lightmat_r(:,:,i,2) = lightmat_r(:,:,i,2) - matmul(ham_r(:,:,Kvec_ndx),dip_r(:,:,j,2))*Xi
+            lightmat_r(:,:,i,3) = lightmat_r(:,:,i,3) - matmul(ham_r(:,:,Kvec_ndx),dip_r(:,:,j,3))*Xi
+            !
+         enddo
+      enddo
+      !
+   elseif(gauge=="E")then
+      !
+      do i=1,nrpts
+         !
+         lightmat_r(:,:,i,1) = dip_r(:,:,i,1)
+         lightmat_r(:,:,i,2) = dip_r(:,:,i,2)
+         lightmat_r(:,:,i,3) = dip_r(:,:,i,3)
+         !
+      enddo
+      !
+   endif
+   deallocate(veclist,Kvec,dip_r)
+   if(mpi_master)write(*,'(2A)')"  light-matter interaction built in gauge: ",gauge
+   !
+   !5) build prefactor
+   if(gauge=="A")then
+      !
+      StructFact=dcmplx(1.d0,0.d0)
+      !
+   elseif(gauge=="E")then
+      !
+      StructFact=dcmplx(1.d0,0.d0)
+      do it=2,Nt
+         do i=1,Nlat
+            do j=1,Nlat
+               !
+               exparg = ( -Afact * field(it,1,2) * ( Ruc(i,1) - Ruc(j,1) ) &
+                          -Afact * field(it,2,2) * ( Ruc(i,2) - Ruc(j,2) ) &
+                          -Afact * field(it,3,2) * ( Ruc(i,3) - Ruc(j,3) ) )
+               !
+               StructFact(i,j,it) = dcmplx(cos(exparg),sin(exparg))
+               !
+            enddo
+         enddo
+      enddo
+      !
+   endif
+   if(mpi_master)write(*,'(1A)')"  prefactor built"
+   !
+   !6) build interacting hamilt in real space
+   if(gauge=="A")then
+      !
+      do inrpts=1,nrpts
+         do it=1,Nt
+            !
+            ham_rt(:,:,inrpts,it) = StructFact(site_ndx(inrpts,1),site_ndx(inrpts,2),it) * &
+                                         ( ham_r(:,:,inrpts) + field(it,1,2) * lightmat_r(:,:,inrpts,1) &
+                                                             + field(it,2,2) * lightmat_r(:,:,inrpts,2) &
+                                                             + field(it,3,2) * lightmat_r(:,:,inrpts,3) )
+            !
+         enddo
+      enddo
+      !
+   elseif(gauge=="E")then
+      !
+      do inrpts=1,nrpts
+         !
+         exparg = ( -Afact * field(it,1,2) * ( irvec(inrpts,1)*R1(1) + irvec(inrpts,2)*R2(1) + irvec(inrpts,3)*R3(1) ) &
+                    -Afact * field(it,2,2) * ( irvec(inrpts,1)*R1(2) + irvec(inrpts,2)*R2(2) + irvec(inrpts,3)*R3(2) ) &
+                    -Afact * field(it,3,2) * ( irvec(inrpts,1)*R1(3) + irvec(inrpts,2)*R2(3) + irvec(inrpts,3)*R3(3) ) )
+         !
+         do it=1,Nt
+            !
+            ham_rt(:,:,inrpts,it) = StructFact(site_ndx(inrpts,1),site_ndx(inrpts,2),it) * dcmplx(cos(exparg),sin(exparg)) * &
+                                         ( ham_r(:,:,inrpts) + field(it,1,1) * lightmat_r(:,:,inrpts,1) &
+                                                             + field(it,2,1) * lightmat_r(:,:,inrpts,2) &
+                                                             + field(it,3,1) * lightmat_r(:,:,inrpts,3) )
+            !
+         enddo
+      enddo
+      !
+   endif
+   deallocate(StructFact,site_ndx,ham_r,lightmat_r)
+   if(mpi_master)write(*,'(1A)')"  real-space H(R,t) built"
+   !
+   !7) Fourier Transform
+   ham_kt=zero
+   do iktot = 1+mpi_rank, num_kpts, mpi_size
+      do it=1,Nt
+         do inrpts=1,nrpts
+            rdotk=0.d0
+            rdotk= (   irvec(inrpts,1)*dot_product(kpt1(iktot,:),R1) &
+                     + irvec(inrpts,2)*dot_product(kpt2(iktot,:),R2) &
+                     + irvec(inrpts,3)*dot_product(kpt3(iktot,:),R3) )
+            do i=1,num_wann
+               do j=1,num_wann
+                  !
+                  ham_auxt(i,j,iktot,it) = ham_auxt(i,j,iktot,it) + &
+                                           ham_rt(i,j,inrpts,it)  * dcmplx(cos(rdotk),-sin(rdotk)) / ndegen(inrpts)
+                  !
+                  if(Nspin==2)ham_auxt(i+num_wann,j+num_wann,iktot,it)=ham_auxt(i,j,iktot,it)
+                  !
+               enddo
+            enddo
+         enddo
+      enddo
+   enddo
+   !
+   deallocate(ndegen,irvec,ham_rt)
+   call Mpi_AllReduce(ham_auxt,ham_kt,size(ham_kt),MPI_Double_Complex,MPI_Sum,MpiComm,mpi_ierr)
+   call MPI_Barrier(MpiComm,mpi_ierr)
+   if(mpi_master)write(*,'(1A)')"  K-space H(K,t) built"
+   !
+   !5) Reordering
+   if (present(Porder))then
+      P=Porder
+   else
+      P=eye(Nspin*Norb*Nlat)
+   endif
+   ham_auxt=zero;ham_auxt=ham_kt;ham_kt=zero
+   do iktot=1,num_kpts
+      do it=1,Nt
+         ham_kt(:,:,iktot,it)=matmul(transpose(dble(P)),matmul(ham_auxt(:,:,iktot,it),dble(P)))
+      enddo
+   enddo
+   !
+   deallocate(ham_auxt)
+   !
+  end subroutine hkt_from_w90_hr_mpi
+
+
+  subroutine hloct_from_w90_hr_mpi(MpiComm,field,gauge,R1,R2,R3,Ruc,Hloct,w90_file,dipole_file,Nspin,Norb,Nlat,Nt,Porder)
+   implicit none
+   integer               ,intent(in)            ::   MpiComm
+   real(8)               ,intent(in)            ::   field(:,:,:) ![Nt,dim,2] 1=Efield 2=Afield
+   character(len=*)      ,intent(in)            ::   gauge
+   real(8)               ,intent(in)            ::   R1(:),R2(:),R3(:)
+   real(8)               ,intent(in)            ::   Ruc(:,:)
+   complex(8),allocatable,intent(inout)         ::   Hloct(:,:,:)
+   character(len=*)      ,intent(in)            ::   w90_file
+   character(len=*)      ,intent(in)            ::   dipole_file
+   integer               ,intent(in)            ::   Nspin,Norb,Nlat,Nt
+   integer               ,intent(in) ,optional  ::   Porder(Nlat*Nspin*Norb,Nlat*Nspin*Norb)
+   !
+   integer                                      ::   mpi_ierr
+   integer                                      ::   mpi_rank
+   integer                                      ::   mpi_size
+   logical                                      ::   mpi_master
+   !
+   logical                                      ::   IOfile
+   integer                                      ::   unitIO1,unitIO2
+   integer                                      ::   i,j,it
+   integer                                      ::   ndx1_H,ndx2_H,ndx1_D,ndx2_D
+   integer                                      ::   inrpts
+   integer                                      ::   P(Nspin*Norb*Nlat,Nspin*Norb*Nlat)
+   real(8)                                      ::   a,b,Dx,Dy,Dz,exparg,Afact
+   integer                                      ::   rst,qst,limit,kvec_ndx
+   integer                                      ::   auxndx,dumR1,dumR2,dumR3
+   !---- light matter ----
+   integer   ,allocatable,dimension(:)          ::   Kvec
+   integer   ,allocatable,dimension(:,:)        ::   site_ndx
+   integer   ,allocatable,dimension(:,:,:)      ::   veclist
+   complex(8),allocatable,dimension(:,:,:)      ::   ham_r,StructFact
+   complex(8),allocatable,dimension(:,:,:,:)    ::   lightmat_r,dip_r,ham_auxt,ham_rt
+   !---- W90 specific ----
+   integer                                      ::   num_wann       !=Norb*Nlat
+   integer                                      ::   nrpts
+   integer(4),allocatable                       ::   ndegen(:)      !(nrpts)
+   integer   ,allocatable                       ::   irvec(:,:)     !(3,nrpts)
+   !
+   !
+   !MPI setup:
+   mpi_size  = MPI_Get_size(MpiComm)
+   mpi_rank =  MPI_Get_rank(MpiComm)
+   mpi_master= MPI_Get_master(MpiComm)
+   !
+   !
+   Afact=2.d0*pi/(Planck_constant_in_eV_s*1e15)
+   !
+   unitIO1=free_unit()
+   open(unit=unitIO1,file=w90_file,status="old",action="read")
+   unitIO2=free_unit()
+   open(unit=unitIO2,file=dipole_file,status="old",action="read")
+   read(unitIO1,*)
+   read(unitIO1,*) num_wann
+   read(unitIO1,*) nrpts
+   rst=mod(nrpts,15)
+   qst=int(nrpts/15)
+   if(mpi_master)then
+      write(*,*)
+      write(*,'(1A)')         "-------------- Ht_LDA --------------"
+      write(*,'(A,I6)')      "  number of Wannier functions:   ",num_wann
+      write(*,'(A,I6)')      "  number of Wigner-Seitz vectors:",nrpts
+      write(*,'(A,I6,1A,I6)') "  rows:",qst,"  last row elements:",rst
+   endif
+   if(num_wann.ne.Nlat*Norb)stop "hk_from_w90_hr. Something is wrong"
+   !
+   if(allocated(ndegen))    deallocate(ndegen)    ;allocate(ndegen(nrpts))                                       ;ndegen=0
+   if(allocated(irvec))     deallocate(irvec)     ;allocate(irvec(nrpts,3))                                      ;irvec=0
+   if(allocated(Kvec))      deallocate(Kvec)      ;allocate(Kvec(3))                                             ;Kvec=0
+   if(allocated(veclist))   deallocate(veclist)   ;allocate(veclist(-10:10,-10:10,-10:10))                       ;veclist=0
+   if(allocated(site_ndx))  deallocate(site_ndx)  ;allocate(site_ndx(nrpts,2))                                   ;site_ndx=0
+   if(allocated(ham_r))     deallocate(ham_r)     ;allocate(ham_r(num_wann,num_wann,nrpts))                      ;ham_r=zero
+   if(allocated(dip_r))     deallocate(dip_r)     ;allocate(dip_r(num_wann,num_wann,nrpts,3))                    ;dip_r=zero
+   if(allocated(StructFact))deallocate(StructFact);allocate(StructFact(Nlat,Nlat,Nt))                            ;StructFact=zero
+   if(allocated(lightmat_r))deallocate(lightmat_r);allocate(lightmat_r(num_wann,num_wann,nrpts,3))               ;lightmat_r=zero
+   !
+   if(allocated(ham_rt))    deallocate(ham_rt)    ;allocate(ham_rt(num_wann,num_wann,nrpts,Nt))                  ;ham_rt=zero
+   if(allocated(ham_auxt))  deallocate(ham_auxt)  ;allocate(ham_auxt(num_wann*Nspin,num_wann*Nspin,nrpts,Nt))    ;ham_auxt=zero
+   !
+   !1) read WS degeneracies
+   do i=1,qst
+      read(unitIO1,*)(ndegen(j+(i-1)*15),j=1,15)
+   enddo
+   if(rst.ne.0)read(unitIO1,*)(ndegen(j+qst*15),j=1,rst)
+   if(mpi_master)write(*,'(1A)')"  degen readed"
+   !
+   !2) read real-space quantities
+   limit=0
+   do inrpts=1,nrpts
+      do i=1,num_wann
+         do j=1,num_wann
+            !
+            !read H(R) & D(R)
+            read(unitIO1,'(5I5,3F12.6)')irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3),ndx1_H,ndx2_H,a,b
+            read(unitIO2,'(5I5,3F12.6)')           dumR1,         dumR2,          dumR3,ndx1_D,ndx2_D,Dx,Dy,Dz
+            !
+            !consistency check
+            auxndx = sum([irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3),ndx1_H,ndx2_H]-[dumR1,dumR2,dumR3,ndx1_D,ndx2_D])
+            if(auxndx.ne.0)then
+               write(*,'(10A)') "  Something is wrong between ",w90_file," and ",dipole_file," indexing"
+               write(*,'(10I5)')irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3),ndx1_H,ndx2_H
+               write(*,'(10I5)')dumR1,dumR2,dumR3,ndx1_D,ndx2_D
+               stop
+            endif
+            !
+            if(abs(dumR1).gt.limit)limit=abs(dumR1)
+            veclist(irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3))=inrpts
+            !
+            site_ndx(inrpts,1)=floor((ndx1_H-0.01)/Norb)+1
+            site_ndx(inrpts,2)=floor((ndx1_H-0.01)/Norb)+1
+            !
+            ham_r(ndx1_H,ndx2_H,inrpts)=dcmplx(a,b)
+            dip_r(ndx1_D,ndx2_D,inrpts,1)=dcmplx(Dx,0.d0)
+            dip_r(ndx1_D,ndx2_D,inrpts,2)=dcmplx(Dy,0.d0)
+            dip_r(ndx1_D,ndx2_D,inrpts,3)=dcmplx(Dz,0.d0)
+            !
+         enddo
+      enddo
+   enddo
+   close(unitIO1)
+   close(unitIO2)
+   if(mpi_master)write(*,'(1A)')"  H(R) and D(R) readed"
+   !
+   !3) build light-matter interaction
+   if(gauge=="A")then
+      !
+      do i=1,nrpts
+         do j=1,nrpts
+            !
+            Kvec(1)=irvec(i,1)-irvec(j,1)
+            Kvec(2)=irvec(i,2)-irvec(j,2)
+            Kvec(3)=irvec(i,3)-irvec(j,3)
+            !
+            if((abs(Kvec(1)).gt.limit) .or. &
+               (abs(Kvec(2)).gt.limit) .or. &
+               (abs(Kvec(3)).gt.limit)      )cycle
+            !
+            Kvec_ndx=veclist(Kvec(1),Kvec(2),Kvec(3))
+            !
+            lightmat_r(:,:,i,1) = matmul(dip_r(:,:,Kvec_ndx,1),ham_r(:,:,j))*Xi
+            lightmat_r(:,:,i,2) = matmul(dip_r(:,:,Kvec_ndx,2),ham_r(:,:,j))*Xi
+            lightmat_r(:,:,i,3) = matmul(dip_r(:,:,Kvec_ndx,3),ham_r(:,:,j))*Xi
+            !
+         enddo
+      enddo
+      !
+      do i=1,nrpts
+         do j=1,nrpts
+            !
+            Kvec(1)=irvec(i,1)-irvec(j,1)
+            Kvec(2)=irvec(i,2)-irvec(j,2)
+            Kvec(3)=irvec(i,3)-irvec(j,3)
+            !
+            if((abs(Kvec(1)).gt.limit) .or. &
+               (abs(Kvec(2)).gt.limit) .or. &
+               (abs(Kvec(3)).gt.limit)      )cycle
+            !
+            Kvec_ndx=veclist(Kvec(1),Kvec(2),Kvec(3))
+            !
+            lightmat_r(:,:,i,1) = lightmat_r(:,:,i,1) - matmul(ham_r(:,:,Kvec_ndx),dip_r(:,:,j,1))*Xi
+            lightmat_r(:,:,i,2) = lightmat_r(:,:,i,2) - matmul(ham_r(:,:,Kvec_ndx),dip_r(:,:,j,2))*Xi
+            lightmat_r(:,:,i,3) = lightmat_r(:,:,i,3) - matmul(ham_r(:,:,Kvec_ndx),dip_r(:,:,j,3))*Xi
+            !
+         enddo
+      enddo
+      !
+   elseif(gauge=="E")then
+      !
+      do i=1,nrpts
+         !
+         lightmat_r(:,:,i,1) = dip_r(:,:,i,1)
+         lightmat_r(:,:,i,2) = dip_r(:,:,i,2)
+         lightmat_r(:,:,i,3) = dip_r(:,:,i,3)
+         !
+      enddo
+      !
+   endif
+   deallocate(Kvec,dip_r)
+   if(mpi_master)write(*,'(2A)')"  light-matter interaction built in gauge: ",gauge
+   !
+   !4) build prefactor
+   if(gauge=="A")then
+      !
+      StructFact=dcmplx(1.d0,0.d0)
+      !
+   elseif(gauge=="E")then
+      !
+      StructFact=dcmplx(1.d0,0.d0)
+      do it=2,Nt
+         do i=1,Nlat
+            do j=1,Nlat
+               !
+               exparg = ( -Afact * field(it,1,2) * ( Ruc(i,1) - Ruc(j,1) ) &
+                          -Afact * field(it,2,2) * ( Ruc(i,2) - Ruc(j,2) ) &
+                          -Afact * field(it,3,2) * ( Ruc(i,3) - Ruc(j,3) ) )
+               !
+               StructFact(i,j,it) = dcmplx(cos(exparg),sin(exparg))
+               !
+            enddo
+         enddo
+      enddo
+      !
+   endif
+   if(mpi_master)write(*,'(1A)')"  prefactor built"
+   !
+   !5) build interacting hamilt in real space
+   if(gauge=="A")then
+      !
+      do it=1,Nt
+         do inrpts=1,nrpts
+            !
+            ham_rt(:,:,inrpts,it) = StructFact(site_ndx(inrpts,1),site_ndx(inrpts,2),it)* &
+                                          ( ham_r(:,:,inrpts)+ field(it,1,1) * lightmat_r(:,:,inrpts,1)     &
+                                                             + field(it,2,1) * lightmat_r(:,:,inrpts,2)     &
+                                                             + field(it,3,1) * lightmat_r(:,:,inrpts,3)     )
+            !
+         enddo
+      enddo
+      !
+   elseif(gauge=="E")then
+      !
+      do it=1,Nt
+         do inrpts=1,nrpts
+            !
+            exparg = (                                                                                         &
+            -Afact * field(it,1,2) * ( irvec(inrpts,1)*R1(1) + irvec(inrpts,2)*R2(1) + irvec(inrpts,3)*R3(1) ) &
+            -Afact * field(it,2,2) * ( irvec(inrpts,1)*R1(2) + irvec(inrpts,2)*R2(2) + irvec(inrpts,3)*R3(2) ) &
+            -Afact * field(it,3,2) * ( irvec(inrpts,1)*R1(3) + irvec(inrpts,2)*R2(3) + irvec(inrpts,3)*R3(3) ) )
+            !
+            ham_rt(:,:,inrpts,it) = StructFact(site_ndx(inrpts,1),site_ndx(inrpts,2),it)* &
+                                                                          dcmplx(cos(exparg),sin(exparg)) * &
+                                          ( ham_r(:,:,inrpts)+ field(it,1,1) * lightmat_r(:,:,inrpts,1)     &
+                                                             + field(it,2,1) * lightmat_r(:,:,inrpts,2)     &
+                                                             + field(it,3,1) * lightmat_r(:,:,inrpts,3)     )
+            !
+            !
+         enddo
+      enddo
+      !
+   endif
+   deallocate(StructFact,site_ndx,ham_r,lightmat_r)
+   if(mpi_master)write(*,'(1A)')"  real-space H(R,t) built"
+   !
+   !6) Reordering
+   if (present(Porder).and.Nspin==2)then
+      P=Porder
+   else
+      P=eye(Nspin*Norb*Nlat)
+   endif
+   ham_auxt=zero
+   do inrpts=1,nrpts
+      do it=1,Nt
+         do i=1,num_wann
+            do j=1,num_wann
+               ham_auxt(i,j,inrpts,it)=ham_rt(i,j,inrpts,it)
+               if(Nspin==2)ham_auxt(i+num_wann,j+num_wann,inrpts,it)=ham_rt(i,j,inrpts,it)
+            enddo
+         enddo
+         !
+         ham_auxt(:,:,inrpts,it)=matmul(transpose(dble(P)),matmul(ham_auxt(:,:,inrpts,it),dble(P)))
+         !
+      enddo
+   enddo
+   deallocate(ham_rt)
+   !
+   !7) linking the local Hamiltonian
+   Hloct=zero
+   do it=1,Nt
+      Hloct(:,:,it)=ham_auxt(:,:,veclist(0,0,0),it)
+   enddo
+   deallocate(ham_auxt)
+   if(mpi_master)write(*,'(1A)')"  Hloc(K,t) written"
+   !
+  end subroutine hloct_from_w90_hr_mpi
 

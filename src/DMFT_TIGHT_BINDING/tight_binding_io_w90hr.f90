@@ -1,43 +1,34 @@
-  subroutine hk_from_w90_hr(Rx,Ry,Rz,ham_k,w90_file,Nspin,Norb,Nlat,Nkvec,Porder,bandwidth,kpt_latt,Hkfile,Kpointfile)
+  subroutine hk_from_w90_hr(R1,R2,R3,ham_k,ham_loc,w90_file,Nspin,Norb,Nlat,Nkvec,Porder,kpt_latt,Hkfile,Kpointfile)
    implicit none
-   real(8)               ,intent(in)            ::   Rx(:),Ry(:),Rz(:)
-   complex(8),allocatable,intent(out)           ::   ham_k(:,:,:)         !(num_wann*nspin,num_wann*nspin,num_kpts)
-   character(len=*)      ,intent(in)            ::   w90_file             !"seedname_hr.dat"
+   real(8)               ,intent(in)            ::   R1(:),R2(:),R3(:)
+   complex(8),allocatable,intent(inout)         ::   ham_k(:,:,:)
+   complex(8),allocatable,intent(inout)         ::   ham_loc(:,:)
+   character(len=*)      ,intent(in)            ::   w90_file
    integer               ,intent(in)            ::   Nspin,Norb,Nlat
    integer(4),allocatable,intent(in)            ::   Nkvec(:)             ![Nkx,Nky,Nkz]
    integer               ,intent(in) ,optional  ::   Porder(Nlat*Nspin*Norb,Nlat*Nspin*Norb)
-   complex(8)            ,intent(out),optional  ::   bandwidth(Nlat*Nspin*Norb,Nlat*Nspin*Norb)
    real(8)   ,allocatable,intent(out),optional  ::   kpt_latt(:,:)        ![ik,3]
    character(len=*)      ,intent(in) ,optional  ::   Hkfile
    character(len=*)      ,intent(in) ,optional  ::   Kpointfile
    !
+   logical                                      ::   IOfile
+   integer                                      ::   unitIO
    integer                                      ::   i,j,ndx1,ndx2
-   integer                                      ::   ispin,jspin,iorb,jorb,ilat,iktot
-   integer                                      ::   Nkx,Nky,Nkz,num_kpts
+   integer                                      ::   Nkx,Nky,Nkz
+   integer                                      ::   iktot,num_kpts
    integer                                      ::   inrpts
    integer                                      ::   P(Nspin*Norb*Nlat,Nspin*Norb*Nlat)
-   real(8)                                      ::   bk_x(size(Rx)),bk_y(size(Ry)),bk_z(size(Rz))
-   real(8),dimension(product(Nkvec),size(Nkvec))::   kpt_x,kpt_y,kpt_z
-   !
-   !---- W90 specific ----
-   !
-   !Number of Wannier orbitals
-   integer                                      ::   num_wann       !=Norb*Nlat
-   !Wigner-Seitz grid points
-   integer                                      ::   nrpts          !=147
-   !Degeneracy of the Wigner-Seitz grid points
-   integer(4),allocatable                       ::   ndegen(:)      !(nrpts)
-   !real space vector
-   real(8)   ,allocatable                       ::   irvec(:,:)     !(3,nrpts)
-   !real-space Hamiltonian
-   complex(8),allocatable                       ::   ham_r(:,:,:)   !(num_wann*nspin,num_wann*nspin,nrpts)
-   complex(8),allocatable                       ::   ham_aux(:,:,:)
-   !local Hamiltonian
-   complex(8),allocatable                       ::   Hloc(:,:)      !(num_wann*nspin,num_wann*nspin)
-   !dummy vars
-   real(8)                                      ::   a,b,factor_hr,rdotk
+   real(8)                                      ::   bk1(size(R1)),bk2(size(R2)),bk3(size(R3))
+   real(8),dimension(product(Nkvec),size(Nkvec))::   kpt1,kpt2,kpt3
+   real(8)                                      ::   a,b,rdotk
    integer                                      ::   rst,qst
-   factor_hr=6.28318530717959
+   !---- W90 specific ----
+   integer                                      ::   num_wann       !=Norb*Nlat
+   integer                                      ::   nrpts
+   integer(4),allocatable                       ::   ndegen(:)      !(nrpts)
+   integer   ,allocatable                       ::   irvec(:,:)     !(3,nrpts)
+   complex(8),allocatable                       ::   ham_r(:,:,:)
+   complex(8),allocatable                       ::   ham_aux(:,:,:)
    !
    !
    Nkx=Nkvec(1)
@@ -45,12 +36,15 @@
    Nkz=Nkvec(3)
    num_kpts=Nkx*Nky*Nkz
    !
-   open(unit=106,file=w90_file,status="unknown",action="read")
-   read(106,*)
-   read(106,*) num_wann
-   read(106,*) nrpts
+   unitIO=free_unit()
+   open(unit=unitIO,file=w90_file,status="old",action="read")
+   read(unitIO,*)
+   read(unitIO,*) num_wann
+   read(unitIO,*) nrpts
    rst=mod(nrpts,15)
    qst=int(nrpts/15)
+   write(*,*)
+   write(*,'(1A)')         "-------------- H_LDA --------------"
    write(*,'(A,I6)')      "  number of Wannier functions:   ",num_wann
    write(*,'(A,I6)')      "  number of Wigner-Seitz vectors:",nrpts
    write(*,'(A,I6,A,I6)') "  rows:",qst,"  last row elements:",rst
@@ -60,25 +54,25 @@
    if(allocated(ndegen))  deallocate(ndegen)  ;allocate(ndegen(nrpts))                                  ;ndegen=0
    if(allocated(irvec))   deallocate(irvec)   ;allocate(irvec(nrpts,3))                                 ;irvec=0
    if(allocated(ham_r))   deallocate(ham_r)   ;allocate(ham_r(num_wann*Nspin,num_wann*Nspin,nrpts))     ;ham_r=zero
-   if(allocated(ham_k))   deallocate(ham_k)   ;allocate(ham_k(num_wann*Nspin,num_wann*Nspin,num_kpts))  ;ham_k =zero
-   if(allocated(ham_aux)) deallocate(ham_aux) ;allocate(ham_aux(num_wann*Nspin,num_wann*Nspin,num_kpts));ham_aux =zero
-   if(allocated(Hloc))    deallocate(Hloc)    ;allocate(Hloc(num_wann*Nspin,num_wann*Nspin))            ;Hloc =zero
+   if(allocated(ham_k))   deallocate(ham_k)   ;allocate(ham_k(num_wann*Nspin,num_wann*Nspin,num_kpts))  ;ham_k=zero
+   if(allocated(ham_aux)) deallocate(ham_aux) ;allocate(ham_aux(num_wann*Nspin,num_wann*Nspin,num_kpts));ham_aux=zero
    !
    !1) k-points mesh
-   call TB_set_ei(Rx,Ry,Rz)
-   call TB_get_bk(bk_x,bk_y,bk_z)
-   call TB_set_bk(bk_x,bk_y,bk_z)
-   call TB_build_kgrid(Nkvec,kpt_x,kpt_y,kpt_z,.true.)
-   if(present(kpt_latt))kpt_latt=kpt_x+kpt_y+kpt_z
+   call TB_set_ei(R1,R2,R3)
+   call TB_get_bk(bk1,bk2,bk3)
+   call TB_set_bk(bk1,bk2,bk3)
+   call TB_build_kgrid(Nkvec,kpt1,kpt2,kpt3,.true.)
+   if(present(kpt_latt))kpt_latt=kpt1+kpt2+kpt3
    !
    !2) read WS degeneracies
    do i=1,qst
-      read(106,*)(ndegen(j+(i-1)*15),j=1,15)
+      read(unitIO,*)(ndegen(j+(i-1)*15),j=1,15)
    enddo
-   read(106,*)(ndegen(j+qst*15),j=1,rst)
-   write(*,'(A)')"  degen readed"
+   if(rst.ne.0)read(unitIO,*)(ndegen(j+qst*15),j=1,rst)
+   write(*,'(1A)')"  degen readed"
    !
    !3) read real-space Hamiltonian (no spinup-spindw hybridizations assumed)
+   ham_loc=zero
    do inrpts=1,nrpts
       do i=1,num_wann
          do j=1,num_wann
@@ -87,21 +81,26 @@
             ham_r(ndx1,ndx2,inrpts)=dcmplx(a,b)
             !spin dw
             if(Nspin==2)ham_r(ndx1+num_wann,ndx2+num_wann,inrpts)=dcmplx(a,b)
+            !Hloc
+            if(irvec(inrpts,1)==0.and.irvec(inrpts,2)==0.and.irvec(inrpts,3)==0)then
+               ham_loc(ndx1,ndx2)=dcmplx(a,b)
+               if(Nspin==2)ham_loc(ndx1+num_wann,ndx2+num_wann)=dcmplx(a,b)
+            endif
          enddo
       enddo
    enddo
-   close(106)
+   close(unitIO)
    write(*,'(2A)')"  H(R) readed from: ",w90_file
    !
    !4) Fourier Transform
-   do iktot=1,num_kpts 
-      do i=1,num_wann*nspin
-         do j=1,num_wann*nspin
-            do inrpts=1,nrpts
-               rdotk=0.d0
-               rdotk= ( irvec(inrpts,1)*dot_product(kpt_x(iktot,:),Rx) +  &
-                        irvec(inrpts,2)*dot_product(kpt_y(iktot,:),Ry) +  &
-                        irvec(inrpts,3)*dot_product(kpt_z(iktot,:),Rz) )
+   do iktot=1,num_kpts
+      do inrpts=1,nrpts
+         rdotk=0.d0
+         rdotk= ( irvec(inrpts,1)*dot_product(kpt1(iktot,:),R1) +  &
+                  irvec(inrpts,2)*dot_product(kpt2(iktot,:),R2) +  &
+                  irvec(inrpts,3)*dot_product(kpt3(iktot,:),R3) )
+         do i=1,num_wann*nspin
+            do j=1,num_wann*nspin
                !
                ham_k(i,j,iktot)=ham_k(i,j,iktot)+ham_r(i,j,inrpts)*dcmplx(cos(rdotk),-sin(rdotk))/ndegen(inrpts)
                !
@@ -109,6 +108,8 @@
          enddo
       enddo
    enddo
+   !
+   !5) Reordering
    if (present(Porder))then
       P=Porder
    else
@@ -118,19 +119,21 @@
    do iktot=1,num_kpts
       ham_k(:,:,iktot)=matmul(transpose(dble(P)),matmul(ham_aux(:,:,iktot),dble(P)))
    enddo
+   ham_loc=matmul(transpose(dble(P)),matmul(ham_loc,dble(P)))
    !
-   write(*,'(A)')"  H(k) produced"
+   write(*,'(1A)')"  H(k) produced"
    if(present(Hkfile))then
       call TB_write_hk(ham_k,Hkfile,Nspin*Norb*Nlat,1,1,Nlat,[Nkx,Nky,Nkz])
       write(*,'(2A)')"  H(k) written on: ",Hkfile
    endif
    !
    if(present(Kpointfile))then
-      open(unit=107,file=Kpointfile,status="unknown",action="write",position="rewind")
+      unitIO=free_unit()
+      open(unit=unitIO,file=Kpointfile,status="unknown",action="write",position="rewind")
       do iktot=1,num_kpts
-         write(107,'(3F15.7)') (kpt_latt(iktot,i),i=1,3)
+         write(unitIO,'(3F15.7)') (kpt_latt(iktot,i),i=1,3)
       enddo
-      close(107)
+      close(unitIO)
       write(*,'(2A)')"  Kpoints used written on: ",Kpointfile
    endif
    !
@@ -138,7 +141,6 @@
    deallocate(irvec)
    deallocate(ham_r)
    deallocate(ham_aux)
-   deallocate(Hloc)
    if(.not.present(kpt_latt))deallocate(kpt_latt)
    !
 end subroutine hk_from_w90_hr
@@ -174,8 +176,8 @@ subroutine read_Hr_w90_solve_Hk_along_BZpath(       w90_file           &      !o
   real(8)   ,allocatable,intent(out),optional  ::   kpt_latt(:,:)
   integer                                      ::   i,j,ndx1,ndx2
   integer                                      ::   ipts,ik,ic,u1,u2
-  integer                                      ::   ispin,jspin,iorb,jorb,ilat,iktot
-  integer                                      ::   inrpts,num_kpts
+  integer                                      ::   iktot,num_kpts
+  integer                                      ::   inrpts
   character(len=256)                           ::   file_,file_s1,file_s2,file_corr_s1,file_corr_s2,xtics
   integer                                      ::   Npts
   integer                                      ::   unit
@@ -186,29 +188,20 @@ subroutine read_Hr_w90_solve_Hk_along_BZpath(       w90_file           &      !o
   type(rgb_color)                              ::   corb(Norb*Nlat),c(Norb*Nlat)
   character(len=10)                            ::   chpoint
   character(len=32) :: fmt
-  !
-  !---- W90 specific ----
-  !
-  !Number of Wannier orbitals
-  integer                                      ::   num_wann       !=Norb*Nlat
-  !Wigner-Seitz grid points
-  integer                                      ::   nrpts          !=147
-  !Degeneracy of the Wigner-Seitz grid points
-  integer(4),allocatable                       ::   ndegen(:)      !(nrpts)
-  !real space vector
-  real(8)   ,allocatable                       ::   irvec(:,:)     !(3,nrpts)
-  !real-space Hamiltonian
-  complex(8),allocatable                       ::   ham_r(:,:,:)   !(num_wann*nspin,num_wann*nspin,nrpts)
-  !k-space Hamiltonian
-  complex(8),allocatable                       ::   ham_aux(:,:,:) !(num_wann*nspin,num_wann*nspin,num_kpts)
-  !dummy vars
-  real(8)                                      ::   a,b,factor_hr,rdotk
+  real(8)                                      ::   a,b,rdotk
   integer                                      ::   rst,qst
+  !---- W90 specific ----
+  integer                                      ::   num_wann       !=Norb*Nlat
+  integer                                      ::   nrpts
+  integer(4),allocatable                       ::   ndegen(:)      !(nrpts)
+  integer   ,allocatable                       ::   irvec(:,:)     !(3,nrpts)
+  complex(8),allocatable                       ::   ham_r(:,:,:)
+  complex(8),allocatable                       ::   ham_aux(:,:,:)
   !
   Npts=size(kpath,1)
   num_kpts=Nk*(Npts-1)
   !
-  write(*,'(A)')"  Solving model along the path:"
+  write(*,'(1A)')"  Solving model along the path:"
   write(fmt,"(A3,I0,A)")"(A,",size(kpath,2),"F7.4,A1)"
   do ipts=1,Npts
      write(*,fmt)"Point"//str(ipts)//": [",(kpath(ipts,ic),ic=1,size(kpath,2)),"]"
@@ -220,6 +213,7 @@ subroutine read_Hr_w90_solve_Hk_along_BZpath(       w90_file           &      !o
   read(106,*) nrpts
   rst=mod(nrpts,15)
   qst=int(nrpts/15)
+  write(*,'(1A)')         "-------------- H_LDA --------------"
   write(*,'(A,I6)')      "  number of Wannier functions:   ",num_wann
   write(*,'(A,I6)')      "  number of Wigner-Seitz vectors:",nrpts
   write(*,'(A,I6,A,I6)') "  rows:",qst,"  last row elements:",rst
@@ -249,8 +243,8 @@ subroutine read_Hr_w90_solve_Hk_along_BZpath(       w90_file           &      !o
   do i=1,qst
      read(106,*)(ndegen(j+(i-1)*15),j=1,15)
   enddo
-  read(106,*)(ndegen(j+qst*15),j=1,rst)
-  write(*,'(A)')"  degen readed"
+  if(rst.ne.0)read(106,*)(ndegen(j+qst*15),j=1,rst)
+  write(*,'(1A)')"  degen readed"
   !
   !3) read real-space Hamiltonian (no spinup-spindw hybridizations assumed change sub otherwise)
   do inrpts=1,nrpts
@@ -283,7 +277,7 @@ subroutine read_Hr_w90_solve_Hk_along_BZpath(       w90_file           &      !o
         enddo
      enddo
   enddo
-  write(*,'(A)')"  H(k) on path produced"
+  write(*,'(1A)')"  H(k) on path produced"
   !
   !5) re-ordering from w90 user defined to the code standard [[[Norb],Nspin],Nlat]
   if (present(Porder))then
