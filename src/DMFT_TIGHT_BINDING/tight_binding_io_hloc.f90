@@ -93,7 +93,7 @@ subroutine read_hloc_1(hloc,file)
   do iorb=1,Ni
      read(unit,"(9000F12.6)")(reHloc(iorb,jorb),jorb=1,Nj)
   enddo
-  write(unit,*)""
+  read(unit,*)
   do iorb=1,Ni
      read(unit,"(9000F12.6)")(imHloc(iorb,jorb),jorb=1,Nj)
   enddo
