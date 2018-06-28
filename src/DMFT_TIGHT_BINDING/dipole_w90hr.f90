@@ -11,7 +11,6 @@
    real(8)               ,intent(in),optional   ::   t_thresh_
    integer               ,intent(in),optional   ::   cg_niter_
    real(8)               ,intent(in),optional   ::   cg_Ftol_
-   !
    integer                                      ::   i,j,rst,qst
    integer                                      ::   ix,iy,iz
    integer                                      ::   ndx,vecndx
@@ -75,12 +74,13 @@
    rst=mod(nrpts,15)
    qst=int(nrpts/15)
    totdim = nrpts*num_wann*num_wann
-   dim_opt = 6*num_wann*num_wann
+   dim_opt = 9*num_wann*num_wann
    !dim_opt = 2*num_wann*num_wann
    !
    write(*,'(A,I6)')      "  number of Wannier functions:   ",num_wann
    write(*,'(A,I6)')      "  number of Wigner-Seitz vectors:",nrpts
-   write(*,'(A,I6,A,I6)') "  rows:",qst,"  last row elements:",rst
+   write(*,'(A,I6,1A,I6)')"  rows:",qst,"  last row elements:",rst
+   !
    if(num_wann.ne.Nlat*Norb)stop "hk_from_w90_hr. Something is wrong"
    if(size(Ruc,dim=1).ne.Nlat)stop "mismatch between number of lattice sites and their position"
    !
@@ -122,7 +122,7 @@
          do j=1,num_wann
             vecndx=vecndx+1
             !
-            read(106,'(5I5,2F12.6)') n1,n2,n3,ndx1,ndx2,a,b
+            read(unitIO1,'(5I5,2F12.6)') n1,n2,n3,ndx1,ndx2,a,b
             !
             Ruc_bra_ndx=floor((ndx1-0.01)/Norb)+1
             Ruc_ket_ndx=floor((ndx2-0.01)/Norb)+1
@@ -132,7 +132,8 @@
             !
             dist = norm2(Rbra(vecndx,:))
             !
-            if(abs(dcmplx(a,b)).gt.t_thresh .and. dist.gt.R_single)then
+            if(abs(dcmplx(a,b)).gt.t_thresh)then
+               if(.not.(dot_product(abs([n1,n2,n3]),[1,1,1])==0 .and. Ruc_bra_ndx==Ruc_ket_ndx))then
                !
                if(dist.ge.R_thresh)R_thresh=dist
                !
@@ -147,10 +148,10 @@
                orbital_ndx(totIntegrals,2)=ndx2-floor((ndx2-0.01)/Norb)*Norb
                !
             endif
+            endif
             !
             if(optimize)then
                if(dot_product(abs([n1,n2,n3]),[1,1,1])==1) then
-               !if(abs(n1)==1.and.n2==0.and.n3==0) then
                   !
                   totIntegrals_opt=totIntegrals_opt+1
                   !
@@ -179,7 +180,7 @@
    !
    if(optimize)then
       !
-      write(*,'(A,I8,A)')  "  optimization of: ",totIntegrals_opt," integrals"
+      write(*,'(A,I8,1A)') "  optimization of: ",totIntegrals_opt," integrals"
       !
       call fmin_cgminimize(var,chi2_hopping_ratio,iter,chi,itmax=cg_niter,ftol=cg_Ftol)
       !
@@ -193,8 +194,9 @@
       !
    endif
    !
+   !
    write(*,'(2A)')      "  positions readed from: ",w90_file
-   write(*,'(A,I8,A)')  "  computation of: ",totIntegrals," integrals"
+   write(*,'(A,I8,1A)') "  computation of: ",totIntegrals," integrals"
    write(*,'(A,F12.6)') "  integration radius (Bohr): ",R_thresh
    write(*,'(A,F12.6)') "  ratio with u.c. radius: ",R_thresh/R_single
    !
@@ -208,8 +210,6 @@
       Dz = 0d0
       !
       vecndx = Integral_ndx(ndx)
-      !
-      !write(998,*)Rbra(vecndx,1),Rbra(vecndx,2),Rbra(vecndx,3)
       !
       Ruc_bra_ndx=site_ndx(ndx,1)
       Ruc_ket_ndx=site_ndx(ndx,2)
@@ -227,11 +227,9 @@
                wfc_bra = atomic_wfc(bra_orb_ndx,(x-Rbra(vecndx,1)),(y-Rbra(vecndx,2)),(z-Rbra(vecndx,3)),var(bra_orb_ndx)*R_single)
                wfc_ket = atomic_wfc(ket_orb_ndx,(x-Rket(vecndx,1)),(y-Rket(vecndx,2)),(z-Rket(vecndx,3)),var(ket_orb_ndx)*R_single)
                !
-               Dx = Dx +  wfc_bra * ( x - Ruc(Ruc_bra_ndx,1) ) * wfc_ket * dr**3
-               Dy = Dy +  wfc_bra * ( y - Ruc(Ruc_bra_ndx,2) ) * wfc_ket * dr**3
-               Dz = Dz +  wfc_bra * ( z - Ruc(Ruc_bra_ndx,3) ) * wfc_ket * dr**3
-               !
-               !if(ndx==1)write(999,*)x,y,z
+               Dx = Dx +  wfc_bra * ( x - (Rbra(vecndx,1)+Ruc(Ruc_ket_ndx,1))/2.d0 ) * wfc_ket * dr**3
+               Dy = Dy +  wfc_bra * ( y - (Rbra(vecndx,2)+Ruc(Ruc_ket_ndx,2))/2.d0 ) * wfc_ket * dr**3
+               Dz = Dz +  wfc_bra * ( z - (Rbra(vecndx,3)+Ruc(Ruc_ket_ndx,3))/2.d0 ) * wfc_ket * dr**3
                !
             enddo
          enddo
@@ -254,8 +252,8 @@
    enddo
    if(rst.ne.0)read(unitIO1,*)
    do vecndx=1,totdim
-      read (unitIO1,*) n1,n2,n3,ndx1,ndx2
-      write(unitIO2,'(5I5,3F12.6)') n1,n2,n3,ndx1,ndx2,dipole(vecndx,:)
+      read (unitIO1,'(5I5)') n1,n2,n3,ndx1,ndx2
+      write(unitIO2,'(5I5,3F15.9)') n1,n2,n3,ndx1,ndx2,dipole(vecndx,:)
    enddo
    close(unitIO1)
    close(unitIO2)
@@ -274,7 +272,8 @@
    real(8)                :: phi
    real(8)                :: r,rsq,radial
    !
-   rsq = x**2 + y**2 + z**2
+   !this is to avoid the 0/0 condition below
+   rsq = x**2 + y**2 + z**2 + 0.0000001
    r   = sqrt(rsq)
    radial = exp((-(r/var)**2)/3.)/(2*pi*3*abs(var)) 
    !
@@ -323,9 +322,9 @@
                     wfc_bra = atomic_wfc(orbbra,(x-Ruc(Rucbra,1)),(y-Ruc(Rucbra,2)),(z-Ruc(Rucbra,3)),variance(orbbra)*R_single)
                     wfc_ket = atomic_wfc(orbket,(x-Ruc(Rucket,1)),(y-Ruc(Rucket,2)),(z-Ruc(Rucket,3)),variance(orbket)*R_single)
                     !
-                    rsq_o = rsq_o +  wfc_bra * ( x - Ruc(Rucbra,1) )**2 * wfc_ket * dr**3  &
-                                  +  wfc_bra * ( y - Ruc(Rucbra,2) )**2 * wfc_ket * dr**3  &
-                                  +  wfc_bra * ( z - Ruc(Rucbra,3) )**2 * wfc_ket * dr**3
+                    rsq_o = rsq_o +  wfc_bra * ( x - (Ruc(Rucbra,1)+Ruc(Rucket,1))/2.d0 )**2 * wfc_ket * dr**3  &
+                                  +  wfc_bra * ( y - (Ruc(Rucbra,2)+Ruc(Rucket,2))/2.d0 )**2 * wfc_ket * dr**3  &
+                                  +  wfc_bra * ( z - (Ruc(Rucbra,3)+Ruc(Rucket,3))/2.d0 )**2 * wfc_ket * dr**3
                     !
                  enddo
               enddo
@@ -365,9 +364,9 @@
                  wfc_bra = atomic_wfc(orbbra,(x-Rbra(vecndx,1)),(y-Rbra(vecndx,2)),(z-Rbra(vecndx,3)),variance(orbbra)*R_single)
                  wfc_ket = atomic_wfc(orbket,(x-Rket(vecndx,1)),(y-Rket(vecndx,2)),(z-Rket(vecndx,3)),variance(orbket)*R_single)
                  !
-                 rsq = rsq +  wfc_bra * ( x - Ruc(Rucbra,1) )**2 * wfc_ket * dr**3  &
-                           +  wfc_bra * ( y - Ruc(Rucbra,2) )**2 * wfc_ket * dr**3  &
-                           +  wfc_bra * ( z - Ruc(Rucbra,3) )**2 * wfc_ket * dr**3
+                 rsq = rsq +  wfc_bra * ( x - (Rbra(vecndx,1)+Rket(vecndx,1))/2.d0 )**2 * wfc_ket * dr**3  &
+                           +  wfc_bra * ( y - (Rbra(vecndx,2)+Rket(vecndx,2))/2.d0 )**2 * wfc_ket * dr**3  &
+                           +  wfc_bra * ( z - (Rbra(vecndx,3)+Rket(vecndx,3))/2.d0 )**2 * wfc_ket * dr**3
                  !
               enddo
            enddo
