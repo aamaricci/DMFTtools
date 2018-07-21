@@ -166,13 +166,14 @@
 
 
 
-  subroutine hkt_from_w90_hr_mpi(MpiComm,field,gauge,R1,R2,R3,Ruc,ham_kt,w90_file,dipole_file,Nspin,Norb,Nlat,Nt,Nkvec)
+  subroutine hkt_from_w90_hr_mpi(MpiComm,field,gauge,R1,R2,R3,Ruc,dipole_flag,ham_kt,w90_file,dipole_file,Nspin,Norb,Nlat,Nt,Nkvec)
    implicit none
    integer               ,intent(in)            ::   MpiComm
    real(8)               ,intent(in)            ::   field(:,:,:) ![Nt,dim,2] 1=Efield 2=Afield
    character(len=*)      ,intent(in)            ::   gauge
    real(8)               ,intent(in)            ::   R1(:),R2(:),R3(:)
    real(8)               ,intent(in)            ::   Ruc(:,:)
+   logical               ,intent(in)            ::   dipole_flag
    complex(8),allocatable,intent(inout)         ::   ham_kt(:,:,:,:)
    character(len=*)      ,intent(in)            ::   w90_file
    character(len=*)      ,intent(in)            ::   dipole_file
@@ -222,8 +223,10 @@
    !
    unitIO1=free_unit()
    open(unit=unitIO1,file=w90_file,status="old",action="read")
-   unitIO2=free_unit()
-   open(unit=unitIO2,file=dipole_file,status="old",action="read")
+   if(dipole_flag)then
+      unitIO2=free_unit()
+      open(unit=unitIO2,file=dipole_file,status="old",action="read")
+   endif
    read(unitIO1,*)
    read(unitIO1,*) num_wann
    read(unitIO1,*) nrpts
@@ -272,15 +275,17 @@
             !
             !read H(R) & D(R)
             read(unitIO1,*)irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3),ndx1_H,ndx2_H,a,b
-            read(unitIO2,*)           dumR1,         dumR2,          dumR3,ndx1_D,ndx2_D,Dx,Dy,Dz
+            if(dipole_flag)read(unitIO2,*)           dumR1,         dumR2,          dumR3,ndx1_D,ndx2_D,Dx,Dy,Dz
             !
             !consistency check
-            auxndx = sum([irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3),ndx1_H,ndx2_H]-[dumR1,dumR2,dumR3,ndx1_D,ndx2_D])
-            if(auxndx.ne.0)then
-               write(*,'(10A)') "  Something is wrong between ",w90_file," and ",dipole_file," indexing"
-               write(*,'(10I5)')irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3),ndx1_H,ndx2_H
-               write(*,'(10I5)')dumR1,dumR2,dumR3,ndx1_D,ndx2_D
-               stop
+            if(dipole_flag)then
+               auxndx = sum([irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3),ndx1_H,ndx2_H]-[dumR1,dumR2,dumR3,ndx1_D,ndx2_D])
+               if(auxndx.ne.0)then
+                  write(*,'(10A)') "  Something is wrong between ",w90_file," and ",dipole_file," indexing"
+                  write(*,'(10I5)')irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3),ndx1_H,ndx2_H
+                  write(*,'(10I5)')dumR1,dumR2,dumR3,ndx1_D,ndx2_D
+                  stop
+               endif
             endif
             !
             if(abs(dumR1).gt.limit)limit=abs(dumR1)
@@ -290,15 +295,17 @@
             site_ndx(inrpts,2)=floor((ndx2_H-0.01)/Norb)+1
             !
             ham_r(ndx1_H,ndx2_H,inrpts)=dcmplx(a,b)
-            dip_r(ndx1_D,ndx2_D,inrpts,1)=dcmplx(Dx,0.d0)
-            dip_r(ndx1_D,ndx2_D,inrpts,2)=dcmplx(Dy,0.d0)
-            dip_r(ndx1_D,ndx2_D,inrpts,3)=dcmplx(Dz,0.d0)
+            if(dipole_flag)then
+               dip_r(ndx1_D,ndx2_D,inrpts,1)=dcmplx(Dx,0.d0)
+               dip_r(ndx1_D,ndx2_D,inrpts,2)=dcmplx(Dy,0.d0)
+               dip_r(ndx1_D,ndx2_D,inrpts,3)=dcmplx(Dz,0.d0)
+            endif
             !
          enddo
       enddo
    enddo
    close(unitIO1)
-   close(unitIO2)
+   if(dipole_flag)close(unitIO2)
    if(mpi_master)write(*,'(1A)')"  H(R) and D(R) readed"
    !
    !4) build light-matter interaction
@@ -479,14 +486,15 @@
   end subroutine hkt_from_w90_hr_mpi
 
 
-  subroutine hloct_from_w90_hr_mpi(MpiComm,field,gauge,R1,R2,R3,Ruc,Hloct,w90_file,dipole_file,Nspin,Norb,Nlat,Nt)
+  subroutine hloct_from_w90_hr_mpi(MpiComm,field,gauge,R1,R2,R3,Ruc,dipole_flag,Hloct,w90_file,dipole_file,Nspin,Norb,Nlat,Nt)
    implicit none
    integer               ,intent(in)            ::   MpiComm
    real(8)               ,intent(in)            ::   field(:,:,:) ![Nt,dim,2] 1=Efield 2=Afield
    character(len=*)      ,intent(in)            ::   gauge
    real(8)               ,intent(in)            ::   R1(:),R2(:),R3(:)
    real(8)               ,intent(in)            ::   Ruc(:,:)
-   complex(8),allocatable,intent(inout)         ::   Hloct(:,:,:)
+   logical               ,intent(in)            ::   dipole_flag
+   complex(8),allocatable,intent(inout)         ::   Hloct(:,:,:,:)
    character(len=*)      ,intent(in)            ::   w90_file
    character(len=*)      ,intent(in)            ::   dipole_file
    integer               ,intent(in)            ::   Nspin,Norb,Nlat,Nt
@@ -498,19 +506,19 @@
    !
    logical                                      ::   IOfile
    integer                                      ::   unitIO1,unitIO2
-   integer                                      ::   i,j,iorb,jorb,io,jo,it
+   integer                                      ::   i,j,k,iorb,jorb,io,jo,it
    integer                                      ::   ndx1_H,ndx2_H,ndx1_D,ndx2_D
    integer                                      ::   inrpts
    real(8)                                      ::   a,b,Dx,Dy,Dz,exparg
    integer                                      ::   rst,qst,limit,kvec_ndx
    integer                                      ::   auxndx,dumR1,dumR2,dumR3
    !---- light matter ----
-   integer   ,allocatable,dimension(:)          ::   Kvec
+   integer   ,allocatable,dimension(:)          ::   Kvec,ilist
    integer   ,allocatable,dimension(:,:)        ::   site_ndx
    integer   ,allocatable,dimension(:,:,:)      ::   veclist
    complex(8),allocatable,dimension(:,:,:)      ::   ham_r,StructFact
-   complex(8),allocatable,dimension(:,:,:)      ::   ham_auxt,ham_rt,lightmat_r
-   complex(8),allocatable,dimension(:,:,:,:)    ::   dip_r
+   complex(8),allocatable,dimension(:,:,:,:)    ::   dip_r,ham_auxt,ham_rt,lightmat_r
+   !complex(8),allocatable,dimension(:,:,:)      ::   ham_auxt,ham_rt,lightmat_r
    !---- W90 specific ----
    integer                                      ::   num_wann       !=Norb*Nlat
    integer                                      ::   nrpts
@@ -526,8 +534,10 @@
    !
    unitIO1=free_unit()
    open(unit=unitIO1,file=w90_file,status="old",action="read")
-   unitIO2=free_unit()
-   open(unit=unitIO2,file=dipole_file,status="old",action="read")
+   if(dipole_flag)then
+      unitIO2=free_unit()
+      open(unit=unitIO2,file=dipole_file,status="old",action="read")
+   endif
    read(unitIO1,*)
    read(unitIO1,*) num_wann
    read(unitIO1,*) nrpts
@@ -546,14 +556,15 @@
    if(allocated(irvec))     deallocate(irvec)     ;allocate(irvec(nrpts,3))                                      ;irvec=0
    if(allocated(Kvec))      deallocate(Kvec)      ;allocate(Kvec(3))                                             ;Kvec=0
    if(allocated(veclist))   deallocate(veclist)   ;allocate(veclist(-10:10,-10:10,-10:10))                       ;veclist=0
+   if(allocated(ilist))     deallocate(ilist)     ;allocate(ilist(4))                                            ;ilist=0
    if(allocated(site_ndx))  deallocate(site_ndx)  ;allocate(site_ndx(nrpts,2))                                   ;site_ndx=0
    if(allocated(ham_r))     deallocate(ham_r)     ;allocate(ham_r(num_wann,num_wann,nrpts))                      ;ham_r=zero
    if(allocated(dip_r))     deallocate(dip_r)     ;allocate(dip_r(num_wann,num_wann,nrpts,3))                    ;dip_r=zero
    if(allocated(StructFact))deallocate(StructFact);allocate(StructFact(num_wann,num_wann,Nt))                    ;StructFact=zero
-   if(allocated(lightmat_r))deallocate(lightmat_r);allocate(lightmat_r(num_wann,num_wann,3))                     ;lightmat_r=zero
+   if(allocated(lightmat_r))deallocate(lightmat_r);allocate(lightmat_r(num_wann,num_wann,4,3))                   ;lightmat_r=zero
    !
-   if(allocated(ham_rt))    deallocate(ham_rt)    ;allocate(ham_rt(num_wann,num_wann,Nt))                        ;ham_rt=zero
-   if(allocated(ham_auxt))  deallocate(ham_auxt)  ;allocate(ham_auxt(num_wann*Nspin,num_wann*Nspin,Nt))          ;ham_auxt=zero
+   if(allocated(ham_rt))    deallocate(ham_rt)    ;allocate(ham_rt(num_wann,num_wann,4,Nt))                      ;ham_rt=zero
+   if(allocated(ham_auxt))  deallocate(ham_auxt)  ;allocate(ham_auxt(num_wann*Nspin,num_wann*Nspin,4,Nt))        ;ham_auxt=zero
    !
    !1) read WS degeneracies
    do i=1,qst
@@ -570,15 +581,17 @@
             !
             !read H(R) & D(R)
             read(unitIO1,*)irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3),ndx1_H,ndx2_H,a,b
-            read(unitIO2,*)           dumR1,         dumR2,          dumR3,ndx1_D,ndx2_D,Dx,Dy,Dz
+            if(dipole_flag)read(unitIO2,*)           dumR1,         dumR2,          dumR3,ndx1_D,ndx2_D,Dx,Dy,Dz
             !
             !consistency check
-            auxndx = sum([irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3),ndx1_H,ndx2_H]-[dumR1,dumR2,dumR3,ndx1_D,ndx2_D])
-            if(auxndx.ne.0)then
-               write(*,'(10A)') "  Something is wrong between ",w90_file," and ",dipole_file," indexing"
-               write(*,'(10I5)')irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3),ndx1_H,ndx2_H
-               write(*,'(10I5)')dumR1,dumR2,dumR3,ndx1_D,ndx2_D
-               stop
+            if(dipole_flag)then
+               auxndx = sum([irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3),ndx1_H,ndx2_H]-[dumR1,dumR2,dumR3,ndx1_D,ndx2_D])
+               if(auxndx.ne.0)then
+                  write(*,'(10A)') "  Something is wrong between ",w90_file," and ",dipole_file," indexing"
+                  write(*,'(10I5)')irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3),ndx1_H,ndx2_H
+                  write(*,'(10I5)')dumR1,dumR2,dumR3,ndx1_D,ndx2_D
+                  stop
+               endif
             endif
             !
             if(abs(dumR1).gt.limit)limit=abs(dumR1)
@@ -588,70 +601,88 @@
             site_ndx(inrpts,2)=floor((ndx2_H-0.01)/Norb)+1
             !
             ham_r(ndx1_H,ndx2_H,inrpts)=dcmplx(a,b)
-            dip_r(ndx1_D,ndx2_D,inrpts,1)=dcmplx(Dx,0.d0)
-            dip_r(ndx1_D,ndx2_D,inrpts,2)=dcmplx(Dy,0.d0)
-            dip_r(ndx1_D,ndx2_D,inrpts,3)=dcmplx(Dz,0.d0)
+            if(dipole_flag)then
+               dip_r(ndx1_D,ndx2_D,inrpts,1)=dcmplx(Dx,0.d0)
+               dip_r(ndx1_D,ndx2_D,inrpts,2)=dcmplx(Dy,0.d0)
+               dip_r(ndx1_D,ndx2_D,inrpts,3)=dcmplx(Dz,0.d0)
+            endif
             !
          enddo
       enddo
    enddo
    close(unitIO1)
-   close(unitIO2)
+   if(dipole_flag)close(unitIO2)
    if(mpi_master)write(*,'(1A)')"  H(R) and D(R) readed"
    !
-   !3) build light-matter interaction
+   ilist(1)=veclist(0,0,0)
+   ilist(2)=veclist(1,0,0)
+   ilist(3)=veclist(0,1,0)
+   ilist(4)=veclist(0,0,1)
+   !
+   !4) build light-matter interaction
    if(gauge=="A")then
       !
-      i=veclist(0,0,0)
-      do j=1,nrpts
-         !
-         Kvec(1)=irvec(i,1)-irvec(j,1)
-         Kvec(2)=irvec(i,2)-irvec(j,2)
-         Kvec(3)=irvec(i,3)-irvec(j,3)
-         !
-         if((abs(Kvec(1)).gt.limit) .or. &
-            (abs(Kvec(2)).gt.limit) .or. &
-            (abs(Kvec(3)).gt.limit)      )cycle
-         !
-         Kvec_ndx=veclist(Kvec(1),Kvec(2),Kvec(3))
-         !
-         lightmat_r(:,:,1) = lightmat_r(:,:,1) + matmul(dip_r(:,:,Kvec_ndx,1),ham_r(:,:,j))
-         lightmat_r(:,:,2) = lightmat_r(:,:,2) + matmul(dip_r(:,:,Kvec_ndx,2),ham_r(:,:,j))
-         lightmat_r(:,:,3) = lightmat_r(:,:,3) + matmul(dip_r(:,:,Kvec_ndx,3),ham_r(:,:,j))
-         !
+      do k=1,4
+         i=ilist(k)
+         do j=1,nrpts
+            !
+            Kvec(1)=irvec(i,1)-irvec(j,1)
+            Kvec(2)=irvec(i,2)-irvec(j,2)
+            Kvec(3)=irvec(i,3)-irvec(j,3)
+            !
+            if((abs(Kvec(1)).gt.limit) .or. &
+               (abs(Kvec(2)).gt.limit) .or. &
+               (abs(Kvec(3)).gt.limit)      )cycle
+            !
+            Kvec_ndx=veclist(Kvec(1),Kvec(2),Kvec(3))
+            !
+            lightmat_r(:,:,k,1) = lightmat_r(:,:,k,1) + matmul(dip_r(:,:,Kvec_ndx,1),ham_r(:,:,j))
+            lightmat_r(:,:,k,2) = lightmat_r(:,:,k,2) + matmul(dip_r(:,:,Kvec_ndx,2),ham_r(:,:,j))
+            lightmat_r(:,:,k,3) = lightmat_r(:,:,k,3) + matmul(dip_r(:,:,Kvec_ndx,3),ham_r(:,:,j))
+            !
+         enddo
       enddo
       !
-      do j=1,nrpts
-         !
-         Kvec(1)=irvec(i,1)-irvec(j,1)
-         Kvec(2)=irvec(i,2)-irvec(j,2)
-         Kvec(3)=irvec(i,3)-irvec(j,3)
-         !
-         if((abs(Kvec(1)).gt.limit) .or. &
-            (abs(Kvec(2)).gt.limit) .or. &
-            (abs(Kvec(3)).gt.limit)      )cycle
-         !
-         Kvec_ndx=veclist(Kvec(1),Kvec(2),Kvec(3))
-         !
-         lightmat_r(:,:,1) = lightmat_r(:,:,1) - matmul(ham_r(:,:,Kvec_ndx),dip_r(:,:,j,1))
-         lightmat_r(:,:,2) = lightmat_r(:,:,2) - matmul(ham_r(:,:,Kvec_ndx),dip_r(:,:,j,2))
-         lightmat_r(:,:,3) = lightmat_r(:,:,3) - matmul(ham_r(:,:,Kvec_ndx),dip_r(:,:,j,3))
-         !
+      do k=1,4
+         i=ilist(k)
+         do j=1,nrpts
+            !
+            Kvec(1)=irvec(i,1)-irvec(j,1)
+            Kvec(2)=irvec(i,2)-irvec(j,2)
+            Kvec(3)=irvec(i,3)-irvec(j,3)
+            !
+            if((abs(Kvec(1)).gt.limit) .or. &
+               (abs(Kvec(2)).gt.limit) .or. &
+               (abs(Kvec(3)).gt.limit)      )cycle
+            !
+            Kvec_ndx=veclist(Kvec(1),Kvec(2),Kvec(3))
+            !
+            lightmat_r(:,:,k,1) = lightmat_r(:,:,k,1) - matmul(ham_r(:,:,Kvec_ndx),dip_r(:,:,j,1))
+            lightmat_r(:,:,k,2) = lightmat_r(:,:,k,2) - matmul(ham_r(:,:,Kvec_ndx),dip_r(:,:,j,2))
+            lightmat_r(:,:,k,3) = lightmat_r(:,:,k,3) - matmul(ham_r(:,:,Kvec_ndx),dip_r(:,:,j,3))
+            !
+         enddo
+         call herm_check(lightmat_r(:,:,1,1))
+         call herm_check(lightmat_r(:,:,1,2))
+         call herm_check(lightmat_r(:,:,1,3))
       enddo
       !
    elseif(gauge=="E")then
       !
-      i=veclist(0,0,0)
-      !
-      lightmat_r(:,:,1) = dip_r(:,:,i,1) ; call herm_check(lightmat_r(:,:,1))
-      lightmat_r(:,:,2) = dip_r(:,:,i,2) ; call herm_check(lightmat_r(:,:,2))
-      lightmat_r(:,:,3) = dip_r(:,:,i,3) ; call herm_check(lightmat_r(:,:,3))
+      do k=1,4
+         i=ilist(k)
+         !
+         lightmat_r(:,:,k,1) = dip_r(:,:,i,1) ; call herm_check(lightmat_r(:,:,1,1))
+         lightmat_r(:,:,k,2) = dip_r(:,:,i,2) ; call herm_check(lightmat_r(:,:,1,2))
+         lightmat_r(:,:,k,3) = dip_r(:,:,i,3) ; call herm_check(lightmat_r(:,:,1,3))
+         !
+      enddo
       !
    endif
-   deallocate(Kvec,dip_r)
+   deallocate(veclist,Kvec,dip_r)
    if(mpi_master)write(*,'(2A)')"  light-matter interaction built in gauge: ",gauge
    !
-   !4) build prefactor
+   !5) build prefactor
    if(gauge=="A")then
       !
       StructFact=dcmplx(1.d0,0.d0)
@@ -684,27 +715,41 @@
    endif
    if(mpi_master)write(*,'(1A)')"  prefactor built"
    !
-   !5) build interacting hamilt in real space
+   !6) build interacting hamilt in real space
    if(gauge=="A")then
       !
       do it=1,Nt
-         !
-         inrpts=veclist(0,0,0)
-         ham_rt(:,:,it) = ( ham_r(:,:,inrpts)+ field(it,1,2) * Xi * lightmat_r(:,:,1) &
-                                             + field(it,2,2) * Xi * lightmat_r(:,:,2) &
-                                             + field(it,3,2) * Xi * lightmat_r(:,:,3) )
-         !
+         do k=1,4
+            inrpts=ilist(k)
+            !
+            ham_rt(:,:,k,it) = ( ham_r(:,:,inrpts) + field(it,1,2) * Xi * lightmat_r(:,:,k,1) &
+                                                   + field(it,2,2) * Xi * lightmat_r(:,:,k,2) &
+                                                   + field(it,3,2) * Xi * lightmat_r(:,:,k,3) )
+            !
+         enddo
       enddo
       !
    elseif(gauge=="E")then
       !
+
+     write(1234,*)
+     write(1234,*)
+     write(1234,*)
+
       do it=1,Nt
-         !
-         inrpts=veclist(0,0,0)
-         ham_rt(:,:,it) = ( ham_r(:,:,inrpts)+ field(it,1,1) * lightmat_r(:,:,1) &
-                                             + field(it,2,1) * lightmat_r(:,:,2) &
-                                             + field(it,3,1) * lightmat_r(:,:,3) ) * StructFact(:,:,it)
-         !
+         do k=1,4
+            inrpts=ilist(k)
+            !
+            exparg = ( -field(it,1,2) * ( irvec(inrpts,1)*R1(1) + irvec(inrpts,2)*R2(1) + irvec(inrpts,3)*R3(1) ) &
+                       -field(it,2,2) * ( irvec(inrpts,1)*R1(2) + irvec(inrpts,2)*R2(2) + irvec(inrpts,3)*R3(2) ) &
+                       -field(it,3,2) * ( irvec(inrpts,1)*R1(3) + irvec(inrpts,2)*R2(3) + irvec(inrpts,3)*R3(3) ) )
+            !
+            ham_rt(:,:,k,it) = StructFact(:,:,it)*dcmplx(cos(exparg),sin(exparg)) *     &
+                             ( ham_r(:,:,inrpts)+ field(it,1,1) * lightmat_r(:,:,k,1)   &
+                                                + field(it,2,1) * lightmat_r(:,:,k,2)   &
+                                                + field(it,3,1) * lightmat_r(:,:,k,3)   )
+            !
+         enddo
       enddo
       !
    endif
@@ -712,25 +757,18 @@
    if(mpi_master)write(*,'(1A)')"  real-space H(R,t) built"
    !
    !6) Reordering & hermicity check
-   ham_auxt=zero
-   ham_auxt(1:num_wann,1:num_wann,:)=ham_rt
-   if(Nspin==2)then
-      ham_auxt(1+num_wann:2*num_wann,1+num_wann:2*num_wann,:)=ham_rt
-      do it=1,Nt
-         !
-         ham_auxt(:,:,it)=slo2lso(ham_auxt(:,:,it),Nlat,Nspin,Norb)
-         !
-      enddo
-   endif
-   do it=1,Nt
-      call herm_check(ham_auxt(:,:,it))
-   enddo
-   deallocate(ham_rt)
-   !
-   !7) linking the local Hamiltonian
    Hloct=zero
-   Hloct=ham_auxt
-   deallocate(ham_auxt)
+   ham_auxt=zero
+   do k=1,4
+      do it=1,Nt
+         ham_auxt(1:num_wann,1:num_wann,k,it)=ham_rt(:,:,k,it)
+         if(Nspin==2)then
+            ham_auxt(1+num_wann:2*num_wann,1+num_wann:2*num_wann,k,it)=ham_rt(:,:,k,it)
+            Hloct(:,:,k,it)=slo2lso(ham_auxt(:,:,k,it),Nlat,Nspin,Norb)
+         endif
+      enddo
+   enddo
+   deallocate(ham_auxt,ham_rt)
    if(mpi_master)write(*,'(1A)')"  Hloc(K,t) written"
    !
   end subroutine hloct_from_w90_hr_mpi
