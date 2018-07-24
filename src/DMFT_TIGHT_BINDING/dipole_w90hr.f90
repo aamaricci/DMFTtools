@@ -23,7 +23,7 @@
    real(8)                                      ::   wfc_bra,wfc_ket
    real(8)                                      ::   Dx,Dy,Dz
    real(8),allocatable                          ::   Rbra(:,:),Rket(:,:)
-   real(8),allocatable                          ::   dipole(:,:)
+   complex(8),allocatable                       ::   dipole(:,:)
    integer,allocatable                          ::   Integral_ndx(:)
    integer,allocatable                          ::   orbital_ndx(:,:)
    integer,allocatable                          ::   site_ndx(:,:)
@@ -235,9 +235,9 @@
          enddo
       enddo
       !
-      dipole(vecndx,1) = Dx
-      dipole(vecndx,2) = Dy
-      dipole(vecndx,3) = Dz
+      dipole(vecndx,1) = dcmplx(Dx,0.d0)
+      dipole(vecndx,2) = dcmplx(Dy,0.d0)
+      dipole(vecndx,3) = dcmplx(Dz,0.d0)
       !
    enddo
    !
@@ -253,7 +253,9 @@
    if(rst.ne.0)read(unitIO1,*)
    do vecndx=1,totdim
       read (unitIO1,'(5I5)') n1,n2,n3,ndx1,ndx2
-      write(unitIO2,'(5I5,3F15.9)') n1,n2,n3,ndx1,ndx2,dipole(vecndx,:)
+      write(unitIO2,'(5I5,6F15.9)') n1,n2,n3,ndx1,ndx2,real(dipole(vecndx,1)),aimag(dipole(vecndx,1)) &
+                                                      ,real(dipole(vecndx,2)),aimag(dipole(vecndx,2)) &
+                                                      ,real(dipole(vecndx,3)),aimag(dipole(vecndx,3))
    enddo
    close(unitIO1)
    close(unitIO2)

@@ -194,7 +194,8 @@
    integer                                      ::   inrpts
    real(8)                                      ::   bk1(size(R1)),bk2(size(R2)),bk3(size(R3))
    real(8),dimension(product(Nkvec),size(Nkvec))::   kpt1,kpt2,kpt3
-   real(8)                                      ::   a,b,Dx,Dy,Dz,rdotk,exparg
+   real(8)                                      ::   a,b,exparg,rdotk
+   real(8)                                      ::   REDx,REDy,REDz,IMDx,IMDy,IMDz
    integer                                      ::   rst,qst,limit,kvec_ndx
    integer                                      ::   auxndx,dumR1,dumR2,dumR3
    !---- light matter ----
@@ -275,7 +276,7 @@
             !
             !read H(R) & D(R)
             read(unitIO1,*)irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3),ndx1_H,ndx2_H,a,b
-            if(dipole_flag)read(unitIO2,*)           dumR1,         dumR2,          dumR3,ndx1_D,ndx2_D,Dx,Dy,Dz
+            if(dipole_flag)read(unitIO2,*)dumR1,dumR2,dumR3,ndx1_D,ndx2_D,REDx,IMDx,REDy,IMDy,REDz,IMDz
             !
             !consistency check
             if(dipole_flag)then
@@ -296,9 +297,9 @@
             !
             ham_r(ndx1_H,ndx2_H,inrpts)=dcmplx(a,b)
             if(dipole_flag)then
-               dip_r(ndx1_D,ndx2_D,inrpts,1)=dcmplx(Dx,0.d0)
-               dip_r(ndx1_D,ndx2_D,inrpts,2)=dcmplx(Dy,0.d0)
-               dip_r(ndx1_D,ndx2_D,inrpts,3)=dcmplx(Dz,0.d0)
+               dip_r(ndx1_D,ndx2_D,inrpts,1)=dcmplx(REDx,IMDx)
+               dip_r(ndx1_D,ndx2_D,inrpts,2)=dcmplx(REDy,IMDy)
+               dip_r(ndx1_D,ndx2_D,inrpts,3)=dcmplx(REDz,IMDz)
             endif
             !
          enddo
@@ -509,7 +510,8 @@
    integer                                      ::   i,j,k,iorb,jorb,io,jo,it
    integer                                      ::   ndx1_H,ndx2_H,ndx1_D,ndx2_D
    integer                                      ::   inrpts
-   real(8)                                      ::   a,b,Dx,Dy,Dz,exparg
+   real(8)                                      ::   a,b,exparg
+   real(8)                                      ::   REDx,REDy,REDz,IMDx,IMDy,IMDz
    integer                                      ::   rst,qst,limit,kvec_ndx
    integer                                      ::   auxndx,dumR1,dumR2,dumR3
    !---- light matter ----
@@ -581,7 +583,7 @@
             !
             !read H(R) & D(R)
             read(unitIO1,*)irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3),ndx1_H,ndx2_H,a,b
-            if(dipole_flag)read(unitIO2,*)           dumR1,         dumR2,          dumR3,ndx1_D,ndx2_D,Dx,Dy,Dz
+            if(dipole_flag)read(unitIO2,*)dumR1,dumR2,dumR3,ndx1_D,ndx2_D,REDx,IMDx,REDy,IMDy,REDz,IMDz
             !
             !consistency check
             if(dipole_flag)then
@@ -602,9 +604,9 @@
             !
             ham_r(ndx1_H,ndx2_H,inrpts)=dcmplx(a,b)
             if(dipole_flag)then
-               dip_r(ndx1_D,ndx2_D,inrpts,1)=dcmplx(Dx,0.d0)
-               dip_r(ndx1_D,ndx2_D,inrpts,2)=dcmplx(Dy,0.d0)
-               dip_r(ndx1_D,ndx2_D,inrpts,3)=dcmplx(Dz,0.d0)
+               dip_r(ndx1_D,ndx2_D,inrpts,1)=dcmplx(REDx,IMDx)
+               dip_r(ndx1_D,ndx2_D,inrpts,2)=dcmplx(REDy,IMDy)
+               dip_r(ndx1_D,ndx2_D,inrpts,3)=dcmplx(REDz,IMDz)
             endif
             !
          enddo
