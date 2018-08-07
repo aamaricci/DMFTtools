@@ -7,6 +7,7 @@ module DMFT_WEISS_FIELD
   USE SF_MISC,      only:assert_shape
   USE DMFT_CTRL_VARS
 #ifdef _MPI
+  USE SF_MPI
   USE MPI
 #endif
   implicit none
@@ -14,7 +15,18 @@ module DMFT_WEISS_FIELD
 
 
 
-
+  interface dmft_self_consistency
+     module procedure :: dmft_sc_normal_main
+     module procedure :: dmft_sc_normal_ineq
+     module procedure :: dmft_sc_superc_main
+     module procedure :: dmft_sc_superc_ineq
+#ifdef _MPI
+     module procedure :: dmft_sc_normal_main_mpi
+     module procedure :: dmft_sc_normal_ineq_mpi
+     module procedure :: dmft_sc_superc_main_mpi
+     module procedure :: dmft_sc_superc_ineq_mpi
+#endif
+  end interface dmft_self_consistency
 
 
   interface dmft_weiss
@@ -23,7 +35,9 @@ module DMFT_WEISS_FIELD
      module procedure :: dmft_get_weiss_superc_main
      module procedure :: dmft_get_weiss_superc_ineq
 #ifdef _MPI
+     module procedure :: dmft_get_weiss_normal_main_mpi
      module procedure :: dmft_get_weiss_normal_ineq_mpi
+     module procedure :: dmft_get_weiss_superc_main_mpi
      module procedure :: dmft_get_weiss_superc_ineq_mpi
 #endif
   end interface dmft_weiss
@@ -35,13 +49,15 @@ module DMFT_WEISS_FIELD
      module procedure :: dmft_get_delta_superc_main
      module procedure :: dmft_get_delta_superc_ineq
 #ifdef _MPI
+     module procedure :: dmft_get_delta_normal_main_mpi
      module procedure :: dmft_get_delta_normal_ineq_mpi
+     module procedure :: dmft_get_delta_superc_main_mpi
      module procedure :: dmft_get_delta_superc_ineq_mpi
 #endif
   end interface dmft_delta
 
 
-
+  public :: dmft_self_consistency
   public :: dmft_weiss
   public :: dmft_delta
 
@@ -98,13 +114,150 @@ contains
 
 
 
+
+  !--------------------------------------------------------------------!
+  !PURPOSE: Perform the DMFT local self-consistency using Weiss or Delta
+  ! equations and given G_loc/F_loc and Sigma/Self
+  ! INPUT:
+  ! 1. GLOC/FLOC  : ([Nlat])[Nspin][Nspin][Norb][Norb][Lmats]
+  ! 2. Sigma/SELF : ([Nlat])[Nspin][Nspin][Norb][Norb][Lmats]
+  ! 4. Hloc       : local part of the non-interacting Hamiltonian
+  !--------------------------------------------------------------------!
+  subroutine dmft_sc_normal_main(Gloc,Smats,Weiss,Hloc,SCtype)
+    complex(8),dimension(:,:,:,:,:),intent(in)    :: Gloc  ! [Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:),intent(in)    :: Smats ! [Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:),intent(inout) :: Weiss ! [Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:),intent(in)      :: Hloc  ! [Nspin][Nspin][Norb][Norb]
+    character(len=*)                              :: SCtype
+    select case(SCtype)
+    case default
+       call dmft_weiss(Gloc,Smats,Weiss,Hloc)
+    case ("delta")
+       call dmft_delta(Gloc,Smats,Weiss,Hloc)
+    end select
+  end subroutine dmft_sc_normal_main
+
+  subroutine dmft_sc_normal_ineq(Gloc,Smats,Weiss,Hloc,SCtype)
+    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Gloc         ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Smats        ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Weiss        ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:),intent(in)      :: Hloc         ! [Nlat][Nspin][Nspin][Norb][Norb]
+    character(len=*)                                :: SCtype
+    select case(SCtype)
+    case default
+       call dmft_weiss(Gloc,Smats,Weiss,Hloc)
+    case ("delta")
+       call dmft_delta(Gloc,Smats,Weiss,Hloc)
+    end select
+  end subroutine dmft_sc_normal_ineq
+
+  subroutine dmft_sc_superc_main(Gloc,Floc,Smats,SAmats,Weiss,Hloc,SCtype)
+    complex(8),dimension(:,:,:,:,:),intent(in)      :: Gloc         ! [Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:),intent(in)      :: Floc         ! [Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:),intent(in)      :: Smats        !
+    complex(8),dimension(:,:,:,:,:),intent(in)      :: SAmats        !
+    complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Weiss        !
+    complex(8),dimension(:,:,:,:),intent(in)        :: Hloc         ! [Nspin][Nspin][Norb][Norb]
+    character(len=*)                                :: SCtype
+    select case(SCtype)
+    case default
+       call dmft_weiss(Gloc,Floc,Smats,SAmats,Weiss,Hloc)
+    case ("delta")
+       call dmft_delta(Gloc,Floc,Smats,SAmats,Weiss,Hloc)
+    end select
+  end subroutine dmft_sc_superc_main
+
+  subroutine dmft_sc_superc_ineq(Gloc,Floc,Smats,SAmats,Weiss,Hloc,SCtype)
+    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Gloc         ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Floc         ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Smats        !
+    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: SAmats        ! 
+    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Weiss        ! 
+    complex(8),dimension(:,:,:,:,:),intent(in)        :: Hloc         ! [Nlat][Nspin][Nspin][Norb][Norb]
+    character(len=*)                                  :: SCtype
+    select case(SCtype)
+    case default
+       call dmft_weiss(Gloc,Floc,Smats,SAmats,Weiss,Hloc)
+    case ("delta")
+       call dmft_delta(Gloc,Floc,Smats,SAmats,Weiss,Hloc)
+    end select
+  end subroutine dmft_sc_superc_ineq
+
+#ifdef _MPI
+  subroutine dmft_sc_normal_main_mpi(MpiComm,Gloc,Smats,Weiss,Hloc,SCtype)
+    integer                                       :: MpiComm
+    complex(8),dimension(:,:,:,:,:),intent(in)    :: Gloc  ! [Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:),intent(in)    :: Smats ! [Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:),intent(inout) :: Weiss ! [Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:),intent(in)      :: Hloc  ! [Nspin][Nspin][Norb][Norb]
+    character(len=*)                              :: SCtype
+    select case(SCtype)
+    case default
+       call dmft_weiss(MpiComm,Gloc,Smats,Weiss,Hloc)
+    case ("delta")
+       call dmft_delta(MpiComm,Gloc,Smats,Weiss,Hloc)
+    end select
+  end subroutine dmft_sc_normal_main_mpi
+
+  subroutine dmft_sc_normal_ineq_mpi(MpiComm,Gloc,Smats,Weiss,Hloc,SCtype)
+    integer                                         :: MpiComm
+    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Gloc         ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Smats        ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Weiss        ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:),intent(in)      :: Hloc         ! [Nlat][Nspin][Nspin][Norb][Norb]
+    character(len=*)                                :: SCtype
+    select case(SCtype)
+    case default
+       call dmft_weiss(MpiComm,Gloc,Smats,Weiss,Hloc)
+    case ("delta")
+       call dmft_delta(MpiComm,Gloc,Smats,Weiss,Hloc)
+    end select
+  end subroutine dmft_sc_normal_ineq_mpi
+
+  subroutine dmft_sc_superc_main_mpi(MpiComm,Gloc,Floc,Smats,SAmats,Weiss,Hloc,SCtype)
+    integer                                         :: MpiComm
+    complex(8),dimension(:,:,:,:,:),intent(in)      :: Gloc         ! [Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:),intent(in)      :: Floc         ! [Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:),intent(in)      :: Smats        !
+    complex(8),dimension(:,:,:,:,:),intent(in)      :: SAmats        !
+    complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Weiss        !
+    complex(8),dimension(:,:,:,:),intent(in)        :: Hloc         ! [Nspin][Nspin][Norb][Norb]
+    character(len=*)                                :: SCtype
+    select case(SCtype)
+    case default
+       call dmft_weiss(MpiComm,Gloc,Floc,Smats,SAmats,Weiss,Hloc)
+    case ("delta")
+       call dmft_delta(MpiComm,Gloc,Floc,Smats,SAmats,Weiss,Hloc)
+    end select
+  end subroutine dmft_sc_superc_main_mpi
+
+  subroutine dmft_sc_superc_ineq_mpi(MpiComm,Gloc,Floc,Smats,SAmats,Weiss,Hloc,SCtype)
+    integer                                           :: MpiComm
+    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Gloc         ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Floc         ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Smats        !
+    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: SAmats        ! 
+    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Weiss        ! 
+    complex(8),dimension(:,:,:,:,:),intent(in)        :: Hloc         ! [Nlat][Nspin][Nspin][Norb][Norb]
+    character(len=*)                                  :: SCtype
+    select case(SCtype)
+    case default
+       call dmft_weiss(MpiComm,Gloc,Floc,Smats,SAmats,Weiss,Hloc)
+    case ("delta")
+       call dmft_delta(MpiComm,Gloc,Floc,Smats,SAmats,Weiss,Hloc)
+    end select
+  end subroutine dmft_sc_superc_ineq_mpi
+#endif
+
+
+
   !--------------------------------------------------------------------!
   !PURPOSE: Get the local Weiss Field calG0 or using self-consistency 
-  ! equations and given G_loc and Sigma.
+  ! equations and given G_loc/F_loc and Sigma/Self
   ! INPUT:
-  ! 1. GLOC  : ([2][Nlat])[Nspin][Nspin][Norb][Norb][Lmats]
-  ! 2. Sigma : ([2][Nlat])[Nspin][Nspin][Norb][Norb][Lmats]
-  ! 4. Hloc  : local part of the non-interacting Hamiltonian
+  ! 1. GLOC/FLOC  : ([Nlat])[Nspin][Nspin][Norb][Norb][Lmats]
+  ! 2. Sigma/SELF : ([Nlat])[Nspin][Nspin][Norb][Norb][Lmats]
+  ! 4. Hloc       : local part of the non-interacting Hamiltonian
   !--------------------------------------------------------------------!
   !--------------------------------------------------------------------!
   !
@@ -112,8 +265,6 @@ contains
   !
   !--------------------------------------------------------------------!
   !--------------------------------------------------------------------!
-
-
   subroutine dmft_get_weiss_normal_main(Gloc,Smats,Weiss,Hloc)
     complex(8),dimension(:,:,:,:,:),intent(in)    :: Gloc  ! [Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:),intent(in)    :: Smats ! [Nspin][Nspin][Norb][Norb][Lmats]
@@ -174,6 +325,81 @@ contains
     enddo
     !
   end subroutine dmft_get_weiss_normal_main
+
+#ifdef _MPI
+  subroutine dmft_get_weiss_normal_main_mpi(MpiComm,Gloc,Smats,Weiss,Hloc)
+    integer                                       :: MpiComm
+    complex(8),dimension(:,:,:,:,:),intent(in)    :: Gloc  ! [Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:),intent(in)    :: Smats ! [Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:),intent(inout) :: Weiss ! [Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:),intent(in)      :: Hloc  ! [Nspin][Nspin][Norb][Norb]
+    !aux
+    complex(8),dimension(:,:,:),allocatable       :: zeta_site ![Nspin*Norb][Nspin*Norb][Lmats]
+    complex(8),dimension(:,:,:),allocatable       :: Smats_site![Nspin*Norb][Nspin*Norb][Lmats]
+    complex(8),dimension(:,:,:),allocatable       :: invGloc_site![Nspin*Norb][Nspin*Norb][Lmats]
+    complex(8),dimension(:,:,:),allocatable       :: calG0_site![Nspin*Norb][Nspin*Norb][Lmats]
+    integer                                       :: Nspin,Norb,Nso,Lmats
+    integer                                       :: i,iorb,jorb,ispin,jspin,io,jo
+    !
+    !MPI setup:
+    mpi_size  = get_size_MPI(MpiComm)
+    mpi_rank =  get_rank_MPI(MpiComm)
+    mpi_master= get_master_MPI(MpiComm)
+    !
+    !Retrieve parameters:
+    call get_ctrl_var(beta,"BETA")
+    call get_ctrl_var(xmu,"XMU")
+    !
+    if(mpi_master)then
+       !Testing part:
+       Nspin = size(Gloc,1)
+       Norb  = size(Gloc,3)
+       Lmats = size(Gloc,5)
+       Nso   = Nspin*Norb
+       !
+       call assert_shape(Gloc,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_normal_main","Gloc")
+       call assert_shape(Smats,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_normal_main","Smats")
+       call assert_shape(Weiss,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_normal_main","Weiss")
+       call assert_shape(Hloc,[Nspin,Nspin,Norb,Norb],"dmft_get_weiss_normal_main","Hloc")
+       !
+       if(allocated(wm))deallocate(wm)
+       allocate(wm(Lmats))
+       allocate(zeta_site(Nso,Nso,Lmats))
+       allocate(Smats_site(Nso,Nso,Lmats))
+       allocate(invGloc_site(Nso,Nso,Lmats))
+       allocate(calG0_site(Nso,Nso,Lmats))
+       !
+       wm = pi/beta*(2*arange(1,Lmats)-1)
+       !Dump the Gloc and the Smats into a [Norb*Nspin]^2 matrix and create the zeta_site
+       do i=1,Lmats
+          zeta_site(:,:,i)    = (xi*wm(i)+xmu)*eye(Nso) - nn2so_reshape(Hloc,Nspin,Norb) - &
+               nn2so_reshape(Smats(:,:,:,:,i),Nspin,Norb)
+          invGloc_site(:,:,i) = nn2so_reshape(Gloc(:,:,:,:,i),Nspin,Norb)
+          Smats_site(:,:,i)   = nn2so_reshape(Smats(:,:,:,:,i),Nspin,Norb)
+       enddo
+       !
+       !Invert the ilat-th site [Norb*Nspin]**2 Gloc block matrix 
+       do i=1,Lmats
+          call inv(invGloc_site(:,:,i))
+       enddo
+       !
+       ![calG0]_ilat = [ [Gloc]_ilat^-1 + [Smats]_ilat ]^-1
+       calG0_site(:,:,1:Lmats) = invGloc_site(:,:,1:Lmats) + Smats_site(:,:,1:Lmats)
+       do i=1,Lmats
+          call inv(calG0_site(:,:,i))
+       enddo
+       !
+       !Dump back the [Norb*Nspin]**2 block of the ilat-th site into the 
+       !output structure of [Nspsin,Nspin,Norb,Norb] matrix
+       do i=1,Lmats
+          Weiss(:,:,:,:,i) = so2nn_reshape(calG0_site(:,:,i),Nspin,Norb)
+       enddo
+    endif
+    call Bcast_Mpi(MpiComm,Weiss)
+    !
+  end subroutine dmft_get_weiss_normal_main_mpi
+#endif
+
 
 
   subroutine dmft_get_weiss_normal_ineq(Gloc,Smats,Weiss,Hloc)
@@ -253,7 +479,6 @@ contains
     !
   end subroutine dmft_get_weiss_normal_ineq
 
-
 #ifdef _MPI
   subroutine dmft_get_weiss_normal_ineq_mpi(MpiComm,Gloc,Smats,Weiss,Hloc)
     integer                                         :: MpiComm
@@ -271,9 +496,9 @@ contains
     integer                                         :: i,j,iorb,jorb,ispin,jspin,ilat,jlat,io,jo,js
     !
     !MPI setup:
-    mpi_size  = MPI_Get_size(MpiComm)
-    mpi_rank =  MPI_Get_rank(MpiComm)
-    mpi_master= MPI_Get_master(MpiComm)
+    mpi_size  = get_size_MPI(MpiComm)
+    mpi_rank =  get_rank_MPI(MpiComm)
+    mpi_master= get_master_MPI(MpiComm)
     !
     !Retrieve parameters:
     call get_ctrl_var(beta,"BETA")
@@ -357,9 +582,11 @@ contains
   !
   !--------------------------------------------------------------------!
   !--------------------------------------------------------------------!
-  subroutine dmft_get_weiss_superc_main(Gloc,Smats,Weiss,Hloc)
-    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Gloc         ! [2][Nspin][Nspin][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Smats        !
+  subroutine dmft_get_weiss_superc_main(Gloc,Floc,Smats,SAmats,Weiss,Hloc)
+    complex(8),dimension(:,:,:,:,:),intent(in)      :: Gloc         ! [Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:),intent(in)      :: Floc         ! [Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:),intent(in)      :: Smats        !
+    complex(8),dimension(:,:,:,:,:),intent(in)      :: SAmats        !
     complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Weiss        !
     complex(8),dimension(:,:,:,:),intent(in)        :: Hloc         ! [Nspin][Nspin][Norb][Norb]
     !aux
@@ -375,13 +602,15 @@ contains
     call get_ctrl_var(xmu,"XMU")
     !
     !Testing part:
-    Nspin = size(Gloc,2)
-    Norb  = size(Gloc,4)
-    Lmats = size(Gloc,6)
+    Nspin = size(Gloc,1)
+    Norb  = size(Gloc,3)
+    Lmats = size(Gloc,5)
     Nso   = Nspin*Norb
     Nso2  = 2*Nso
-    call assert_shape(Gloc,[2,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_main","Gloc")
-    call assert_shape(Smats,[2,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_main","Smats")
+    call assert_shape(Gloc,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_main","Gloc")
+    call assert_shape(Floc,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_main","Floc")
+    call assert_shape(Smats,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_main","Smats")
+    call assert_shape(SAmats,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_main","SAmats")
     call assert_shape(Weiss,[2,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_main","Weiss")
     call assert_shape(Hloc,[Nspin,Nspin,Norb,Norb],"dmft_get_weiss_superc_main","Hloc")
     !
@@ -409,21 +638,21 @@ contains
                 io = iorb + (ispin-1)*Norb
                 jo = jorb + (jspin-1)*Norb
                 zeta_site(io,jo,:)           = zeta_site(io,jo,:)         &
-                     - Hloc(ispin,jspin,iorb,jorb) - Smats(1,ispin,jspin,iorb,jorb,:)
-                zeta_site(io,jo+Nso,:)       =     - Smats(2,ispin,jspin,iorb,jorb,:)
-                zeta_site(io+Nso,jo,:)       =     - Smats(2,ispin,jspin,iorb,jorb,:)
+                     - Hloc(ispin,jspin,iorb,jorb) - Smats(ispin,jspin,iorb,jorb,:)
+                zeta_site(io,jo+Nso,:)       =     - SAmats(ispin,jspin,iorb,jorb,:)
+                zeta_site(io+Nso,jo,:)       =     - SAmats(ispin,jspin,iorb,jorb,:)
                 zeta_site(io+Nso,jo+Nso,:)   = zeta_site(io+Nso,jo+Nso,:) + &
-                     Hloc(ispin,jspin,iorb,jorb) + conjg(Smats(1,ispin,jspin,iorb,jorb,:))
+                     Hloc(ispin,jspin,iorb,jorb) + conjg(Smats(ispin,jspin,iorb,jorb,:))
                 !
-                invGloc_site(io,jo,:)        = Gloc(1,ispin,jspin,iorb,jorb,:)
-                invGloc_site(io,jo+Nso,:)    = Gloc(2,ispin,jspin,iorb,jorb,:)
-                invGloc_site(io+Nso,jo,:)    = Gloc(2,ispin,jspin,iorb,jorb,:)
-                invGloc_site(io+Nso,jo+Nso,:)=-conjg(Gloc(1,ispin,jspin,iorb,jorb,:))
+                invGloc_site(io,jo,:)        = Gloc(ispin,jspin,iorb,jorb,:)
+                invGloc_site(io,jo+Nso,:)    = Floc(ispin,jspin,iorb,jorb,:)
+                invGloc_site(io+Nso,jo,:)    = Floc(ispin,jspin,iorb,jorb,:)
+                invGloc_site(io+Nso,jo+Nso,:)=-conjg(Gloc(ispin,jspin,iorb,jorb,:))
                 !
-                Smats_site(io,jo,:)          = Smats(1,ispin,jspin,iorb,jorb,:)
-                Smats_site(io,jo+Nso,:)      = Smats(2,ispin,jspin,iorb,jorb,:)
-                Smats_site(io+Nso,jo,:)      = Smats(2,ispin,jspin,iorb,jorb,:)
-                Smats_site(io+Nso,jo+Nso,:)  =-conjg(Smats(1,ispin,jspin,iorb,jorb,:))
+                Smats_site(io,jo,:)          = Smats(ispin,jspin,iorb,jorb,:)
+                Smats_site(io,jo+Nso,:)      = SAmats(ispin,jspin,iorb,jorb,:)
+                Smats_site(io+Nso,jo,:)      = SAmats(ispin,jspin,iorb,jorb,:)
+                Smats_site(io+Nso,jo+Nso,:)  =-conjg(Smats(ispin,jspin,iorb,jorb,:))
              enddo
           enddo
        enddo
@@ -457,10 +686,129 @@ contains
     !
   end subroutine dmft_get_weiss_superc_main
 
+#ifdef _MPI
+  subroutine dmft_get_weiss_superc_main_mpi(MpiComm,Gloc,Floc,Smats,SAmats,Weiss,Hloc)
+    integer                                         :: MpiComm
+    complex(8),dimension(:,:,:,:,:),intent(in)      :: Gloc         ! [Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:),intent(in)      :: Floc         ! [Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:),intent(in)      :: Smats        !
+    complex(8),dimension(:,:,:,:,:),intent(in)      :: SAmats        !
+    complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Weiss        !
+    complex(8),dimension(:,:,:,:),intent(in)        :: Hloc         ! [Nspin][Nspin][Norb][Norb]
+    !aux
+    complex(8),dimension(:,:,:),allocatable         :: zeta_site    ![2*Nspin*Norb][2*Nspin*Norb][Lmats]
+    complex(8),dimension(:,:,:),allocatable         :: Smats_site   ![2*Nspin*Norb][2*Nspin*Norb][Lmats]
+    complex(8),dimension(:,:,:),allocatable         :: invGloc_site ![2*Nspin*Norb][2*Nspin*Norb][Lmats]
+    complex(8),dimension(:,:,:),allocatable         :: calG0_site   ![2*Nspin*Norb][2*Nspin*Norb][Lmats]
+    integer                                         :: Nspin,Norb,Nso,Nso2,Lmats
+    integer                                         :: i,iorb,jorb,ispin,jspin,io,jo
+    !
+    !MPI setup:
+    mpi_size  = get_size_MPI(MpiComm)
+    mpi_rank =  get_rank_MPI(MpiComm)
+    mpi_master= get_master_MPI(MpiComm)
+    !
+    if(mpi_master)then
+       !Retrieve parameters:
+       call get_ctrl_var(beta,"BETA")
+       call get_ctrl_var(xmu,"XMU")
+       !
+       !Testing part:
+       Nspin = size(Gloc,1)
+       Norb  = size(Gloc,3)
+       Lmats = size(Gloc,5)
+       Nso   = Nspin*Norb
+       Nso2  = 2*Nso
+       call assert_shape(Gloc,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_main","Gloc")
+       call assert_shape(Floc,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_main","Floc")
+       call assert_shape(Smats,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_main","Smats")
+       call assert_shape(SAmats,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_main","SAmats")
+       call assert_shape(Weiss,[2,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_main","Weiss")
+       call assert_shape(Hloc,[Nspin,Nspin,Norb,Norb],"dmft_get_weiss_superc_main","Hloc")
+       !
+       if(allocated(wm))deallocate(wm)
+       allocate(wm(Lmats))
+       allocate(zeta_site(Nso2,Nso2,Lmats))
+       allocate(Smats_site(Nso2,Nso2,Lmats))
+       allocate(invGloc_site(Nso2,Nso2,Lmats))
+       allocate(calG0_site(Nso2,Nso2,Lmats))
+       !
+       wm = pi/beta*(2*arange(1,Lmats)-1)
+       !Dump the Gloc and the Smats for the ilat-th site into a [Norb*Nspin]^2 matrix and create the zeta_site
+       zeta_site=zero
+       do ispin=1,Nspin
+          do iorb=1,Norb
+             io = iorb + (ispin-1)*Norb
+             zeta_site(io,io,:)         = xi*wm(:) + xmu 
+             zeta_site(io+Nso,io+Nso,:) = xi*wm(:) - xmu 
+          enddo
+       enddo
+       do ispin=1,Nspin
+          do jspin=1,Nspin
+             do iorb=1,Norb
+                do jorb=1,Norb
+                   io = iorb + (ispin-1)*Norb
+                   jo = jorb + (jspin-1)*Norb
+                   zeta_site(io,jo,:)           = zeta_site(io,jo,:)         &
+                        - Hloc(ispin,jspin,iorb,jorb) - Smats(ispin,jspin,iorb,jorb,:)
+                   zeta_site(io,jo+Nso,:)       =     - SAmats(ispin,jspin,iorb,jorb,:)
+                   zeta_site(io+Nso,jo,:)       =     - SAmats(ispin,jspin,iorb,jorb,:)
+                   zeta_site(io+Nso,jo+Nso,:)   = zeta_site(io+Nso,jo+Nso,:) + &
+                        Hloc(ispin,jspin,iorb,jorb) + conjg(Smats(ispin,jspin,iorb,jorb,:))
+                   !
+                   invGloc_site(io,jo,:)        = Gloc(ispin,jspin,iorb,jorb,:)
+                   invGloc_site(io,jo+Nso,:)    = Floc(ispin,jspin,iorb,jorb,:)
+                   invGloc_site(io+Nso,jo,:)    = Floc(ispin,jspin,iorb,jorb,:)
+                   invGloc_site(io+Nso,jo+Nso,:)=-conjg(Gloc(ispin,jspin,iorb,jorb,:))
+                   !
+                   Smats_site(io,jo,:)          = Smats(ispin,jspin,iorb,jorb,:)
+                   Smats_site(io,jo+Nso,:)      = SAmats(ispin,jspin,iorb,jorb,:)
+                   Smats_site(io+Nso,jo,:)      = SAmats(ispin,jspin,iorb,jorb,:)
+                   Smats_site(io+Nso,jo+Nso,:)  =-conjg(Smats(ispin,jspin,iorb,jorb,:))
+                enddo
+             enddo
+          enddo
+       enddo
+       !
+       !Invert the ilat-th site [Norb*Nspin]**2 Gloc block matrix 
+       do i=1,Lmats
+          call inv(invGloc_site(:,:,i))
+       enddo
+       !
+       ![calG0]_ilat = [ [Gloc]_ilat^-1 + [Smats]_ilat ]^-1
+       calG0_site(:,:,1:Lmats) = invGloc_site(:,:,1:Lmats) + Smats_site(:,:,1:Lmats)
+       do i=1,Lmats
+          call inv(calG0_site(:,:,i))
+       enddo
+       !
+       !Dump back the [Norb*Nspin]**2 block of the ilat-th site into the 
+       !output structure of [Nlat,Nspsin,Nspin,Norb,Norb] matrix
+       do ispin=1,Nspin
+          do jspin=1,Nspin
+             do iorb=1,Norb
+                do jorb=1,Norb
+                   io = iorb + (ispin-1)*Norb
+                   jo = jorb + (jspin-1)*Norb
+                   Weiss(1,ispin,jspin,iorb,jorb,:) = calG0_site(io,jo,:)
+                   Weiss(2,ispin,jspin,iorb,jorb,:) = calG0_site(io,jo+Nso,:)
+                enddo
+             enddo
+          enddo
+       enddo
+    endif
+    call Bcast_Mpi(MpiComm,Weiss)
+    !
+  end subroutine dmft_get_weiss_superc_main_mpi
+#endif
 
-  subroutine dmft_get_weiss_superc_ineq(Gloc,Smats,Weiss,Hloc)
-    complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Gloc         ! [2][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Smats        ! 
+
+
+
+  subroutine dmft_get_weiss_superc_ineq(Gloc,Floc,Smats,SAmats,Weiss,Hloc)
+    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Gloc         ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Floc         ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Smats        !
+    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: SAmats        ! 
     complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Weiss        ! 
     complex(8),dimension(:,:,:,:,:),intent(in)        :: Hloc         ! [Nlat][Nspin][Nspin][Norb][Norb]
     !aux
@@ -476,15 +824,17 @@ contains
     call get_ctrl_var(xmu,"XMU")
     !
     !Testing part:
-    Nlat  = size(Gloc,2)
-    Nspin = size(Gloc,3)
-    Norb  = size(Gloc,5)
-    Lmats = size(Gloc,7)
+    Nlat  = size(Gloc,1)
+    Nspin = size(Gloc,2)
+    Norb  = size(Gloc,4)
+    Lmats = size(Gloc,6)
     Nso   = Nspin*Norb
     Nso2  = 2*Nso
     Nlso  = Nlat*Nspin*Norb
-    call assert_shape(Gloc,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_ineq","Gloc")
-    call assert_shape(Smats,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_ineq","Smats")
+    call assert_shape(Gloc,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_ineq","Gloc")
+    call assert_shape(Floc,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_ineq","Floc")
+    call assert_shape(Smats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_ineq","Smats")
+    call assert_shape(SAmats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_ineq","SAmats")
     call assert_shape(Weiss,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_ineq","Weiss")
     call assert_shape(Hloc,[Nlat,Nspin,Nspin,Norb,Norb],"dmft_get_weiss_superc_ineq","Hloc")
     !
@@ -514,20 +864,20 @@ contains
                    io = iorb + (ispin-1)*Norb
                    jo = jorb + (jspin-1)*Norb
                    !
-                   zeta_site(io,jo,:)           = zeta_site(io,jo,:)         - Smats(1,ilat,ispin,jspin,iorb,jorb,:)
-                   zeta_site(io,jo+Nso,:)       =-Smats(2,ilat,ispin,jspin,iorb,jorb,:)
-                   zeta_site(io+Nso,jo,:)       =-Smats(2,ilat,ispin,jspin,iorb,jorb,:)
-                   zeta_site(io+Nso,jo+Nso,:)   = zeta_site(io+Nso,jo+Nso,:) + conjg(Smats(1,ilat,ispin,jspin,iorb,jorb,:))
+                   zeta_site(io,jo,:)           = zeta_site(io,jo,:)         - Smats(ilat,ispin,jspin,iorb,jorb,:)
+                   zeta_site(io,jo+Nso,:)       =-SAmats(ilat,ispin,jspin,iorb,jorb,:)
+                   zeta_site(io+Nso,jo,:)       =-SAmats(ilat,ispin,jspin,iorb,jorb,:)
+                   zeta_site(io+Nso,jo+Nso,:)   = zeta_site(io+Nso,jo+Nso,:) + conjg(Smats(ilat,ispin,jspin,iorb,jorb,:))
                    !
-                   invGloc_site(io,jo,:)        = Gloc(1,ilat,ispin,jspin,iorb,jorb,:)
-                   invGloc_site(io,jo+Nso,:)    = Gloc(2,ilat,ispin,jspin,iorb,jorb,:)
-                   invGloc_site(io+Nso,jo,:)    = Gloc(2,ilat,ispin,jspin,iorb,jorb,:)
-                   invGloc_site(io+Nso,jo+Nso,:)=-conjg(Gloc(1,ilat,ispin,jspin,iorb,jorb,:))
+                   invGloc_site(io,jo,:)        = Gloc(ilat,ispin,jspin,iorb,jorb,:)
+                   invGloc_site(io,jo+Nso,:)    = Floc(ilat,ispin,jspin,iorb,jorb,:)
+                   invGloc_site(io+Nso,jo,:)    = Floc(ilat,ispin,jspin,iorb,jorb,:)
+                   invGloc_site(io+Nso,jo+Nso,:)=-conjg(Gloc(ilat,ispin,jspin,iorb,jorb,:))
                    !
-                   Smats_site(io,jo,:)          = Smats(1,ilat,ispin,jspin,iorb,jorb,:)
-                   Smats_site(io,jo+Nso,:)      = Smats(2,ilat,ispin,jspin,iorb,jorb,:)
-                   Smats_site(io+Nso,jo,:)      = Smats(2,ilat,ispin,jspin,iorb,jorb,:)
-                   Smats_site(io+Nso,jo+Nso,:)  =-conjg(Smats(1,ilat,ispin,jspin,iorb,jorb,:))
+                   Smats_site(io,jo,:)          = Smats(ilat,ispin,jspin,iorb,jorb,:)
+                   Smats_site(io,jo+Nso,:)      = SAmats(ilat,ispin,jspin,iorb,jorb,:)
+                   Smats_site(io+Nso,jo,:)      = SAmats(ilat,ispin,jspin,iorb,jorb,:)
+                   Smats_site(io+Nso,jo+Nso,:)  =-conjg(Smats(ilat,ispin,jspin,iorb,jorb,:))
                 enddo
              enddo
           enddo
@@ -562,10 +912,12 @@ contains
   end subroutine dmft_get_weiss_superc_ineq
 
 #ifdef _MPI
-  subroutine dmft_get_weiss_superc_ineq_mpi(MpiComm,Gloc,Smats,Weiss,Hloc)
+  subroutine dmft_get_weiss_superc_ineq_mpi(MpiComm,Gloc,Floc,Smats,SAmats,Weiss,Hloc)
     integer                                           :: MpiComm
-    complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Gloc         ! [2][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Smats        ! 
+    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Gloc         ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Floc         ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Smats        !
+    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: SAmats        ! 
     complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Weiss        ! 
     complex(8),dimension(:,:,:,:,:),intent(in)        :: Hloc         ! [Nlat][Nspin][Nspin][Norb][Norb]
     !aux
@@ -579,24 +931,26 @@ contains
     !
     !
     !MPI setup:
-    mpi_size  = MPI_Get_size(MpiComm)
-    mpi_rank =  MPI_Get_rank(MpiComm)
-    mpi_master= MPI_Get_master(MpiComm)
+    mpi_size  = get_size_MPI(MpiComm)
+    mpi_rank =  get_rank_MPI(MpiComm)
+    mpi_master= get_master_MPI(MpiComm)
     !
     !Retrieve parameters:
     call get_ctrl_var(beta,"BETA")
     call get_ctrl_var(xmu,"XMU")
     !
     !Testing part:
-    Nlat  = size(Gloc,2)
-    Nspin = size(Gloc,3)
-    Norb  = size(Gloc,5)
-    Lmats = size(Gloc,7)
+    Nlat  = size(Gloc,1)
+    Nspin = size(Gloc,2)
+    Norb  = size(Gloc,4)
+    Lmats = size(Gloc,6)
     Nso   = Nspin*Norb
     Nso2  = 2*Nso
     Nlso  = Nlat*Nspin*Norb
-    call assert_shape(Gloc,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_ineq_mpi","Gloc")
-    call assert_shape(Smats,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_ineq_mpi","Smats")
+    call assert_shape(Gloc,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_ineq_mpi","Gloc")
+    call assert_shape(Floc,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_ineq_mpi","Floc")
+    call assert_shape(Smats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_ineq_mpi","Smats")
+    call assert_shape(SAmats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_ineq_mpi","SAmats")
     call assert_shape(Weiss,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_superc_ineq_mpi","Weiss")
     call assert_shape(Hloc,[Nlat,Nspin,Nspin,Norb,Norb],"dmft_get_weiss_superc_ineq_mpi","Hloc")
     !
@@ -628,20 +982,20 @@ contains
                    io = iorb + (ispin-1)*Norb
                    jo = jorb + (jspin-1)*Norb
                    !
-                   zeta_site(io,jo,:)           = zeta_site(io,jo,:)         - Smats(1,ilat,ispin,jspin,iorb,jorb,:)
-                   zeta_site(io,jo+Nso,:)       =-Smats(2,ilat,ispin,jspin,iorb,jorb,:)
-                   zeta_site(io+Nso,jo,:)       =-Smats(2,ilat,ispin,jspin,iorb,jorb,:)
-                   zeta_site(io+Nso,jo+Nso,:)   = zeta_site(io+Nso,jo+Nso,:) + conjg(Smats(1,ilat,ispin,jspin,iorb,jorb,:))
+                   zeta_site(io,jo,:)           = zeta_site(io,jo,:)         - Smats(ilat,ispin,jspin,iorb,jorb,:)
+                   zeta_site(io,jo+Nso,:)       =-SAmats(ilat,ispin,jspin,iorb,jorb,:)
+                   zeta_site(io+Nso,jo,:)       =-SAmats(ilat,ispin,jspin,iorb,jorb,:)
+                   zeta_site(io+Nso,jo+Nso,:)   = zeta_site(io+Nso,jo+Nso,:) + conjg(Smats(ilat,ispin,jspin,iorb,jorb,:))
                    !
-                   invGloc_site(io,jo,:)        = Gloc(1,ilat,ispin,jspin,iorb,jorb,:)
-                   invGloc_site(io,jo+Nso,:)    = Gloc(2,ilat,ispin,jspin,iorb,jorb,:)
-                   invGloc_site(io+Nso,jo,:)    = Gloc(2,ilat,ispin,jspin,iorb,jorb,:)
-                   invGloc_site(io+Nso,jo+Nso,:)=-conjg(Gloc(1,ilat,ispin,jspin,iorb,jorb,:))
+                   invGloc_site(io,jo,:)        = Gloc(ilat,ispin,jspin,iorb,jorb,:)
+                   invGloc_site(io,jo+Nso,:)    = Floc(ilat,ispin,jspin,iorb,jorb,:)
+                   invGloc_site(io+Nso,jo,:)    = Floc(ilat,ispin,jspin,iorb,jorb,:)
+                   invGloc_site(io+Nso,jo+Nso,:)=-conjg(Gloc(ilat,ispin,jspin,iorb,jorb,:))
                    !
-                   Smats_site(io,jo,:)          = Smats(1,ilat,ispin,jspin,iorb,jorb,:)
-                   Smats_site(io,jo+Nso,:)      = Smats(2,ilat,ispin,jspin,iorb,jorb,:)
-                   Smats_site(io+Nso,jo,:)      = Smats(2,ilat,ispin,jspin,iorb,jorb,:)
-                   Smats_site(io+Nso,jo+Nso,:)  =-conjg(Smats(1,ilat,ispin,jspin,iorb,jorb,:))
+                   Smats_site(io,jo,:)          = Smats(ilat,ispin,jspin,iorb,jorb,:)
+                   Smats_site(io,jo+Nso,:)      = SAmats(ilat,ispin,jspin,iorb,jorb,:)
+                   Smats_site(io+Nso,jo,:)      = SAmats(ilat,ispin,jspin,iorb,jorb,:)
+                   Smats_site(io+Nso,jo+Nso,:)  =-conjg(Smats(ilat,ispin,jspin,iorb,jorb,:))
                 enddo
              enddo
           enddo
@@ -691,11 +1045,11 @@ contains
 
   !--------------------------------------------------------------------!
   !PURPOSE: Get the local Hybridization \Delta functino using 
-  ! self-consistency equations and given G_loc and Sigma.
+  ! equations and given G_loc/F_loc and Sigma/Self
   ! INPUT:
-  ! 1. GLOC  : ([2][Nlat])[Nspin][Nspin][Norb][Norb][Lmats]
-  ! 2. Sigma : ([2][Nlat])[Nspin][Nspin][Norb][Norb][Lmats]
-  ! 4. Hloc  : local part of the non-interacting Hamiltonian
+  ! 1. GLOC/FLOC  : ([Nlat])[Nspin][Nspin][Norb][Norb][Lmats]
+  ! 2. Sigma/SELF : ([Nlat])[Nspin][Nspin][Norb][Norb][Lmats]
+  ! 4. Hloc       : local part of the non-interacting Hamiltonian
   !--------------------------------------------------------------------!
   !--------------------------------------------------------------------!
   !--------------------------------------------------------------------!
@@ -761,6 +1115,80 @@ contains
     enddo
     !
   end subroutine dmft_get_delta_normal_main
+
+
+
+#ifdef _MPI
+  subroutine dmft_get_delta_normal_main_mpi(MpiComm,Gloc,Smats,Delta,Hloc)
+    integer                                       :: MpiComm
+    complex(8),dimension(:,:,:,:,:),intent(in)    :: Gloc  ! [Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:),intent(in)    :: Smats ! [Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:),intent(inout) :: Delta ! [Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:),intent(in)      :: Hloc  ! [Nspin][Nspin][Norb][Norb]
+    !aux
+    complex(8),dimension(:,:,:),allocatable       :: zeta_site ![Nspin*Norb][Nspin*Norb][Lmats]
+    complex(8),dimension(:,:,:),allocatable       :: Smats_site![Nspin*Norb][Nspin*Norb][Lmats]
+    complex(8),dimension(:,:,:),allocatable       :: invGloc_site![Nspin*Norb][Nspin*Norb][Lmats]
+    complex(8),dimension(:,:,:),allocatable       :: calG0_site![Nspin*Norb][Nspin*Norb][Lmats]
+    integer                                       :: Nspin,Norb,Nso,Lmats
+    integer                                       :: i,iorb,jorb,ispin,jspin,io,jo
+    !
+    !MPI setup:
+    mpi_size  = get_size_MPI(MpiComm)
+    mpi_rank =  get_rank_MPI(MpiComm)
+    mpi_master= get_master_MPI(MpiComm)
+    !
+    if(mpi_master)then
+       !Retrieve parameters:
+       call get_ctrl_var(beta,"BETA")
+       call get_ctrl_var(xmu,"XMU")
+       !
+       !Testing part:
+       Nspin = size(Gloc,1)
+       Norb  = size(Gloc,3)
+       Lmats = size(Gloc,5)
+       Nso   = Nspin*Norb
+       call assert_shape(Gloc,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_normal_main","Gloc")
+       call assert_shape(Smats,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_normal_main","Smats")
+       call assert_shape(Delta,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_normal_main","Delta")
+       call assert_shape(Hloc,[Nspin,Nspin,Norb,Norb],"dmft_get_delta_normal_main","Hloc")
+       !
+       if(allocated(wm))deallocate(wm)
+       allocate(wm(Lmats))
+       allocate(zeta_site(Nso,Nso,Lmats))
+       allocate(Smats_site(Nso,Nso,Lmats))
+       allocate(invGloc_site(Nso,Nso,Lmats))
+       allocate(calG0_site(Nso,Nso,Lmats))
+       !
+       wm = pi/beta*(2*arange(1,Lmats)-1)
+       !Dump the Gloc and the Smats into a [Norb*Nspin]^2 matrix and create the zeta_site
+       do i=1,Lmats
+          zeta_site(:,:,i)    = (xi*wm(i)+xmu)*eye(Nso) - nn2so_reshape(Hloc,Nspin,Norb) - &
+               nn2so_reshape(Smats(:,:,:,:,i),Nspin,Norb)
+          invGloc_site(:,:,i) = nn2so_reshape(Gloc(:,:,:,:,i),Nspin,Norb)
+          Smats_site(:,:,i)   = nn2so_reshape(Smats(:,:,:,:,i),Nspin,Norb)
+       enddo
+       !
+       !Invert the ilat-th site [Norb*Nspin]**2 Gloc block matrix 
+       do i=1,Lmats
+          call inv(invGloc_site(:,:,i))
+       enddo
+       !
+       ! [Delta]_ilat = [Zeta-Hloc-Sigma]_ilat - [Gloc]_ilat^-1
+       calG0_site(:,:,1:Lmats) = zeta_site(:,:,1:Lmats) - invGloc_site(:,:,1:Lmats)
+       !
+       !Dump back the [Norb*Nspin]**2 block of the ilat-th site into the 
+       !output structure of [Nspsin,Nspin,Norb,Norb] matrix
+       do i=1,Lmats
+          Delta(:,:,:,:,i) = so2nn_reshape(calG0_site(:,:,i),Nspin,Norb)
+       enddo
+    endif
+    call Bcast_Mpi(MpiComm,Delta)
+    !
+  end subroutine dmft_get_delta_normal_main_mpi
+#endif
+
+
 
   subroutine dmft_get_delta_normal_ineq(Gloc,Smats,Delta,Hloc)
     complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Gloc         ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
@@ -853,9 +1281,9 @@ contains
     integer                                         :: i,j,iorb,jorb,ispin,jspin,ilat,jlat,io,jo,js
     !
     !MPI setup:
-    mpi_size  = MPI_Get_size(MpiComm)
-    mpi_rank =  MPI_Get_rank(MpiComm)
-    mpi_master= MPI_Get_master(MpiComm)
+    mpi_size  = get_size_MPI(MpiComm)
+    mpi_rank =  get_rank_MPI(MpiComm)
+    mpi_master= get_master_MPI(MpiComm)
     !
     !Retrieve parameters:
     call get_ctrl_var(beta,"BETA")
@@ -934,9 +1362,11 @@ contains
   !
   !--------------------------------------------------------------------!
   !--------------------------------------------------------------------!
-  subroutine dmft_get_delta_superc_main(Gloc,Smats,Delta,Hloc)
-    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Gloc         ! [2][Nspin][Nspin][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Smats        !
+  subroutine dmft_get_delta_superc_main(Gloc,Floc,Smats,SAmats,Delta,Hloc)
+    complex(8),dimension(:,:,:,:,:),intent(in)      :: Gloc         ! [Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:),intent(in)      :: Floc         ! [Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:),intent(in)      :: Smats        !
+    complex(8),dimension(:,:,:,:,:),intent(in)      :: SAmats        !
     complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Delta        !
     complex(8),dimension(:,:,:,:),intent(in)        :: Hloc         ! [Nspin][Nspin][Norb][Norb]
     !aux
@@ -952,13 +1382,15 @@ contains
     call get_ctrl_var(xmu,"XMU")
     !
     !Testing part:
-    Nspin = size(Gloc,2)
-    Norb  = size(Gloc,4)
-    Lmats = size(Gloc,6)
+    Nspin = size(Gloc,1)
+    Norb  = size(Gloc,3)
+    Lmats = size(Gloc,5)
     Nso   = Nspin*Norb
     Nso2  = 2*Nso
-    call assert_shape(Gloc,[2,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_main","Gloc")
-    call assert_shape(Smats,[2,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_main","Smats")
+    call assert_shape(Gloc,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_main","Gloc")
+    call assert_shape(Floc,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_main","Floc")
+    call assert_shape(Smats,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_main","Smats")
+    call assert_shape(SAmats,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_main","SAmats")
     call assert_shape(Delta,[2,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_main","Delta")
     call assert_shape(Hloc,[Nspin,Nspin,Norb,Norb],"dmft_get_delta_superc_main","Hloc")
     !
@@ -986,21 +1418,21 @@ contains
                 io = iorb + (ispin-1)*Norb
                 jo = jorb + (jspin-1)*Norb
                 zeta_site(io,jo,:)           = zeta_site(io,jo,:)         - &
-                     Hloc(ispin,jspin,iorb,jorb) - Smats(1,ispin,jspin,iorb,jorb,:)
-                zeta_site(io,jo+Nso,:)       =  - Smats(2,ispin,jspin,iorb,jorb,:)
-                zeta_site(io+Nso,jo,:)       =  - Smats(2,ispin,jspin,iorb,jorb,:)
+                     Hloc(ispin,jspin,iorb,jorb) - Smats(ispin,jspin,iorb,jorb,:)
+                zeta_site(io,jo+Nso,:)       =  - SAmats(ispin,jspin,iorb,jorb,:)
+                zeta_site(io+Nso,jo,:)       =  - SAmats(ispin,jspin,iorb,jorb,:)
                 zeta_site(io+Nso,jo+Nso,:)   = zeta_site(io+Nso,jo+Nso,:) + &
-                     Hloc(ispin,jspin,iorb,jorb) + conjg(Smats(1,ispin,jspin,iorb,jorb,:))
+                     Hloc(ispin,jspin,iorb,jorb) + conjg(Smats(ispin,jspin,iorb,jorb,:))
                 !
-                invGloc_site(io,jo,:)        = Gloc(1,ispin,jspin,iorb,jorb,:)
-                invGloc_site(io,jo+Nso,:)    = Gloc(2,ispin,jspin,iorb,jorb,:)
-                invGloc_site(io+Nso,jo,:)    = Gloc(2,ispin,jspin,iorb,jorb,:)
-                invGloc_site(io+Nso,jo+Nso,:)=-conjg(Gloc(1,ispin,jspin,iorb,jorb,:))
+                invGloc_site(io,jo,:)        = Gloc(ispin,jspin,iorb,jorb,:)
+                invGloc_site(io,jo+Nso,:)    = Floc(ispin,jspin,iorb,jorb,:)
+                invGloc_site(io+Nso,jo,:)    = Floc(ispin,jspin,iorb,jorb,:)
+                invGloc_site(io+Nso,jo+Nso,:)=-conjg(Gloc(ispin,jspin,iorb,jorb,:))
                 !
-                Smats_site(io,jo,:)          = Smats(1,ispin,jspin,iorb,jorb,:)
-                Smats_site(io,jo+Nso,:)      = Smats(2,ispin,jspin,iorb,jorb,:)
-                Smats_site(io+Nso,jo,:)      = Smats(2,ispin,jspin,iorb,jorb,:)
-                Smats_site(io+Nso,jo+Nso,:)  =-conjg(Smats(1,ispin,jspin,iorb,jorb,:))
+                Smats_site(io,jo,:)          = Smats(ispin,jspin,iorb,jorb,:)
+                Smats_site(io,jo+Nso,:)      = SAmats(ispin,jspin,iorb,jorb,:)
+                Smats_site(io+Nso,jo,:)      = SAmats(ispin,jspin,iorb,jorb,:)
+                Smats_site(io+Nso,jo+Nso,:)  =-conjg(Smats(ispin,jspin,iorb,jorb,:))
              enddo
           enddo
        enddo
@@ -1032,9 +1464,125 @@ contains
     !
   end subroutine dmft_get_delta_superc_main
 
-  subroutine dmft_get_delta_superc_ineq(Gloc,Smats,Delta,Hloc)
-    complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Gloc         ! [2][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Smats        ! 
+#ifdef _MPI
+  subroutine dmft_get_delta_superc_main_mpi(MpiComm,Gloc,Floc,Smats,SAmats,Delta,Hloc)
+    integer                                         :: MpiComm
+    complex(8),dimension(:,:,:,:,:),intent(in)      :: Gloc         ! [Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:),intent(in)      :: Floc         ! [Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:),intent(in)      :: Smats        !
+    complex(8),dimension(:,:,:,:,:),intent(in)      :: SAmats        !
+    complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Delta        !
+    complex(8),dimension(:,:,:,:),intent(in)        :: Hloc         ! [Nspin][Nspin][Norb][Norb]
+    !aux
+    complex(8),dimension(:,:,:),allocatable         :: zeta_site    ![2*Nspin*Norb][2*Nspin*Norb][Lmats]
+    complex(8),dimension(:,:,:),allocatable         :: Smats_site   ![2*Nspin*Norb][2*Nspin*Norb][Lmats]
+    complex(8),dimension(:,:,:),allocatable         :: invGloc_site ![2*Nspin*Norb][2*Nspin*Norb][Lmats]
+    complex(8),dimension(:,:,:),allocatable         :: calG0_site   ![2*Nspin*Norb][2*Nspin*Norb][Lmats]
+    integer                                         :: Nspin,Norb,Nso,Nso2,Lmats
+    integer                                         :: i,iorb,jorb,ispin,jspin,io,jo
+    !
+    !MPI setup:
+    mpi_size  = get_size_MPI(MpiComm)
+    mpi_rank =  get_rank_MPI(MpiComm)
+    mpi_master= get_master_MPI(MpiComm)
+    !
+    if(mpi_master)then
+       !Retrieve parameters:
+       call get_ctrl_var(beta,"BETA")
+       call get_ctrl_var(xmu,"XMU")
+       !
+       !Testing part:
+       Nspin = size(Gloc,1)
+       Norb  = size(Gloc,3)
+       Lmats = size(Gloc,5)
+       Nso   = Nspin*Norb
+       Nso2  = 2*Nso
+       call assert_shape(Gloc,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_main_mpi","Gloc")
+       call assert_shape(Floc,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_main_mpi","Floc")
+       call assert_shape(Smats,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_main_mpi","Smats")
+       call assert_shape(SAmats,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_main_mpi","SAmats")
+       call assert_shape(Delta,[2,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_main_mpi","Delta")
+       call assert_shape(Hloc,[Nspin,Nspin,Norb,Norb],"dmft_get_delta_superc_main_mpi","Hloc")
+       !
+       if(allocated(wm))deallocate(wm)
+       allocate(wm(Lmats))
+       allocate(zeta_site(Nso2,Nso2,Lmats))
+       allocate(Smats_site(Nso2,Nso2,Lmats))
+       allocate(invGloc_site(Nso2,Nso2,Lmats))
+       allocate(calG0_site(Nso2,Nso2,Lmats))
+       !
+       wm = pi/beta*(2*arange(1,Lmats)-1)
+       !Dump the Gloc and the Smats for the ilat-th site into a [Norb*Nspin]^2 matrix and create the zeta_site
+       zeta_site=zero
+       do ispin=1,Nspin
+          do iorb=1,Norb
+             io = iorb + (ispin-1)*Norb
+             zeta_site(io,io,:)         = xi*wm(:) + xmu 
+             zeta_site(io+Nso,io+Nso,:) = xi*wm(:) - xmu 
+          enddo
+       enddo
+       do ispin=1,Nspin
+          do jspin=1,Nspin
+             do iorb=1,Norb
+                do jorb=1,Norb
+                   io = iorb + (ispin-1)*Norb
+                   jo = jorb + (jspin-1)*Norb
+                   zeta_site(io,jo,:)           = zeta_site(io,jo,:)         - &
+                        Hloc(ispin,jspin,iorb,jorb) - Smats(ispin,jspin,iorb,jorb,:)
+                   zeta_site(io,jo+Nso,:)       =  - SAmats(ispin,jspin,iorb,jorb,:)
+                   zeta_site(io+Nso,jo,:)       =  - SAmats(ispin,jspin,iorb,jorb,:)
+                   zeta_site(io+Nso,jo+Nso,:)   = zeta_site(io+Nso,jo+Nso,:) + &
+                        Hloc(ispin,jspin,iorb,jorb) + conjg(Smats(ispin,jspin,iorb,jorb,:))
+                   !
+                   invGloc_site(io,jo,:)        = Gloc(ispin,jspin,iorb,jorb,:)
+                   invGloc_site(io,jo+Nso,:)    = Floc(ispin,jspin,iorb,jorb,:)
+                   invGloc_site(io+Nso,jo,:)    = Floc(ispin,jspin,iorb,jorb,:)
+                   invGloc_site(io+Nso,jo+Nso,:)=-conjg(Gloc(ispin,jspin,iorb,jorb,:))
+                   !
+                   Smats_site(io,jo,:)          = Smats(ispin,jspin,iorb,jorb,:)
+                   Smats_site(io,jo+Nso,:)      = SAmats(ispin,jspin,iorb,jorb,:)
+                   Smats_site(io+Nso,jo,:)      = SAmats(ispin,jspin,iorb,jorb,:)
+                   Smats_site(io+Nso,jo+Nso,:)  =-conjg(Smats(ispin,jspin,iorb,jorb,:))
+                enddo
+             enddo
+          enddo
+       enddo
+       !
+       !Invert the ilat-th site [Norb*Nspin]**2 Gloc block matrix 
+       do i=1,Lmats
+          call inv(invGloc_site(:,:,i))
+       enddo
+       !
+       ! [Delta]_ilat = [Zeta-Hloc-Sigma]_ilat - [Hloc]_ilat - [Gloc]_ilat^-1
+       calG0_site(:,:,1:Lmats) = zeta_site(:,:,1:Lmats) - invGloc_site(:,:,1:Lmats)
+       !
+       !Dump back the [Norb*Nspin]**2 block of the ilat-th site into the 
+       !output structure of [Nlat,Nspsin,Nspin,Norb,Norb] matrix
+       do ispin=1,Nspin
+          do jspin=1,Nspin
+             do iorb=1,Norb
+                do jorb=1,Norb
+                   io = iorb + (ispin-1)*Norb
+                   jo = jorb + (jspin-1)*Norb
+                   Delta(1,ispin,jspin,iorb,jorb,:) = calG0_site(io,jo,:)
+                   Delta(2,ispin,jspin,iorb,jorb,:) = calG0_site(io,jo+Nso,:)
+                enddo
+             enddo
+          enddo
+       enddo
+    endif
+    call Bcast_Mpi(MpiComm,Delta)
+    !
+    !
+  end subroutine dmft_get_delta_superc_main_mpi
+#endif
+
+
+  subroutine dmft_get_delta_superc_ineq(Gloc,Floc,Smats,SAmats,Delta,Hloc)
+    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Gloc         ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Floc         ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Smats        !
+    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: SAmats        ! 
     complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Delta        ! 
     complex(8),dimension(:,:,:,:,:),intent(in)        :: Hloc         ! [Nlat][Nspin][Nspin][Norb][Norb]
     !aux
@@ -1050,15 +1598,17 @@ contains
     call get_ctrl_var(xmu,"XMU")
     !
     !Testing part:
-    Nlat  = size(Gloc,2)
-    Nspin = size(Gloc,3)
-    Norb  = size(Gloc,5)
-    Lmats = size(Gloc,7)
+    Nlat  = size(Gloc,1)
+    Nspin = size(Gloc,2)
+    Norb  = size(Gloc,4)
+    Lmats = size(Gloc,6)
     Nso   = Nspin*Norb
     Nso2  = 2*Nso
     Nlso  = Nlat*Nspin*Norb
-    call assert_shape(Gloc,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_ineq","Gloc")
-    call assert_shape(Smats,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_ineq","Smats")
+    call assert_shape(Gloc,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_ineq","Gloc")
+    call assert_shape(Floc,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_ineq","Floc")
+    call assert_shape(Smats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_ineq","Smats")
+    call assert_shape(SAmats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_ineq","SAmats")
     call assert_shape(Delta,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_ineq","Delta")
     call assert_shape(Hloc,[Nlat,Nspin,Nspin,Norb,Norb],"dmft_get_delta_superc_ineq","Hloc")
     !
@@ -1088,20 +1638,20 @@ contains
                    io = iorb + (ispin-1)*Norb
                    jo = jorb + (jspin-1)*Norb
                    !
-                   zeta_site(io,jo,:)           = zeta_site(io,jo,:)         - Smats(1,ilat,ispin,jspin,iorb,jorb,:)
-                   zeta_site(io,jo+Nso,:)       =-Smats(2,ilat,ispin,jspin,iorb,jorb,:)
-                   zeta_site(io+Nso,jo,:)       =-Smats(2,ilat,ispin,jspin,iorb,jorb,:)
-                   zeta_site(io+Nso,jo+Nso,:)   = zeta_site(io+Nso,jo+Nso,:) + conjg(Smats(1,ilat,ispin,jspin,iorb,jorb,:))
+                   zeta_site(io,jo,:)           = zeta_site(io,jo,:)         - Smats(ilat,ispin,jspin,iorb,jorb,:)
+                   zeta_site(io,jo+Nso,:)       =-SAmats(ilat,ispin,jspin,iorb,jorb,:)
+                   zeta_site(io+Nso,jo,:)       =-SAmats(ilat,ispin,jspin,iorb,jorb,:)
+                   zeta_site(io+Nso,jo+Nso,:)   = zeta_site(io+Nso,jo+Nso,:) + conjg(Smats(ilat,ispin,jspin,iorb,jorb,:))
                    !
-                   invGloc_site(io,jo,:)        = Gloc(1,ilat,ispin,jspin,iorb,jorb,:)
-                   invGloc_site(io,jo+Nso,:)    = Gloc(2,ilat,ispin,jspin,iorb,jorb,:)
-                   invGloc_site(io+Nso,jo,:)    = Gloc(2,ilat,ispin,jspin,iorb,jorb,:)
-                   invGloc_site(io+Nso,jo+Nso,:)=-conjg(Gloc(1,ilat,ispin,jspin,iorb,jorb,:))
+                   invGloc_site(io,jo,:)        = Gloc(ilat,ispin,jspin,iorb,jorb,:)
+                   invGloc_site(io,jo+Nso,:)    = Floc(ilat,ispin,jspin,iorb,jorb,:)
+                   invGloc_site(io+Nso,jo,:)    = Floc(ilat,ispin,jspin,iorb,jorb,:)
+                   invGloc_site(io+Nso,jo+Nso,:)=-conjg(Gloc(ilat,ispin,jspin,iorb,jorb,:))
                    !
-                   Smats_site(io,jo,:)          = Smats(1,ilat,ispin,jspin,iorb,jorb,:)
-                   Smats_site(io,jo+Nso,:)      = Smats(2,ilat,ispin,jspin,iorb,jorb,:)
-                   Smats_site(io+Nso,jo,:)      = Smats(2,ilat,ispin,jspin,iorb,jorb,:)
-                   Smats_site(io+Nso,jo+Nso,:)  =-conjg(Smats(1,ilat,ispin,jspin,iorb,jorb,:))
+                   Smats_site(io,jo,:)          = Smats(ilat,ispin,jspin,iorb,jorb,:)
+                   Smats_site(io,jo+Nso,:)      = SAmats(ilat,ispin,jspin,iorb,jorb,:)
+                   Smats_site(io+Nso,jo,:)      = SAmats(ilat,ispin,jspin,iorb,jorb,:)
+                   Smats_site(io+Nso,jo+Nso,:)  =-conjg(Smats(ilat,ispin,jspin,iorb,jorb,:))
                 enddo
              enddo
           enddo
@@ -1133,10 +1683,12 @@ contains
   end subroutine dmft_get_delta_superc_ineq
 
 #ifdef _MPI
-  subroutine dmft_get_delta_superc_ineq_mpi(MpiComm,Gloc,Smats,Delta,Hloc)
+  subroutine dmft_get_delta_superc_ineq_mpi(MpiComm,Gloc,Floc,Smats,SAmats,Delta,Hloc)
     integer                                           :: MpiComm
-    complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Gloc         ! [2][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Smats        ! 
+    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Gloc         ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Floc         ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Smats        !
+    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: SAmats        ! 
     complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Delta        ! 
     complex(8),dimension(:,:,:,:,:),intent(in)        :: Hloc         ! [Nlat][Nspin][Nspin][Norb][Norb]
     !aux
@@ -1150,24 +1702,26 @@ contains
     !
     !
     !MPI setup:
-    mpi_size  = MPI_Get_size(MpiComm)
-    mpi_rank =  MPI_Get_rank(MpiComm)
-    mpi_master= MPI_Get_master(MpiComm)
+    mpi_size  = get_size_MPI(MpiComm)
+    mpi_rank =  get_rank_MPI(MpiComm)
+    mpi_master= get_master_MPI(MpiComm)
     !
     !Retrieve parameters:
     call get_ctrl_var(beta,"BETA")
     call get_ctrl_var(xmu,"XMU")
     !
     !Testing part:
-    Nlat  = size(Gloc,2)
-    Nspin = size(Gloc,3)
-    Norb  = size(Gloc,5)
-    Lmats = size(Gloc,7)
+    Nlat  = size(Gloc,1)
+    Nspin = size(Gloc,2)
+    Norb  = size(Gloc,4)
+    Lmats = size(Gloc,6)
     Nso   = Nspin*Norb
     Nso2  = 2*Nso
     Nlso  = Nlat*Nspin*Norb
-    call assert_shape(Gloc,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_ineq_mpi","Gloc")
-    call assert_shape(Smats,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_ineq_mpi","Smats")
+    call assert_shape(Gloc,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_ineq_mpi","Gloc")
+    call assert_shape(Floc,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_ineq_mpi","Floc")
+    call assert_shape(Smats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_ineq_mpi","Smats")
+    call assert_shape(SAmats,[Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_ineq_mpi","SAmats")
     call assert_shape(Delta,[2,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_delta_superc_ineq_mpi","Delta")
     call assert_shape(Hloc,[Nlat,Nspin,Nspin,Norb,Norb],"dmft_get_delta_superc_ineq_mpi","Hloc")
     !
@@ -1199,20 +1753,20 @@ contains
                    io = iorb + (ispin-1)*Norb
                    jo = jorb + (jspin-1)*Norb
                    !
-                   zeta_site(io,jo,:)           = zeta_site(io,jo,:)         - Smats(1,ilat,ispin,jspin,iorb,jorb,:)
-                   zeta_site(io,jo+Nso,:)       =-Smats(2,ilat,ispin,jspin,iorb,jorb,:)
-                   zeta_site(io+Nso,jo,:)       =-Smats(2,ilat,ispin,jspin,iorb,jorb,:)
-                   zeta_site(io+Nso,jo+Nso,:)   = zeta_site(io+Nso,jo+Nso,:) + conjg(Smats(1,ilat,ispin,jspin,iorb,jorb,:))
+                   zeta_site(io,jo,:)           = zeta_site(io,jo,:)         - Smats(ilat,ispin,jspin,iorb,jorb,:)
+                   zeta_site(io,jo+Nso,:)       =-SAmats(ilat,ispin,jspin,iorb,jorb,:)
+                   zeta_site(io+Nso,jo,:)       =-SAmats(ilat,ispin,jspin,iorb,jorb,:)
+                   zeta_site(io+Nso,jo+Nso,:)   = zeta_site(io+Nso,jo+Nso,:) + conjg(Smats(ilat,ispin,jspin,iorb,jorb,:))
                    !
-                   invGloc_site(io,jo,:)        = Gloc(1,ilat,ispin,jspin,iorb,jorb,:)
-                   invGloc_site(io,jo+Nso,:)    = Gloc(2,ilat,ispin,jspin,iorb,jorb,:)
-                   invGloc_site(io+Nso,jo,:)    = Gloc(2,ilat,ispin,jspin,iorb,jorb,:)
-                   invGloc_site(io+Nso,jo+Nso,:)=-conjg(Gloc(1,ilat,ispin,jspin,iorb,jorb,:))
+                   invGloc_site(io,jo,:)        = Gloc(ilat,ispin,jspin,iorb,jorb,:)
+                   invGloc_site(io,jo+Nso,:)    = Floc(ilat,ispin,jspin,iorb,jorb,:)
+                   invGloc_site(io+Nso,jo,:)    = Floc(ilat,ispin,jspin,iorb,jorb,:)
+                   invGloc_site(io+Nso,jo+Nso,:)=-conjg(Gloc(ilat,ispin,jspin,iorb,jorb,:))
                    !
-                   Smats_site(io,jo,:)          = Smats(1,ilat,ispin,jspin,iorb,jorb,:)
-                   Smats_site(io,jo+Nso,:)      = Smats(2,ilat,ispin,jspin,iorb,jorb,:)
-                   Smats_site(io+Nso,jo,:)      = Smats(2,ilat,ispin,jspin,iorb,jorb,:)
-                   Smats_site(io+Nso,jo+Nso,:)  =-conjg(Smats(1,ilat,ispin,jspin,iorb,jorb,:))
+                   Smats_site(io,jo,:)          = Smats(ilat,ispin,jspin,iorb,jorb,:)
+                   Smats_site(io,jo+Nso,:)      = SAmats(ilat,ispin,jspin,iorb,jorb,:)
+                   Smats_site(io+Nso,jo,:)      = SAmats(ilat,ispin,jspin,iorb,jorb,:)
+                   Smats_site(io+Nso,jo+Nso,:)  =-conjg(Smats(ilat,ispin,jspin,iorb,jorb,:))
                 enddo
              enddo
           enddo
@@ -1249,40 +1803,6 @@ contains
 
 
 
-
-
-
-
-
-
-
-
-#ifdef _MPI
-  function MPI_Get_size(comm) result(size)
-    integer :: comm
-    integer :: size,ierr
-    call MPI_Comm_size(comm,size,ierr)
-  end function MPI_Get_size
-
-
-
-  function MPI_Get_rank(comm) result(rank)
-    integer :: comm
-    integer :: rank,ierr
-    call MPI_Comm_rank(comm,rank,ierr)
-  end function MPI_Get_rank
-
-
-
-  function MPI_Get_master(comm) result(master)
-    integer :: comm
-    logical :: master
-    integer :: rank,ierr
-    call MPI_Comm_rank(comm,rank,ierr)
-    master=.false.
-    if(rank==0)master=.true.
-  end function MPI_Get_master
-#endif
 
 
 

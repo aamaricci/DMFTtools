@@ -22,11 +22,13 @@ subroutine build_hk_model_kgrid_d(Hk,hk_model,Norb,kgrid,wdos)
      Hk(:,:,ik) = hk_model(kgrid(ik,:),Norb)
   enddo
   !
-  allocate(dos_Greal(1,1,1,Norb,Norb,dos_Lreal))
-  allocate(dos_wtk(Nktot))
-  dos_wtk=1d0/Nktot
-  call dmft_gloc_realaxis(one*Hk,dos_wtk,dos_Greal,zeros(1,1,1,Norb,Norb,dos_Lreal))
-  call dmft_print_gf_realaxis(dos_Greal(1,:,:,:,:,:),trim(dos_file),iprint=1)
+  if(wdos_)then
+     allocate(dos_Greal(1,1,1,Norb,Norb,dos_Lreal))
+     allocate(dos_wtk(Nktot))
+     dos_wtk=1d0/Nktot
+     call dmft_gloc_realaxis(one*Hk,dos_wtk,dos_Greal,zeros(1,1,1,Norb,Norb,dos_Lreal))
+     call dmft_print_gf_realaxis(dos_Greal(1,:,:,:,:,:),trim(dos_file),iprint=1)
+  endif
 end subroutine build_hk_model_kgrid_d
 
 subroutine build_hk_model_kgrid_c(Hk,hk_model,Norb,kgrid,wdos) 
@@ -53,11 +55,13 @@ subroutine build_hk_model_kgrid_c(Hk,hk_model,Norb,kgrid,wdos)
      Hk(:,:,ik) = hk_model(kgrid(ik,:),Norb)
   enddo
   !
-  allocate(dos_Greal(1,1,1,Norb,Norb,dos_Lreal))
-  allocate(dos_wtk(Nktot))
-  dos_wtk=1d0/Nktot
-  call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(1,1,1,Norb,Norb,dos_Lreal))
-  call dmft_print_gf_realaxis(dos_Greal(1,:,:,:,:,:),trim(dos_file),iprint=1)
+  if(wdos_)then
+     allocate(dos_Greal(1,1,1,Norb,Norb,dos_Lreal))
+     allocate(dos_wtk(Nktot))
+     dos_wtk=1d0/Nktot
+     call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(1,1,1,Norb,Norb,dos_Lreal))
+     call dmft_print_gf_realaxis(dos_Greal(1,:,:,:,:,:),trim(dos_file),iprint=1)
+  endif
 end subroutine build_hk_model_kgrid_c
 
 
@@ -95,11 +99,13 @@ subroutine build_hk_model_nkvec_d(Hk,hk_model,Norb,Nkvec,wdos)
      Hk(:,:,ik) = hk_model(kgrid(ik,:),Norb)
   enddo
   !
-  allocate(dos_Greal(1,1,1,Norb,Norb,dos_Lreal))
-  allocate(dos_wtk(Nktot))
-  dos_wtk=1d0/Nktot
-  call dmft_gloc_realaxis(one*Hk,dos_wtk,dos_Greal,zeros(1,1,1,Norb,Norb,dos_Lreal))
-  call dmft_print_gf_realaxis(dos_Greal(1,:,:,:,:,:),trim(dos_file),iprint=1)
+  if(wdos_)then
+     allocate(dos_Greal(1,1,1,Norb,Norb,dos_Lreal))
+     allocate(dos_wtk(Nktot))
+     dos_wtk=1d0/Nktot
+     call dmft_gloc_realaxis(one*Hk,dos_wtk,dos_Greal,zeros(1,1,1,Norb,Norb,dos_Lreal))
+     call dmft_print_gf_realaxis(dos_Greal(1,:,:,:,:,:),trim(dos_file),iprint=1)
+  endif
 end subroutine build_hk_model_nkvec_d
 
 subroutine build_hk_model_Nkvec_c(Hk,hk_model,Norb,Nkvec,wdos) 
@@ -127,11 +133,13 @@ subroutine build_hk_model_Nkvec_c(Hk,hk_model,Norb,Nkvec,wdos)
      Hk(:,:,ik) = hk_model(kgrid(ik,:),Norb)
   enddo
   !
-  allocate(dos_Greal(1,1,1,Norb,Norb,dos_Lreal))
-  allocate(dos_wtk(Nktot))
-  dos_wtk=1d0/Nktot
-  call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(1,1,1,Norb,Norb,dos_Lreal))
-  call dmft_print_gf_realaxis(dos_Greal(1,:,:,:,:,:),trim(dos_file),iprint=1)
+  if(wdos_)then
+     allocate(dos_Greal(1,1,1,Norb,Norb,dos_Lreal))
+     allocate(dos_wtk(Nktot))
+     dos_wtk=1d0/Nktot
+     call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(1,1,1,Norb,Norb,dos_Lreal))
+     call dmft_print_gf_realaxis(dos_Greal(1,:,:,:,:,:),trim(dos_file),iprint=1)
+  endif
 end subroutine build_hk_model_Nkvec_c
 
 
@@ -171,11 +179,13 @@ subroutine build_hkr_model_kgrid_d(hk,hkr_model,Nlat,Norb,kgrid,pbc,wdos)
      Hk(:,:,ik) = hkr_model(kgrid(ik,:),Nlat,Norb,pbc)
   enddo
   !
-  allocate(dos_Greal(Nlat,1,1,Norb,Norb,dos_Lreal))
-  allocate(dos_wtk(Nktot))
-  dos_wtk=1d0/Nktot
-  call dmft_gloc_realaxis(one*Hk,dos_wtk,dos_Greal,zeros(Nlat,1,1,Norb,Norb,dos_Lreal))
-  call dmft_print_gf_realaxis(dos_Greal(:,:,:,:,:,:),trim(dos_file),iprint=1)
+  if(wdos_)then
+     allocate(dos_Greal(Nlat,1,1,Norb,Norb,dos_Lreal))
+     allocate(dos_wtk(Nktot))
+     dos_wtk=1d0/Nktot
+     call dmft_gloc_realaxis(one*Hk,dos_wtk,dos_Greal,zeros(Nlat,1,1,Norb,Norb,dos_Lreal))
+     call dmft_print_gf_realaxis(dos_Greal(:,:,:,:,:,:),trim(dos_file),iprint=1)
+  endif
 end subroutine build_hkr_model_kgrid_d
 
 subroutine build_hkr_model_kgrid_c(hk,hkr_model,Nlat,Norb,kgrid,pbc,wdos)
@@ -203,11 +213,13 @@ subroutine build_hkr_model_kgrid_c(hk,hkr_model,Nlat,Norb,kgrid,pbc,wdos)
      Hk(:,:,ik) = hkr_model(kgrid(ik,:),Nlat,Norb,pbc)
   enddo
   !
-  allocate(dos_Greal(Nlat,1,1,Norb,Norb,dos_Lreal))
-  allocate(dos_wtk(Nktot))
-  dos_wtk=1d0/Nktot
-  call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(Nlat,1,1,Norb,Norb,dos_Lreal))
-  call dmft_print_gf_realaxis(dos_Greal(:,:,:,:,:,:),trim(dos_file),iprint=1)
+  if(wdos_)then
+     allocate(dos_Greal(Nlat,1,1,Norb,Norb,dos_Lreal))
+     allocate(dos_wtk(Nktot))
+     dos_wtk=1d0/Nktot
+     call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(Nlat,1,1,Norb,Norb,dos_Lreal))
+     call dmft_print_gf_realaxis(dos_Greal(:,:,:,:,:,:),trim(dos_file),iprint=1)
+  endif
 end subroutine build_hkr_model_kgrid_c
 
 
@@ -251,11 +263,13 @@ subroutine build_hkr_model_nkvec_d(hk,hkr_model,Nlat,Norb,Nkvec,pbc,wdos)
      Hk(:,:,ik) = hkr_model(kgrid(ik,:),Nlat,Norb,pbc)
   enddo
   !
-  allocate(dos_Greal(Nlat,1,1,Norb,Norb,dos_Lreal))
-  allocate(dos_wtk(Nktot))
-  dos_wtk=1d0/Nktot
-  call dmft_gloc_realaxis(one*Hk,dos_wtk,dos_Greal,zeros(Nlat,1,1,Norb,Norb,dos_Lreal))
-  call dmft_print_gf_realaxis(dos_Greal(:,:,:,:,:,:),trim(dos_file),iprint=1)
+  if(wdos_)then
+     allocate(dos_Greal(Nlat,1,1,Norb,Norb,dos_Lreal))
+     allocate(dos_wtk(Nktot))
+     dos_wtk=1d0/Nktot
+     call dmft_gloc_realaxis(one*Hk,dos_wtk,dos_Greal,zeros(Nlat,1,1,Norb,Norb,dos_Lreal))
+     call dmft_print_gf_realaxis(dos_Greal(:,:,:,:,:,:),trim(dos_file),iprint=1)
+  endif
 end subroutine build_hkr_model_nkvec_d
 
 subroutine build_hkr_model_nkvec_c(hk,hkr_model,Nlat,Norb,Nkvec,pbc,wdos)
@@ -286,11 +300,13 @@ subroutine build_hkr_model_nkvec_c(hk,hkr_model,Nlat,Norb,Nkvec,pbc,wdos)
      Hk(:,:,ik) = hkr_model(kgrid(ik,:),Nlat,Norb,pbc)
   enddo
   !
-  allocate(dos_Greal(Nlat,1,1,Norb,Norb,dos_Lreal))
-  allocate(dos_wtk(Nktot))
-  dos_wtk=1d0/Nktot
-  call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(Nlat,1,1,Norb,Norb,dos_Lreal))
-  call dmft_print_gf_realaxis(dos_Greal(:,:,:,:,:,:),trim(dos_file),iprint=1)
+  if(wdos_)then
+     allocate(dos_Greal(Nlat,1,1,Norb,Norb,dos_Lreal))
+     allocate(dos_wtk(Nktot))
+     dos_wtk=1d0/Nktot
+     call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(Nlat,1,1,Norb,Norb,dos_Lreal))
+     call dmft_print_gf_realaxis(dos_Greal(:,:,:,:,:,:),trim(dos_file),iprint=1)
+  endif
 end subroutine build_hkr_model_nkvec_c
 
 

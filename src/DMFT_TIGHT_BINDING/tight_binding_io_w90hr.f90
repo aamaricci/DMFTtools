@@ -402,7 +402,7 @@ subroutine read_Hr_w90_solve_Hk_along_BZpath(       w90_file           &      !o
        write(unit,*)"#set out '"//reg(file_print)//".svg'"
        write(unit,*)""
        write(unit,*)"#set term postscript eps enhanced color 'Times'"
-       write(unit,*)"#set output '|ps2pdf - "//reg(file_print)//".pdf'"
+       write(unit,*)"#set output '|ps2pdf  -dEPSCrop - "//reg(file_print)//".pdf'"
        write(unit,*)"unset key"
        write(unit,*)"set xtics ("//reg(xtics)//")"
        write(unit,*)"set grid noytics xtics"

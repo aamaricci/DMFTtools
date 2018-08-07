@@ -176,8 +176,10 @@ module DMFT_TIGHT_BINDING
   public :: TB_dipole
 
 
-
-
+  public :: TB_set_dos_range
+  public :: TB_set_dos_lreal
+  public :: TB_set_dos_eps
+  public :: TB_set_dos_file
 
 contains
 
