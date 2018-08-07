@@ -1,10 +1,11 @@
 module DMFT_TIGHT_BINDING
   USE SF_CONSTANTS, only: pi,pi2,xi,one,zero
   USE SF_IOTOOLS
-  USE SF_LINALG, only: eigh,det,eye,zeros
+  USE SF_LINALG, only: eigh,det,eye,zeros,eig
   USE SF_COLORS
   USE SF_TIMER, only:start_timer,stop_timer,eta
   USE SF_MISC, only: assert_shape
+  USE SF_OPTIMIZE, only:fmin_cgminimize
   USE DMFT_CTRL_VARS
   USE DMFT_GLOC
   USE DMFT_GFIO
@@ -60,7 +61,9 @@ module DMFT_TIGHT_BINDING
      module procedure hk_from_w90_hr
 #ifdef _MPI
      module procedure hk_from_w90_hr_mpi
-#endif  
+     module procedure hkt_from_w90_hr_mpi
+     module procedure hloct_from_w90_hr_mpi
+#endif
   end interface TB_hr_to_hk
 
 
@@ -131,7 +134,7 @@ module DMFT_TIGHT_BINDING
   logical,save                                  :: set_eivec=.false.
   logical,save                                  :: set_bkvec=.false.
 
-  type(ctrl_list)                               :: dos_ctrl_list  
+  type(ctrl_list)                               :: dos_ctrl_list
   real(8),dimension(2),save                     :: dos_range=[-15d0,15d0]
   integer,save                                  :: dos_Lreal=2048
   real(8),save                                  :: dos_eps=0.01d0
@@ -184,7 +187,7 @@ module DMFT_TIGHT_BINDING
 contains
 
   !-------------------------------------------------------------------------------------------
-  !PURPOSE:  
+  !PURPOSE:
   !-------------------------------------------------------------------------------------------
   subroutine TB_reset_ei
     ei_x=[1d0,0d0,0d0]
@@ -343,7 +346,7 @@ contains
   subroutine TB_reciprocal_basis(a1,a2,a3, b1,b2,b3)
     !This routine generates the reciprocal lattice vectors b1,b2,b3
     !given the space vectors a1,a2,a3.
-    !the vectors are in units of the lattice constant (a=1) 
+    !the vectors are in units of the lattice constant (a=1)
     real(8),dimension(:),intent(in)                 :: a1
     real(8),dimension(size(a1)),intent(in),optional :: a2
     real(8),dimension(size(a1)),intent(in),optional :: a3
@@ -402,7 +405,7 @@ contains
 
 
   !-------------------------------------------------------------------------------------------
-  !PURPOSE:  solve the \hat{H}({\mathbf k}) or \hat{H}({\mathbf k};i,j) along a given linear 
+  !PURPOSE:  solve the \hat{H}({\mathbf k}) or \hat{H}({\mathbf k};i,j) along a given linear
   ! path in the Brillouin Zone. A GNUPLOT script to plot the bands together with their
   ! character is generated.
   !-------------------------------------------------------------------------------------------
@@ -704,6 +707,61 @@ contains
 #endif
 
 
+subroutine herm_check(A)
+  implicit none
+  complex (kind=8), intent(in)   ::   A(:,:)
+  integer                        ::   row,col,i,j
+  row=size(A,1)
+  col=size(A,2)
+  do i=1,col
+     do j=1,row
+        if(abs(A(i,j))-abs(A(j,i)) .gt. 1e-12)then
+           write(*,'(1A)') "--> NON HERMITIAN MATRIX <--"
+           write(*,'(2(1A7,I3))') " row: ",i," col: ",j
+           write(*,'(1A)') "  A(i,j)"
+           write(*,'(2F22.18)') real(A(i,j)),aimag(A(i,j))
+           write(*,'(1A)') "  A(j,i)"
+           write(*,'(2F22.18)') real(A(j,i)),aimag(A(j,i))
+           stop
+        endif
+     enddo
+  enddo
+end subroutine herm_check
+
+
+function slo2lso(Hslo,Nlat,Nspin,Norb) result(Hlso)
+  implicit none
+  complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hslo
+  complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hlso
+  integer                                               :: Nlat,Nspin,Norb
+  integer                                               :: iorb,ispin,ilat
+  integer                                               :: jorb,jspin,jlat
+  integer                                               :: iI,jI,iO,jO
+  Hlso=zero
+  do ilat=1,Nlat
+     do jlat=1,Nlat
+        do ispin=1,Nspin
+           do jspin=1,Nspin
+              do iorb=1,Norb
+                 do jorb=1,Norb
+                    !
+                    iI = iorb + (ilat-1)*Norb + (ispin-1)*Norb*Nlat
+                    jI = jorb + (jlat-1)*Norb + (jspin-1)*Norb*Nlat
+                    !
+                    iO = iorb + (ispin-1)*Norb + (ilat-1)*Norb*Nspin
+                    jO = jorb + (jspin-1)*Norb + (jlat-1)*Norb*Nspin
+                    !
+                    Hlso(iO,jO) = Hslo(iI,jI)
+                    !
+                 enddo
+              enddo
+           enddo
+        enddo
+     enddo
+  enddo
+end function slo2lso
+
+
 END MODULE DMFT_TIGHT_BINDING
 
 
@@ -862,4 +920,3 @@ END MODULE DMFT_TIGHT_BINDING
 !   iy=indx2iy(ik,ndim)
 !   iz=indx2iz(ik,ndim)
 ! end subroutine indx2coord
-
