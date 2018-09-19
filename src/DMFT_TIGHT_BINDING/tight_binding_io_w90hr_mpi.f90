@@ -487,7 +487,8 @@
   end subroutine hkt_from_w90_hr_mpi
 
 
-  subroutine hloct_from_w90_hr_mpi(MpiComm,field,gauge,R1,R2,R3,Ruc,dipole_flag,Hloct,w90_file,dipole_file,Nspin,Norb,Nlat,Nt)
+  subroutine hloct_from_w90_hr_mpi(MpiComm,field,gauge,R1,R2,R3,Ruc,dipole_flag, &
+                          Einleads,leadlimit,Hloct,w90_file,dipole_file,Nspin,Norb,Nlat,Nt)
    implicit none
    integer               ,intent(in)            ::   MpiComm
    real(8)               ,intent(in)            ::   field(:,:,:) ![Nt,dim,2] 1=Efield 2=Afield
@@ -495,6 +496,8 @@
    real(8)               ,intent(in)            ::   R1(:),R2(:),R3(:)
    real(8)               ,intent(in)            ::   Ruc(:,:)
    logical               ,intent(in)            ::   dipole_flag
+   logical               ,intent(in)            ::   Einleads
+   integer               ,intent(in)            ::   leadlimit
    complex(8),allocatable,intent(inout)         ::   Hloct(:,:,:,:)
    character(len=*)      ,intent(in)            ::   w90_file
    character(len=*)      ,intent(in)            ::   dipole_file
@@ -507,7 +510,7 @@
    !
    logical                                      ::   IOfile
    integer                                      ::   unitIO1,unitIO2
-   integer                                      ::   i,j,k,iorb,jorb,io,jo,it
+   integer                                      ::   i,j,k,iorb,jorb,io,jo,it,ilat,jlat
    integer                                      ::   ndx1_H,ndx2_H,ndx1_D,ndx2_D
    integer                                      ::   inrpts
    real(8)                                      ::   a,b,exparg
@@ -520,9 +523,8 @@
    integer   ,allocatable,dimension(:,:,:)      ::   veclist
    complex(8),allocatable,dimension(:,:,:)      ::   ham_r,StructFact
    complex(8),allocatable,dimension(:,:,:,:)    ::   dip_r,ham_auxt,ham_rt,lightmat_r
-   !complex(8),allocatable,dimension(:,:,:)      ::   ham_auxt,ham_rt,lightmat_r
    !---- W90 specific ----
-   integer                                      ::   num_wann       !=Norb*Nlat
+   integer                                      ::   num_wann
    integer                                      ::   nrpts
    integer(4),allocatable                       ::   ndegen(:)      !(nrpts)
    integer   ,allocatable                       ::   irvec(:,:)     !(3,nrpts)
@@ -678,6 +680,16 @@
          lightmat_r(:,:,k,2) = dip_r(:,:,i,2) ; call herm_check(lightmat_r(:,:,1,2))
          lightmat_r(:,:,k,3) = dip_r(:,:,i,3) ; call herm_check(lightmat_r(:,:,1,3))
          !
+         !DEBUG>
+         do i=1,num_wann
+            do j=1,num_wann
+            write(1200+k,'(5I5,6F15.9)')irvec(i,1),irvec(i,2),irvec(i,3),i,j  &
+                          ,real(dip_r(i,j,i,1)),aimag(dip_r(i,j,i,1)) &
+                          ,real(dip_r(i,j,i,2)),aimag(dip_r(i,j,i,2)) &
+                          ,real(dip_r(i,j,i,3)),aimag(dip_r(i,j,i,3))
+            enddo
+         enddo
+         !>DEBUG
       enddo
       !
    endif
@@ -693,13 +705,13 @@
       !
       StructFact=dcmplx(1.d0,0.d0)
       do it=1,Nt
-         do i=1,Nlat
-            do j=1,Nlat
+         do ilat=1,Nlat
+            do jlat=1,Nlat
                do iorb=1,Norb
                   do jorb=1,Norb
                      !
-                     io = iorb + (i-1)*Norb
-                     jo = jorb + (j-1)*Norb
+                     io = iorb + (ilat-1)*Norb
+                     jo = jorb + (jlat-1)*Norb
                      !
                      exparg = ( -field(it,1,2) * ( Ruc(i,1) - Ruc(j,1) ) &
                                 -field(it,2,2) * ( Ruc(i,2) - Ruc(j,2) ) &
@@ -733,23 +745,52 @@
       !
    elseif(gauge=="E")then
       !
-
-     write(1234,*)
-     write(1234,*)
-     write(1234,*)
-
-      do it=1,Nt
-         do k=1,4
-            inrpts=ilist(k)
+      do ilat=1,Nlat
+         do jlat=1,Nlat
             !
-            exparg = ( -field(it,1,2) * ( irvec(inrpts,1)*R1(1) + irvec(inrpts,2)*R2(1) + irvec(inrpts,3)*R3(1) ) &
-                       -field(it,2,2) * ( irvec(inrpts,1)*R1(2) + irvec(inrpts,2)*R2(2) + irvec(inrpts,3)*R3(2) ) &
-                       -field(it,3,2) * ( irvec(inrpts,1)*R1(3) + irvec(inrpts,2)*R2(3) + irvec(inrpts,3)*R3(3) ) )
-            !
-            ham_rt(:,:,k,it) = StructFact(:,:,it)*dcmplx(cos(exparg),sin(exparg)) *     &
-                             ( ham_r(:,:,inrpts)+ field(it,1,1) * lightmat_r(:,:,k,1)   &
-                                                + field(it,2,1) * lightmat_r(:,:,k,2)   &
-                                                + field(it,3,1) * lightmat_r(:,:,k,3)   )
+            if((.not.Einleads).and.(ilat.ge.leadlimit).and.(jlat.ge.leadlimit))then
+               do iorb=1,Norb
+                  do jorb=1,Norb
+                     !
+                     io = iorb + (ilat-1)*Norb
+                     jo = jorb + (jlat-1)*Norb
+                     !
+                     do it=1,Nt
+                        do k=1,4
+                           inrpts=ilist(k)
+                           !
+                           ham_rt(io,jo,k,it)=ham_r(io,jo,inrpts)         
+                           !
+                        enddo
+                     enddo
+                  enddo
+               enddo
+            else
+               do iorb=1,Norb
+                  do jorb=1,Norb
+                     !
+                     io = iorb + (ilat-1)*Norb
+                     jo = jorb + (jlat-1)*Norb
+                     !
+                     do it=1,Nt
+                        do k=1,4
+                           inrpts=ilist(k)
+                           !
+                           exparg = ( &
+                           -field(it,1,2) * ( irvec(inrpts,1)*R1(1) + irvec(inrpts,2)*R2(1) + irvec(inrpts,3)*R3(1) ) &
+                           -field(it,2,2) * ( irvec(inrpts,1)*R1(2) + irvec(inrpts,2)*R2(2) + irvec(inrpts,3)*R3(2) ) &
+                           -field(it,3,2) * ( irvec(inrpts,1)*R1(3) + irvec(inrpts,2)*R2(3) + irvec(inrpts,3)*R3(3) ) )
+                           !
+                           ham_rt(io,jo,k,it) = StructFact(io,jo,it)*dcmplx(cos(exparg),sin(exparg)) *     &
+                                            ( ham_r(io,jo,inrpts)+ field(it,1,1) * lightmat_r(io,jo,k,1)   &
+                                                                 + field(it,2,1) * lightmat_r(io,jo,k,2)   &
+                                                                 + field(it,3,1) * lightmat_r(io,jo,k,3)   )
+                           !
+                        enddo
+                     enddo
+                  enddo
+               enddo
+            endif
             !
          enddo
       enddo
