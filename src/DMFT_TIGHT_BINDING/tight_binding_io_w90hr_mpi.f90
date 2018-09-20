@@ -158,6 +158,7 @@
    deallocate(ham_r)
    deallocate(ham_aux)
    if(.not.present(kpt_latt))deallocate(kpt_latt)
+   call MPI_Barrier(MpiComm,mpi_ierr)
    !
   end subroutine hk_from_w90_hr_mpi
 
@@ -483,6 +484,7 @@
    enddo
    deallocate(ham_auxt)
    if(mpi_master)write(*,'(1A)')"  H(k,t) written"
+   call MPI_Barrier(MpiComm,mpi_ierr)
    !
   end subroutine hkt_from_w90_hr_mpi
 
@@ -522,7 +524,7 @@
    integer   ,allocatable,dimension(:,:)        ::   site_ndx
    integer   ,allocatable,dimension(:,:,:)      ::   veclist
    complex(8),allocatable,dimension(:,:,:)      ::   ham_r,StructFact
-   complex(8),allocatable,dimension(:,:,:,:)    ::   dip_r,ham_auxt,ham_rt,lightmat_r
+   complex(8),allocatable,dimension(:,:,:,:)    ::   dip_r,ham_rt,lightmat_r
    !---- W90 specific ----
    integer                                      ::   num_wann
    integer                                      ::   nrpts
@@ -568,7 +570,6 @@
    if(allocated(lightmat_r))deallocate(lightmat_r);allocate(lightmat_r(num_wann,num_wann,4,3))                   ;lightmat_r=zero
    !
    if(allocated(ham_rt))    deallocate(ham_rt)    ;allocate(ham_rt(num_wann,num_wann,4,Nt))                      ;ham_rt=zero
-   if(allocated(ham_auxt))  deallocate(ham_auxt)  ;allocate(ham_auxt(num_wann*Nspin,num_wann*Nspin,4,Nt))        ;ham_auxt=zero
    !
    !1) read WS degeneracies
    do i=1,qst
@@ -680,16 +681,16 @@
          lightmat_r(:,:,k,2) = dip_r(:,:,i,2) ; call herm_check(lightmat_r(:,:,1,2))
          lightmat_r(:,:,k,3) = dip_r(:,:,i,3) ; call herm_check(lightmat_r(:,:,1,3))
          !
-         !DEBUG>
-         do i=1,num_wann
-            do j=1,num_wann
-            write(1200+k,'(5I5,6F15.9)')irvec(i,1),irvec(i,2),irvec(i,3),i,j  &
-                          ,real(dip_r(i,j,i,1)),aimag(dip_r(i,j,i,1)) &
-                          ,real(dip_r(i,j,i,2)),aimag(dip_r(i,j,i,2)) &
-                          ,real(dip_r(i,j,i,3)),aimag(dip_r(i,j,i,3))
-            enddo
-         enddo
-         !>DEBUG
+        ! !DEBUG>
+        ! do i=1,num_wann
+        !    do j=1,num_wann
+        !    write(1200+k,'(5I5,6F15.9)')irvec(i,1),irvec(i,2),irvec(i,3),i,j  &
+        !                  ,real(dip_r(i,j,i,1)),aimag(dip_r(i,j,i,1)) &
+        !                  ,real(dip_r(i,j,i,2)),aimag(dip_r(i,j,i,2)) &
+        !                  ,real(dip_r(i,j,i,3)),aimag(dip_r(i,j,i,3))
+        !     enddo
+        ! enddo
+        ! !>DEBUG
       enddo
       !
    endif
@@ -759,7 +760,7 @@
                         do k=1,4
                            inrpts=ilist(k)
                            !
-                           ham_rt(io,jo,k,it)=ham_r(io,jo,inrpts)         
+                           ham_rt(io,jo,k,it)=ham_r(io,jo,inrpts)
                            !
                         enddo
                      enddo
@@ -801,18 +802,17 @@
    !
    !6) Reordering & hermicity check
    Hloct=zero
-   ham_auxt=zero
    do k=1,4
       do it=1,Nt
-         ham_auxt(1:num_wann,1:num_wann,k,it)=ham_rt(:,:,k,it)
+         Hloct(1:num_wann,1:num_wann,k,it)=ham_rt(:,:,k,it)
          if(Nspin==2)then
-            ham_auxt(1+num_wann:2*num_wann,1+num_wann:2*num_wann,k,it)=ham_rt(:,:,k,it)
-            Hloct(:,:,k,it)=slo2lso(ham_auxt(:,:,k,it),Nlat,Nspin,Norb)
+            Hloct(1+num_wann:2*num_wann,1+num_wann:2*num_wann,k,it)=ham_rt(:,:,k,it)
+            Hloct(:,:,k,it)=slo2lso(Hloct(:,:,k,it),Nlat,Nspin,Norb)
          endif
       enddo
    enddo
-   deallocate(ham_auxt,ham_rt)
-   if(mpi_master)write(*,'(1A)')"  Hloc(K,t) written"
+   deallocate(ham_rt)
+   if(mpi_master)write(*,'(1A)')"  Hloc(K,t) passed to main"
+   call MPI_Barrier(MpiComm,mpi_ierr)
    !
   end subroutine hloct_from_w90_hr_mpi
-
