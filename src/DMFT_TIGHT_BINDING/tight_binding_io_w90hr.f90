@@ -647,9 +647,9 @@
                      io = iorb + (ilat-1)*Norb
                      jo = jorb + (jlat-1)*Norb
                      !
-                     exparg = ( -field(it,1,2) * ( Ruc(i,1) - Ruc(j,1) ) &
-                                -field(it,2,2) * ( Ruc(i,2) - Ruc(j,2) ) &
-                                -field(it,3,2) * ( Ruc(i,3) - Ruc(j,3) ) )
+                     exparg = ( -field(it,1,2) * ( Ruc(ilat,1) - Ruc(jlat,1) ) &
+                                -field(it,2,2) * ( Ruc(ilat,2) - Ruc(jlat,2) ) &
+                                -field(it,3,2) * ( Ruc(ilat,3) - Ruc(jlat,3) ) )
                      !
                      StructFact(io,jo,it) = dcmplx(cos(exparg),sin(exparg))
                      !
