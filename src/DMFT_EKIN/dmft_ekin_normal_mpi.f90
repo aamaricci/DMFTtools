@@ -101,8 +101,8 @@ subroutine dmft_kinetic_energy_normal_main_mpi(MpiComm,Hk,Wtk,Sigma,Ekin,Eloc)
      enddo
      if(mpi_master)call eta(ik,Lk)
   enddo
-  call MPI_ALLREDUCE(H0tmp, H0, 1, MPI_DOUBLE_PRECISION, MPI_SUM, MpiComm, mpi_ierr)
-  call MPI_ALLREDUCE(Hltmp, Hl, 1, MPI_DOUBLE_PRECISION, MPI_SUM, MpiComm, mpi_ierr)
+  call AllReduce_MPI(MpiComm,H0tmp,H0)
+  call AllReduce_MPI(MpiComm,Hltmp,Hl)
   if(mpi_master)call stop_timer()
   spin_degeneracy=3d0-Nspin     !2 if Nspin=1, 1 if Nspin=2
   H0=H0/beta*2*spin_degeneracy
@@ -227,8 +227,8 @@ subroutine dmft_kinetic_energy_normal_dos_mpi(MpiComm,Ebands,Dbands,Hloc,Sigma,E
      enddo
      if(mpi_master)call eta(ik,Lk)
   enddo
-  call MPI_ALLREDUCE(H0tmp, H0, 1, MPI_DOUBLE_PRECISION, MPI_SUM, MpiComm, mpi_ierr)
-  call MPI_ALLREDUCE(Hltmp, Hl, 1, MPI_DOUBLE_PRECISION, MPI_SUM, MpiComm, mpi_ierr)
+  call AllReduce_MPI(MpiComm,H0tmp,H0)
+  call AllReduce_MPI(MpiComm,Hltmp,Hl)
   if(mpi_master)call stop_timer()
   spin_degeneracy=3d0-Nspin     !2 if Nspin=1, 1 if Nspin=2
   H0=H0/beta*2*spin_degeneracy
@@ -384,8 +384,8 @@ subroutine dmft_kinetic_energy_normal_lattice_mpi(MpiComm,Hk,Wtk,Sigma,Ekin,Eloc
      enddo
      if(mpi_master)call eta(ik,Lk)
   enddo
-  call MPI_ALLREDUCE(H0tmp, H0, 1, MPI_DOUBLE_PRECISION, MPI_SUM, MpiComm, mpi_ierr)
-  call MPI_ALLREDUCE(Hltmp, Hl, 1, MPI_DOUBLE_PRECISION, MPI_SUM, MpiComm, mpi_ierr)
+  call AllReduce_MPI(MpiComm,H0tmp,H0)
+  call AllReduce_MPI(MpiComm,Hltmp,Hl)
   if(mpi_master)call stop_timer
   spin_degeneracy=3d0-Nspin !2 if Nspin=1, 1 if Nspin=2
   H0 = H0/beta*2d0*spin_degeneracy

@@ -8,6 +8,7 @@ MODULE DMFT_EKIN
   USE SF_SPECIAL,   only:fermi
   USE DMFT_CTRL_VARS
 #ifdef _MPI
+  USE SF_MPI
   USE MPI
 #endif
   implicit none
