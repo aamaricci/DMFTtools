@@ -59,10 +59,10 @@ module DMFT_TIGHT_BINDING
 
   interface TB_hr_to_hk
      module procedure hk_from_w90_hr
+     module procedure hloct_from_w90_hr
 #ifdef _MPI
      module procedure hk_from_w90_hr_mpi
      module procedure hkt_from_w90_hr_mpi
-     module procedure hloct_from_w90_hr_mpi
 #endif
   end interface TB_hr_to_hk
 
