@@ -447,14 +447,18 @@
 
 
 
-  subroutine hloct_from_w90_hr(field,gauge,R1,R2,R3,Ruc,dipole_flag, &
-                          Einleads,leadlimit,Hloct,w90_file,dipole_file,Nspin,Norb,Nlat,Nt)
+  subroutine hloct_from_w90_hr(field,gauge,R1,R2,R3,Ruc,                      &
+                               put_dipole,put_local_dipole,absorbdiagonal,    &
+                               Einleads,leadlimit,Hloct,w90_file,dipole_file, &
+                               Nspin,Norb,Nlat,Nt)
    implicit none
    real(8)               ,intent(in)            ::   field(:,:,:) ![Nt,dim,2] 1=Efield 2=Afield
    character(len=*)      ,intent(in)            ::   gauge
    real(8)               ,intent(in)            ::   R1(:),R2(:),R3(:)
    real(8)               ,intent(in)            ::   Ruc(:,:)
-   logical               ,intent(in)            ::   dipole_flag
+   logical               ,intent(in)            ::   put_dipole
+   logical               ,intent(in)            ::   put_local_dipole
+   logical               ,intent(in)            ::   absorbdiagonal
    logical               ,intent(in)            ::   Einleads
    integer               ,intent(in)            ::   leadlimit
    complex(8),allocatable,intent(inout)         ::   Hloct(:,:,:,:)
@@ -466,15 +470,17 @@
    integer                                      ::   i,j,k,iorb,jorb,io,jo,it,ilat,jlat
    integer                                      ::   ndx1_H,ndx2_H,ndx1_D,ndx2_D
    integer                                      ::   inrpts
-   real(8)                                      ::   a,b,exparg
+   real(8)                                      ::   a,b,exparg,expargR,expargD,absorbswitch
    real(8)                                      ::   REDx,REDy,REDz,IMDx,IMDy,IMDz
    integer                                      ::   rst,qst,limit,kvec_ndx
    integer                                      ::   auxndx,dumR1,dumR2,dumR3
+   integer                                      ::   nRvec
    !---- light matter ----
    integer   ,allocatable,dimension(:)          ::   Kvec,ilist
-   integer   ,allocatable,dimension(:,:)        ::   site_ndx
+   integer   ,allocatable,dimension(:,:)        ::   site_ndx,orb_ndx
    integer   ,allocatable,dimension(:,:,:)      ::   veclist
-   complex(8),allocatable,dimension(:,:,:)      ::   ham_r,StructFact
+   real(8)   ,allocatable,dimension(:)          ::   locswitch
+   complex(8),allocatable,dimension(:,:,:)      ::   Cvec,ham_r,StructFact
    complex(8),allocatable,dimension(:,:,:,:)    ::   dip_r,ham_rt,lightmat_r
    !---- W90 specific ----
    integer                                      ::   num_wann
@@ -483,12 +489,8 @@
    integer   ,allocatable                       ::   irvec(:,:)     !(3,nrpts)
    !
    !
-   unitIO1=free_unit()
-   open(unit=unitIO1,file=w90_file,status="old",action="read")
-   if(dipole_flag)then
-      unitIO2=free_unit()
-      open(unit=unitIO2,file=dipole_file,status="old",action="read")
-   endif
+   unitIO1=free_unit();open(unit=unitIO1,file=w90_file,status="old",action="read")
+   unitIO2=free_unit();open(unit=unitIO2,file=dipole_file,status="old",action="read")
    read(unitIO1,*)
    read(unitIO1,*) num_wann
    read(unitIO1,*) nrpts
@@ -501,18 +503,22 @@
    write(*,'(A,I6,1A,I6)') "  rows:",qst,"  last row elements:",rst
    if(num_wann.ne.Nlat*Norb)stop "hk_from_w90_hr. Something is wrong"
    !
-   if(allocated(ndegen))    deallocate(ndegen)    ;allocate(ndegen(nrpts))                                       ;ndegen=0
-   if(allocated(irvec))     deallocate(irvec)     ;allocate(irvec(nrpts,3))                                      ;irvec=0
-   if(allocated(Kvec))      deallocate(Kvec)      ;allocate(Kvec(3))                                             ;Kvec=0
-   if(allocated(veclist))   deallocate(veclist)   ;allocate(veclist(-10:10,-10:10,-10:10))                       ;veclist=0
-   if(allocated(ilist))     deallocate(ilist)     ;allocate(ilist(4))                                            ;ilist=0
-   if(allocated(site_ndx))  deallocate(site_ndx)  ;allocate(site_ndx(nrpts,2))                                   ;site_ndx=0
-   if(allocated(ham_r))     deallocate(ham_r)     ;allocate(ham_r(num_wann,num_wann,nrpts))                      ;ham_r=zero
-   if(allocated(dip_r))     deallocate(dip_r)     ;allocate(dip_r(num_wann,num_wann,nrpts,3))                    ;dip_r=zero
-   if(allocated(StructFact))deallocate(StructFact);allocate(StructFact(num_wann,num_wann,Nt))                    ;StructFact=zero
-   if(allocated(lightmat_r))deallocate(lightmat_r);allocate(lightmat_r(num_wann,num_wann,4,3))                   ;lightmat_r=zero
+   nRvec=1+2+2+2+2
    !
-   if(allocated(ham_rt))    deallocate(ham_rt)    ;allocate(ham_rt(num_wann,num_wann,4,Nt))                      ;ham_rt=zero
+   if(allocated(ndegen))         deallocate(ndegen)         ;allocate(ndegen(nrpts))                         ;ndegen=0
+   if(allocated(irvec))          deallocate(irvec)          ;allocate(irvec(nrpts,3))                        ;irvec=0
+   if(allocated(Kvec))           deallocate(Kvec)           ;allocate(Kvec(3))                               ;Kvec=0
+   if(allocated(veclist))        deallocate(veclist)        ;allocate(veclist(-10:10,-10:10,-10:10))         ;veclist=0
+   if(allocated(ilist))          deallocate(ilist)          ;allocate(ilist(nRvec))                          ;ilist=0
+   if(allocated(site_ndx))       deallocate(site_ndx)       ;allocate(site_ndx(num_wann,2))                  ;site_ndx=0
+   if(allocated(orb_ndx))        deallocate(orb_ndx)        ;allocate(orb_ndx(num_wann,2))                   ;orb_ndx=0
+   if(allocated(ham_r))          deallocate(ham_r)          ;allocate(ham_r(num_wann,num_wann,nrpts))        ;ham_r=zero
+   if(allocated(Cvec))           deallocate(Cvec)           ;allocate(Cvec(Nlat,Norb,3))                     ;Cvec=zero
+   if(allocated(dip_r))          deallocate(dip_r)          ;allocate(dip_r(num_wann,num_wann,nrpts,3))      ;dip_r=zero
+   if(allocated(StructFact))     deallocate(StructFact)     ;allocate(StructFact(Nlat,Nlat,Nt))              ;StructFact=zero
+   if(allocated(lightmat_r))     deallocate(lightmat_r)     ;allocate(lightmat_r(num_wann,num_wann,nRvec,3)) ;lightmat_r=zero
+   !
+   if(allocated(ham_rt))    deallocate(ham_rt)    ;allocate(ham_rt(num_wann,num_wann,nRvec,Nt))              ;ham_rt=zero
    !
    !1) read WS degeneracies
    do i=1,qst
@@ -529,48 +535,92 @@
             !
             !read H(R) & D(R)
             read(unitIO1,*)irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3),ndx1_H,ndx2_H,a,b
-            if(dipole_flag)read(unitIO2,*)dumR1,dumR2,dumR3,ndx1_D,ndx2_D,REDx,IMDx,REDy,IMDy,REDz,IMDz
+            read(unitIO2,*)dumR1,dumR2,dumR3,ndx1_D,ndx2_D,REDx,IMDx,REDy,IMDy,REDz,IMDz
             !
             !consistency check
-            if(dipole_flag)then
-               auxndx = sum([irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3),ndx1_H,ndx2_H]-[dumR1,dumR2,dumR3,ndx1_D,ndx2_D])
-               if(auxndx.ne.0)then
-                  write(*,'(10A)') "  Something is wrong between ",w90_file," and ",dipole_file," indexing"
-                  write(*,'(10I5)')irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3),ndx1_H,ndx2_H
-                  write(*,'(10I5)')dumR1,dumR2,dumR3,ndx1_D,ndx2_D
-                  stop
-               endif
+            auxndx = sum([irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3),ndx1_H,ndx2_H]-[dumR1,dumR2,dumR3,ndx1_D,ndx2_D])
+            if(auxndx.ne.0)then
+               write(*,'(10A)') "  Something is wrong between ",w90_file," and ",dipole_file," indexing"
+               write(*,'(10I5)')irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3),ndx1_H,ndx2_H
+               write(*,'(10I5)')dumR1,dumR2,dumR3,ndx1_D,ndx2_D
+               stop
             endif
             !
             if(abs(dumR1).gt.limit)limit=abs(dumR1)
             veclist(irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3))=inrpts
             !
-            site_ndx(inrpts,1)=floor((ndx1_H-0.01)/Norb)+1
-            site_ndx(inrpts,2)=floor((ndx2_H-0.01)/Norb)+1
+            site_ndx(ndx1_H,1)=floor((ndx1_H-0.01)/Norb)+1
+            site_ndx(ndx2_H,2)=floor((ndx2_H-0.01)/Norb)+1
+            !
+            orb_ndx(ndx1_H,1)=ndx1_H-3*(site_ndx(ndx1_H,1)-1)
+            orb_ndx(ndx2_H,2)=ndx2_H-3*(site_ndx(ndx2_H,1)-1)
             !
             ham_r(ndx1_H,ndx2_H,inrpts)=dcmplx(a,b)
-            if(dipole_flag)then
-               dip_r(ndx1_D,ndx2_D,inrpts,1)=dcmplx(REDx,IMDx)
-               dip_r(ndx1_D,ndx2_D,inrpts,2)=dcmplx(REDy,IMDy)
-               dip_r(ndx1_D,ndx2_D,inrpts,3)=dcmplx(REDz,IMDz)
+            dip_r(ndx1_D,ndx2_D,inrpts,1)=dcmplx(REDx,IMDx)
+            dip_r(ndx1_D,ndx2_D,inrpts,2)=dcmplx(REDy,IMDy)
+            dip_r(ndx1_D,ndx2_D,inrpts,3)=dcmplx(REDz,IMDz)
+            !
+            if((ndx1_D.eq.ndx2_D).and.(irvec(inrpts,1).eq.0).and.(irvec(inrpts,2).eq.0).and.(irvec(inrpts,3).eq.0))then
+               Cvec(site_ndx(ndx1_H,1),orb_ndx(ndx1_H,1),1)=dcmplx(REDx,IMDx)
+               Cvec(site_ndx(ndx1_H,1),orb_ndx(ndx1_H,1),2)=dcmplx(REDy,IMDy)
+               Cvec(site_ndx(ndx1_H,1),orb_ndx(ndx1_H,1),3)=dcmplx(REDz,IMDz)
             endif
             !
          enddo
       enddo
    enddo
    close(unitIO1)
-   if(dipole_flag)close(unitIO2)
+   close(unitIO2)
+   !
+   ilist(1)=veclist( 0, 0, 0)
+   ilist(2)=veclist(+1, 0, 0)
+   ilist(3)=veclist(-1, 0, 0)
+   ilist(4)=veclist( 0,+1, 0)
+   ilist(5)=veclist( 0,-1, 0)
+   ilist(6)=veclist( 0, 0,+1)
+   ilist(7)=veclist( 0, 0,-1)
+   ilist(8)=veclist(-1,+1, 0)
+   ilist(9)=veclist(+1,-1, 0)
+   if(allocated(locswitch))deallocate(locswitch);allocate(locswitch(nRvec));locswitch=0d0
+   locswitch(1)=1.0d0
+   !
    write(*,'(1A)')"  H(R) and D(R) readed"
    !
-   ilist(1)=veclist(0,0,0)
-   ilist(2)=veclist(1,0,0)
-   ilist(3)=veclist(0,1,0)
-   ilist(4)=veclist(0,0,1)
+   !3) cleanup dipole components
+   write(*,*)"  put_dipole:",put_dipole
+   write(*,*)"  put_local_dipole:",put_local_dipole
+   write(*,*)"  absorbdiagonal:",absorbdiagonal
+   if(.not.put_dipole)then
+      dip_r=zero
+      Cvec=zero
+      write(*,'(1A)')"  D(R) cancelled"
+   endif
+   if(.not.put_local_dipole)then
+      do ilat=1,Nlat
+         do iorb=1,Norb
+            do jorb=1,Norb
+               !
+               io = iorb + (ilat-1)*Norb
+               jo = jorb + (ilat-1)*Norb
+               dip_r(io,jo,ilist(1),:)=zero
+               !
+            enddo
+         enddo
+      enddo
+      Cvec=zero
+      write(*,'(1A)')"  D(a) cancelled"
+   endif
+   if(absorbdiagonal)then
+      do i=1,num_wann
+         dip_r(i,i,ilist(1),:)=zero
+      enddo
+      write(*,'(1A)')"  diagonal D(0) cancelled"
+   endif
    !
-   !4) build light-matter interaction
+   !4) reduce dipole to few long range hoppings
    if(gauge=="A")then
       !
-      do k=1,4
+      do k=1,nRvec
          i=ilist(k)
          do j=1,nrpts
             !
@@ -591,7 +641,7 @@
          enddo
       enddo
       !
-      do k=1,4
+      do k=1,nRvec
          i=ilist(k)
          do j=1,nrpts
             !
@@ -617,7 +667,7 @@
       !
    elseif(gauge=="E")then
       !
-      do k=1,4
+      do k=1,nRvec
          i=ilist(k)
          !
          lightmat_r(:,:,k,1) = dip_r(:,:,i,1) ; call herm_check(lightmat_r(:,:,1,1))
@@ -641,33 +691,25 @@
       do it=1,Nt
          do ilat=1,Nlat
             do jlat=1,Nlat
-               do iorb=1,Norb
-                  do jorb=1,Norb
-                     !
-                     io = iorb + (ilat-1)*Norb
-                     jo = jorb + (jlat-1)*Norb
-                     !
-                     exparg = ( -field(it,1,2) * ( Ruc(ilat,1) - Ruc(jlat,1) ) &
-                                -field(it,2,2) * ( Ruc(ilat,2) - Ruc(jlat,2) ) &
-                                -field(it,3,2) * ( Ruc(ilat,3) - Ruc(jlat,3) ) )
-                     !
-                     StructFact(io,jo,it) = dcmplx(cos(exparg),sin(exparg))
-                     !
-                  enddo
-               enddo
+               exparg = ( -field(it,1,2) * ( Ruc(ilat,1) - Ruc(jlat,1) ) &
+                          -field(it,2,2) * ( Ruc(ilat,2) - Ruc(jlat,2) ) &
+                          -field(it,3,2) * ( Ruc(ilat,3) - Ruc(jlat,3) ) )
+               !
+               StructFact(ilat,jlat,it) = dcmplx(cos(exparg),sin(exparg))
+               !
             enddo
          enddo
          call herm_check(StructFact(:,:,it))
       enddo
       !
    endif
-   write(*,'(1A)')"  prefactor built"
+   write(*,'(1A)')"  StructFact built"
    !
    !6) build interacting hamilt in real space
    if(gauge=="A")then
       !
       do it=1,Nt
-         do k=1,4
+         do k=1,nRvec
             inrpts=ilist(k)
             !
             ham_rt(:,:,k,it) = ( ham_r(:,:,inrpts) + field(it,1,2) * Xi * lightmat_r(:,:,k,1) &
@@ -678,6 +720,12 @@
       enddo
       !
    elseif(gauge=="E")then
+      !
+      absorbswitch=0d0
+      if(absorbdiagonal)then
+         absorbswitch=1.0d0
+         write(*,'(1A)')"  Da(0) absorbed"
+      endif
       !
       do ilat=1,Nlat
          do jlat=1,Nlat
@@ -690,7 +738,7 @@
                      jo = jorb + (jlat-1)*Norb
                      !
                      do it=1,Nt
-                        do k=1,4
+                        do k=1,nRvec
                            inrpts=ilist(k)
                            !
                            ham_rt(io,jo,k,it)=ham_r(io,jo,inrpts)
@@ -707,18 +755,24 @@
                      jo = jorb + (jlat-1)*Norb
                      !
                      do it=1,Nt
-                        do k=1,4
+                        do k=1,nRvec
                            inrpts=ilist(k)
                            !
-                           exparg = ( &
-                           -field(it,1,2) * ( irvec(inrpts,1)*R1(1) + irvec(inrpts,2)*R2(1) + irvec(inrpts,3)*R3(1) ) &
-                           -field(it,2,2) * ( irvec(inrpts,1)*R1(2) + irvec(inrpts,2)*R2(2) + irvec(inrpts,3)*R3(2) ) &
-                           -field(it,3,2) * ( irvec(inrpts,1)*R1(3) + irvec(inrpts,2)*R2(3) + irvec(inrpts,3)*R3(3) ) )
+                           expargR = ( &
+                           +field(it,1,2) * ( irvec(inrpts,1)*R1(1) + irvec(inrpts,2)*R2(1) + irvec(inrpts,3)*R3(1) ) &
+                           +field(it,2,2) * ( irvec(inrpts,1)*R1(2) + irvec(inrpts,2)*R2(2) + irvec(inrpts,3)*R3(2) ) &
+                           +field(it,3,2) * ( irvec(inrpts,1)*R1(3) + irvec(inrpts,2)*R2(3) + irvec(inrpts,3)*R3(3) ) )
                            !
-                           ham_rt(io,jo,k,it) = StructFact(io,jo,it)*dcmplx(cos(exparg),sin(exparg)) *     &
-                                            ( ham_r(io,jo,inrpts)+ field(it,1,1) * lightmat_r(io,jo,k,1)   &
-                                                                 + field(it,2,1) * lightmat_r(io,jo,k,2)   &
-                                                                 + field(it,3,1) * lightmat_r(io,jo,k,3)   )
+                           expargD = ( &
+                           -field(it,1,2) * ( Cvec(ilat,iorb,1) - Cvec(jlat,Jorb,1)*locswitch(i) ) &
+                           -field(it,2,2) * ( Cvec(ilat,iorb,2) - Cvec(jlat,Jorb,2)*locswitch(i) ) &
+                           -field(it,3,2) * ( Cvec(ilat,iorb,3) - Cvec(jlat,Jorb,3)*locswitch(i) ) ) * absorbswitch
+                           !
+                           ham_rt(io,jo,k,it) =                                                                            &
+                           dcmplx(cos(expargR),sin(expargR))*dcmplx(cos(expargD),sin(expargD))*StructFact(ilat,jlat,it) *  &
+                          ( ham_r(io,jo,inrpts) + field(it,1,1) * lightmat_r(io,jo,k,1)                                    &
+                                                + field(it,2,1) * lightmat_r(io,jo,k,2)                                    &
+                                                + field(it,3,1) * lightmat_r(io,jo,k,3) )
                            !
                         enddo
                      enddo
@@ -730,12 +784,12 @@
       enddo
       !
    endif
-   deallocate(StructFact,site_ndx,ham_r,lightmat_r)
+   deallocate(StructFact,site_ndx,ham_r,lightmat_r,locswitch)
    write(*,'(1A)')"  real-space H(R,t) built"
    !
    !6) Reordering & hermicity check
    Hloct=zero
-   do k=1,4
+   do k=1,nRvec
       do it=1,Nt
          Hloct(:,:,k,it)=ham_rt(:,:,k,it)
          if(Nspin==2)then
