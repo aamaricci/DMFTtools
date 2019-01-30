@@ -31,7 +31,8 @@ subroutine dmft_get_weiss_normal_bethe(Gloc,Weiss,Hloc,Wbands)
   Weiss=zero
   do ispin=1,Nspin
      do iorb=1,Norb
-        invWeiss = (xi*wm(:)+xmu) - Hloc(ispin,ispin,iorb,iorb) - 0.25d0*Wbands(iorb+(ispin-1)*Norb)*Gloc(ispin,ispin,iorb,iorb,:)
+        invWeiss = (xi*wm(:)+xmu) - Hloc(ispin,ispin,iorb,iorb) - &
+             0.25d0*Wbands(iorb+(ispin-1)*Norb)**2*Gloc(ispin,ispin,iorb,iorb,:)
         Weiss(ispin,ispin,iorb,iorb,:) = one/invWeiss
      enddo
   enddo
@@ -78,7 +79,8 @@ subroutine dmft_get_weiss_normal_bethe_ineq(Gloc,Weiss,Hloc,Wbands)
      do ispin=1,Nspin
         do iorb=1,Norb
            io       = iorb + (ispin-1)*Norb + (ilat-1)*Nspin*Norb
-           invWeiss = (xi*wm(:)+xmu) - Hloc(ilat,ispin,ispin,iorb,iorb) - 0.25d0*Wbands(io)*Gloc(ilat,ispin,ispin,iorb,iorb,:)
+           invWeiss = (xi*wm(:)+xmu) - Hloc(ilat,ispin,ispin,iorb,iorb) - &
+                0.25d0*Wbands(io)**2*Gloc(ilat,ispin,ispin,iorb,iorb,:)
            Weiss(ilat,ispin,ispin,iorb,iorb,:) = one/invWeiss
         enddo
      enddo
