@@ -3,10 +3,10 @@ module DMFT_CTRL_VARS
   private
 
   type ctrl_var
-     integer,pointer             :: i
-     real(8),pointer             :: d
-     logical,pointer             :: l
-     character(len=:),pointer    :: ch
+     integer,pointer             :: i=>null()
+     real(8),pointer             :: d=>null()
+     logical,pointer             :: l=>null()
+     character(len=:),pointer    :: ch=>null()
   end type ctrl_var
 
   type ctrl_node
@@ -49,7 +49,7 @@ module DMFT_CTRL_VARS
   public :: ctrl_list
 
   public :: init_ctrl_list
-  public :: destroy_ctrl_list
+  public :: delete_ctrl_list
   public :: size_ctrl_list
   public :: print_ctrl_list
 
@@ -60,7 +60,7 @@ module DMFT_CTRL_VARS
   type(ctrl_list)              :: dmft_ctrl_list
 
   character(len=:),allocatable :: p_buffer
-  
+
   character(len=:),allocatable :: name_
 
   !LOCAL VERSION OF TXTFY//STR
@@ -101,9 +101,10 @@ contains
   !+------------------------------------------------------------------+
   !PURPOSE: delete the list
   !+------------------------------------------------------------------+
-  subroutine destroy_ctrl_list(list)
+  subroutine delete_ctrl_list(list)
     type(ctrl_list),optional :: list
     type(ctrl_node),pointer  :: p,c
+    integer :: i
     if(present(list))then
        do
           p => list%root
@@ -111,21 +112,38 @@ contains
           if(.not.associated(c))exit  !empty list
           p%next => c%next !
           c%next=>null()
+          do i=1,size(c%var)
+             nullify(c%var(i)%i)
+             nullify(c%var(i)%d)
+             nullify(c%var(i)%l)
+             nullify(c%var(i)%ch)
+          enddo
+          if(allocated(c%var))deallocate(c%var)
           deallocate(c)
        end do
        list%status=.false.
+       deallocate(list%root)
     else
        do
           p => dmft_ctrl_list%root
           c => p%next
           if(.not.associated(c))exit  !empty list
           p%next => c%next !
+          do i=1,size(c%var)
+             nullify(c%var(i)%i)
+             nullify(c%var(i)%d)
+             nullify(c%var(i)%l)
+             nullify(c%var(i)%ch)
+          enddo
+          if(allocated(c%var))deallocate(c%var)
           c%next=>null()
           deallocate(c)
        end do
        dmft_ctrl_list%status=.false.
+       deallocate(dmft_ctrl_list%root)
     endif
-  end subroutine destroy_ctrl_list
+    p => null()
+  end subroutine delete_ctrl_list
 
 
 
