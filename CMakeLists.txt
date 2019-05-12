@@ -64,13 +64,19 @@ IF(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git)
       ERROR_QUIET
       OUTPUT_STRIP_TRAILING_WHITESPACE)
     MESSAGE( STATUS "${Yellow}Git version: ${ColourReset}${GIT_SHA1}" )
+    
+    EXECUTE_PROCESS(
+      COMMAND ${GIT_EXECUTABLE} describe --tags
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+      OUTPUT_VARIABLE GIT_SF_VERSION
+      ERROR_QUIET
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    MESSAGE(STATUS "${Yellow}Git tag: ${ColourReset}${GIT_SF_VERSION}" )
+    SET(VERSION ${GIT_SF_VERSION})    
   ELSE(GIT_FOUND)
     SET(GIT_SHA1 0)
   ENDIF(GIT_FOUND)
 ENDIF(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git)
-# SET(DT_VERSION_FILE ${CMAKE_CURRENT_SOURCE_DIR}/src/${PROJECT_NAME}_version.inc)
-# FILE(WRITE  ${DT_VERSION_FILE}
-#   "character(len=41),parameter,public :: ${PROJECT_NAME}_version_sha1 = \"${GIT_SHA1}\"\n")
 
 
 #set MPI preprocessing defition:
