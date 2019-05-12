@@ -19,6 +19,14 @@ IF(NOT CMAKE_Fortran_COMPILER_SUPPORTS_F90)
    MESSAGE(FATAL_ERROR "Fortran compiler does not support F90")
 ENDIF(NOT CMAKE_Fortran_COMPILER_SUPPORTS_F90)
 
+
+IF( (${CMAKE_Fortran_COMPILER_ID} MATCHES Intel) OR (${CMAKE_Fortran_COMPILER_ID} MATCHES GNU))
+  MESSAGE(STATUS "Fortran Compiler id = ${CMAKE_Fortran_COMPILER_ID}")
+ELSEIF()
+  MESSAGE(FATAL_ERROR "Unsupported Fortran compiler (use Intel or GNU) ")
+ENDIF()  
+
+
 # Set some options the user may choose
 OPTION(USE_MPI "Use the MPI library for parallelization" ON)
 OPTION(VERBOSE "Build a verbose Makefile" OFF)
@@ -94,7 +102,7 @@ ENDIF()
 #make sure FC_PLAT is lowecase
 STRING(TOLOWER "${CMAKE_Fortran_COMPILER_ID}" FC_PLAT)
 
-SET(PREFIX  "$ENV{HOME}/opt/${PROJECT_NAME}/${VERSION}/${FC_PLAT}" CACHE PATH "Prefix prepended to install directories")
+SET(PREFIX  "$ENV{HOME}/opt/${PROJECT_NAME}/${FC_PLAT}" CACHE PATH "Prefix prepended to install directories")
 
 SET(CMAKE_INSTALL_PREFIX "${PREFIX}" CACHE INTERNAL "Prefix prepended to install directories" FORCE)
 
@@ -113,6 +121,7 @@ SET(DT_TARGET_LIB ${CMAKE_INSTALL_PREFIX}/lib)
 SET(DT_TARGET_INC ${CMAKE_INSTALL_PREFIX}/include)
 SET(DT_TARGET_ETC ${CMAKE_INSTALL_PREFIX}/etc)
 SET(DT_TARGET_BIN ${CMAKE_INSTALL_PREFIX}/bin)
+SET(DT_TARGET_VER ${CMAKE_INSTALL_PREFIX}/version)
 
 # Have the .mod files placed in the INC folder
 SET(CMAKE_Fortran_MODULE_DIRECTORY ${DT_TMP_INC})
@@ -246,6 +255,11 @@ INSTALL(FILES ${TMP_CONFIGVARS_USER_FILE} DESTINATION ${DT_TARGET_BIN}/
 INSTALL(FILES ${TMP_CONFIGVARS_GLOBAL_FILE} DESTINATION ${DT_TARGET_BIN}/
   PERMISSIONS ${PERMISSION_777} SETUID)
 
+FILE(WRITE  ${DT_TARGET_VER}  "${VERSION}\n")
+
+
+MESSAGE( STATUS "${Red}Library version:${ColourReset} ${VERSION}")
+MESSAGE( STATUS "${Red}Library will be installed in:${ColourReset} ${CMAKE_INSTALL_PREFIX}")
 
 MESSAGE( STATUS "${Yellow}To conclude installation:${ColourReset} 
 $ make
