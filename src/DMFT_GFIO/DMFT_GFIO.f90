@@ -1,6 +1,6 @@
 module DMFT_GFIO
   USE SF_CONSTANTS, only: one,xi,zero,pi
-  USE SF_IOTOOLS,   only: reg,str,splot,sread,file_gunzip,file_gzip
+  USE SF_IOTOOLS,   only: reg,str,splot,sread,file_gunzip,file_gzip,file_targz,file_untargz
   USE SF_MISC,      only: assert_shape
   USE SF_ARRAYS,    only: arange,linspace
   USE DMFT_CTRL_VARS

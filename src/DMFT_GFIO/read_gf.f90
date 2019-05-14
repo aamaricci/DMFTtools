@@ -143,29 +143,56 @@ subroutine dmft_gf_read_matsubara_ineq(Gmats,fname,iprint,ineq_index,ineq_pad)
      !
   case(4)                  !print only diagonal elements
      write(*,"(A,1x,A)")reg(fname),"matsubara: write spin-orbital diagonal elements. Split."
-     do ilat=1,Nlat
-        do ispin=1,Nspin
-           do iorb=1,Norb
+     do ispin=1,Nspin
+        do iorb=1,Norb
+           do ilat=1,Nlat
+              suffix=reg(fname)//&
+                   "_l"//str(iorb)//str(iorb)//&
+                   "_s"//str(ispin)//&
+                   "_iw"
+              call file_untargz(tarball=reg(suffix))
+              !
+              !
               suffix=reg(fname)//&
                    "_l"//str(iorb)//str(iorb)//&
                    "_s"//str(ispin)//&
                    "_iw_"//reg(index)//str(ilat,pad)//reg(gf_suffix)
               call sread(reg(suffix),wm,Gmats(ilat,ispin,ispin,iorb,iorb,:))
+              !
+              suffix=reg(fname)//&
+                   "_l"//str(iorb)//str(iorb)//&
+                   "_s"//str(ispin)//&
+                   "_iw"
+              call file_targz(tarball=reg(suffix),&
+                   pattern=reg(suffix)//"_"//reg(index)//"*"//reg(gf_suffix))
            enddo
         enddo
      enddo
      !
   case(5)                  !print spin-diagonal, all orbitals 
      write(*,"(A,1x,A)")reg(fname),"matsubara: write spin diagonal and all orbitals elements. Split."
-     do ilat=1,Nlat
-        do ispin=1,Nspin
-           do iorb=1,Norb
-              do jorb=1,Norb
+     do ispin=1,Nspin
+        do iorb=1,Norb
+           do jorb=1,Norb
+              do ilat=1,Nlat
+                 suffix=reg(fname)//&
+                      "_l"//str(iorb)//str(jorb)//&
+                      "_s"//str(ispin)//&
+                      "_iw"
+                 call file_untargz(tarball=reg(suffix))
+                 !
                  suffix=reg(fname)//&
                       "_l"//str(iorb)//str(jorb)//&
                       "_s"//str(ispin)//&
                       "_iw_"//reg(index)//str(ilat,pad)//reg(gf_suffix)
                  call sread(reg(suffix),wm,Gmats(ilat,ispin,ispin,iorb,jorb,:))
+                 !
+                 suffix=reg(fname)//&
+                      "_l"//str(iorb)//str(jorb)//&
+                      "_s"//str(ispin)//&
+                      "_iw"
+                 call file_targz(tarball=reg(suffix),&
+                      pattern=reg(suffix)//"_"//reg(index)//"*"//reg(gf_suffix))
               enddo
            enddo
         enddo
@@ -173,16 +200,29 @@ subroutine dmft_gf_read_matsubara_ineq(Gmats,fname,iprint,ineq_index,ineq_pad)
      !
   case default
      write(*,"(A,1x,A)")reg(fname),"matsubara: write all elements. Split."
-     do ilat=1,Nlat
-        do ispin=1,Nspin
-           do jspin=1,Nspin
-              do iorb=1,Norb
-                 do jorb=1,Norb
+     do ispin=1,Nspin
+        do jspin=1,Nspin
+           do iorb=1,Norb
+              do jorb=1,Norb
+                 do ilat=1,Nlat
+                    suffix=reg(fname)//&
+                         "_l"//str(iorb)//str(jorb)//&
+                         "_s"//str(ispin)//str(jspin)//&
+                         "_iw"
+                    call file_untargz(tarball=reg(suffix))
+                    !
                     suffix=reg(fname)//&
                          "_l"//str(iorb)//str(jorb)//&
                          "_s"//str(ispin)//str(jspin)//&
                          "_iw_"//reg(index)//str(ilat,pad)//reg(gf_suffix)
                     call sread(reg(suffix),wm,Gmats(ilat,ispin,jspin,iorb,jorb,:))
+                    !
+                    suffix=reg(fname)//&
+                         "_l"//str(iorb)//str(jorb)//&
+                         "_s"//str(ispin)//str(jspin)//&
+                         "_iw"
+                    call file_targz(tarball=reg(suffix),&
+                         pattern=reg(suffix)//"_"//reg(index)//"*"//reg(gf_suffix))
                  enddo
               enddo
            enddo
@@ -425,29 +465,56 @@ subroutine dmft_gf_read_realaxis_ineq(Greal,fname,iprint,ineq_index,ineq_pad)
      !
   case(4)                  !print only diagonal elements
      write(*,"(A,1x,A)")reg(fname),"real: write spin-orbital diagonal elements. Split."
-     do ilat=1,Nlat
-        do ispin=1,Nspin
-           do iorb=1,Norb
+     do ispin=1,Nspin
+        do iorb=1,Norb
+           do ilat=1,Nlat
+              suffix=reg(fname)//&
+                   "_l"//str(iorb)//str(iorb)//&
+                   "_s"//str(ispin)//&
+                   "_realw"
+              call file_untargz(tarball=reg(suffix))
+              !
               suffix=reg(fname)//&
                    "_l"//str(iorb)//str(iorb)//&
                    "_s"//str(ispin)//&
                    "_realw_"//reg(index)//str(ilat,pad)//reg(gf_suffix)
               call sread(reg(suffix),wr,Greal(ilat,ispin,ispin,iorb,iorb,:))
+              !
+              suffix=reg(fname)//&
+                   "_l"//str(iorb)//str(iorb)//&
+                   "_s"//str(ispin)//&
+                   "_realw"
+              call file_targz(tarball=reg(suffix),&
+                   pattern=reg(suffix)//"_"//reg(index)//"*"//reg(gf_suffix))
+              !
            enddo
         enddo
      enddo
      !
   case(5)                  !print spin-diagonal, all orbitals 
      write(*,"(A,1x,A)")reg(fname),"real: write spin diagonal and all orbitals elements. Split."
-     do ilat=1,Nlat
-        do ispin=1,Nspin
-           do iorb=1,Norb
-              do jorb=1,Norb
+     do ispin=1,Nspin
+        do iorb=1,Norb
+           do jorb=1,Norb
+              do ilat=1,Nlat
+                 suffix=reg(fname)//&
+                      "_l"//str(iorb)//str(jorb)//&
+                      "_s"//str(ispin)//&
+                      "_realw"
+                 call file_untargz(tarball=reg(suffix))
+                 !
                  suffix=reg(fname)//&
                       "_l"//str(iorb)//str(jorb)//&
                       "_s"//str(ispin)//&
                       "_realw_"//reg(index)//str(ilat,pad)//reg(gf_suffix)
                  call sread(reg(suffix),wr,Greal(ilat,ispin,ispin,iorb,jorb,:))
+                 !
+                 suffix=reg(fname)//&
+                      "_l"//str(iorb)//str(jorb)//&
+                      "_s"//str(ispin)//&
+                      "_realw"
+                 call file_targz(tarball=reg(suffix),&
+                      pattern=reg(suffix)//"_"//reg(index)//"*"//reg(gf_suffix))
               enddo
            enddo
         enddo
@@ -455,16 +522,29 @@ subroutine dmft_gf_read_realaxis_ineq(Greal,fname,iprint,ineq_index,ineq_pad)
      !
   case default
      write(*,"(A,1x,A)")reg(fname),"real: write all elements. Split."
-     do ilat=1,Nlat
-        do ispin=1,Nspin
-           do jspin=1,Nspin
-              do iorb=1,Norb
-                 do jorb=1,Norb
+     do ispin=1,Nspin
+        do jspin=1,Nspin
+           do iorb=1,Norb
+              do jorb=1,Norb
+                 do ilat=1,Nlat
+                    suffix=reg(fname)//&
+                         "_l"//str(iorb)//str(jorb)//&
+                         "_s"//str(ispin)//str(jspin)//&
+                         "_realw"
+                    call file_untargz(tarball=reg(suffix))
+                    !
                     suffix=reg(fname)//&
                          "_l"//str(iorb)//str(jorb)//&
                          "_s"//str(ispin)//str(jspin)//&
                          "_realw_"//reg(index)//str(ilat,pad)//reg(gf_suffix)
                     call sread(reg(suffix),wr,Greal(ilat,ispin,jspin,iorb,jorb,:))
+                    !
+                    suffix=reg(fname)//&
+                         "_l"//str(iorb)//str(jorb)//&
+                         "_s"//str(ispin)//str(jspin)//&
+                         "_realw"
+                    call file_targz(tarball=reg(suffix),&
+                         pattern=reg(suffix)//"_"//reg(index)//"*"//reg(gf_suffix))
                  enddo
               enddo
            enddo
