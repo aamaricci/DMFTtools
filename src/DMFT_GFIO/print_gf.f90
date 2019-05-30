@@ -155,7 +155,7 @@ subroutine dmft_gf_print_matsubara_ineq(Gmats,fname,iprint,ineq_index,ineq_pad,i
                 "_l"//str(iorb)//str(iorb)//&
                 "_s"//str(ispin)//&
                 "_iw"
-           call file_targz(tarball=reg(suffix),&
+           if(present(itar).AND.itar)call file_targz(tarball=reg(suffix),&
                 pattern=reg(suffix)//"_"//reg(index)//"*"//reg(gf_suffix))
         enddo
      enddo
@@ -176,7 +176,7 @@ subroutine dmft_gf_print_matsubara_ineq(Gmats,fname,iprint,ineq_index,ineq_pad,i
                    "_l"//str(iorb)//str(jorb)//&
                    "_s"//str(ispin)//&
                    "_iw"
-              call file_targz(tarball=reg(suffix),&
+              if(present(itar).AND.itar)call file_targz(tarball=reg(suffix),&
                    pattern=reg(suffix)//"_"//reg(index)//"*"//reg(gf_suffix))
            enddo
         enddo
@@ -199,7 +199,7 @@ subroutine dmft_gf_print_matsubara_ineq(Gmats,fname,iprint,ineq_index,ineq_pad,i
                       "_l"//str(iorb)//str(jorb)//&
                       "_s"//str(ispin)//str(jspin)//&
                       "_iw"
-                 call file_targz(tarball=reg(suffix),&
+                 if(present(itar).AND.itar)call file_targz(tarball=reg(suffix),&
                       pattern=reg(suffix)//"_"//reg(index)//"*"//reg(gf_suffix))
               enddo
            enddo
@@ -359,12 +359,13 @@ end subroutine dmft_gf_print_realaxis_main
 
 
 !> REALAXIS: ineq sites
-subroutine dmft_gf_print_realaxis_ineq(Greal,fname,iprint,ineq_index,ineq_pad)
+subroutine dmft_gf_print_realaxis_ineq(Greal,fname,iprint,ineq_index,ineq_pad,itar)
   complex(8),dimension(:,:,:,:,:,:),intent(in) :: Greal
   character(len=*),intent(in)                  :: fname
   integer,intent(in)                           :: iprint
   character(len=*),optional                    :: ineq_index
   integer,optional                             :: ineq_pad
+  logical,optional                             :: itar
   character(len=:),allocatable                 :: index
   integer                                      :: pad
   !
@@ -451,7 +452,7 @@ subroutine dmft_gf_print_realaxis_ineq(Greal,fname,iprint,ineq_index,ineq_pad)
                 "_l"//str(iorb)//str(iorb)//&
                 "_s"//str(ispin)//&
                 "_realw"
-           call file_targz(tarball=reg(suffix),&
+           if(present(itar).AND.itar)call file_targz(tarball=reg(suffix),&
                 pattern=reg(suffix)//"_"//reg(index)//"*"//reg(gf_suffix))
         enddo
      enddo
@@ -472,7 +473,7 @@ subroutine dmft_gf_print_realaxis_ineq(Greal,fname,iprint,ineq_index,ineq_pad)
                    "_l"//str(iorb)//str(jorb)//&
                    "_s"//str(ispin)//&
                    "_realw"
-              call file_targz(tarball=reg(suffix),&
+              if(present(itar).AND.itar)call file_targz(tarball=reg(suffix),&
                    pattern=reg(suffix)//"_"//reg(index)//"*"//reg(gf_suffix))
            enddo
         enddo
@@ -495,7 +496,7 @@ subroutine dmft_gf_print_realaxis_ineq(Greal,fname,iprint,ineq_index,ineq_pad)
                       "_l"//str(iorb)//str(jorb)//&
                       "_s"//str(ispin)//str(jspin)//&
                       "_realw"
-                 call file_targz(tarball=reg(suffix),&
+                 if(present(itar).AND.itar)call file_targz(tarball=reg(suffix),&
                       pattern=reg(suffix)//"_"//reg(index)//"*"//reg(gf_suffix))
               enddo
            enddo
