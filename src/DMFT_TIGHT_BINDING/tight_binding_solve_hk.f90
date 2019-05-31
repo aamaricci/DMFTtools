@@ -66,7 +66,6 @@ subroutine solve_Hk_along_BZpath(hk_model,Nlso,kpath,Nk,colors_name,points_name,
   xtics=reg(xtics)//"'"//reg(points_name(Npts))//"'"//str(ktics(Npts))//""
   !
   open(unit,file=reg(file_)//".gp")
-  write(unit,*)"set term wxt"
   write(unit,*)"#set terminal pngcairo size 350,262 enhanced font 'Verdana,10'"
   write(unit,*)"#set out '"//reg(file_)//".png'"
   write(unit,*)""
@@ -191,7 +190,6 @@ subroutine solve_HkR_along_BZpath(hkr_model,Nlat,Nso,kpath,Nkpath,colors_name,po
   xtics=reg(xtics)//"'"//reg(points_name(Npts))//"'"//str(ktics(Npts))//""
   !
   open(unit,file=reg(file_)//".gp")
-  write(unit,*)"set term wxt"
   write(unit,*)"#set terminal pngcairo size 350,262 enhanced font 'Verdana,10'"
   write(unit,*)"#set out '"//reg(file_)//".png'"
   write(unit,*)""

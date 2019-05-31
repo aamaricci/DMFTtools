@@ -1039,7 +1039,6 @@ subroutine read_Hr_w90_solve_Hk_along_BZpath(       w90_file           &      !o
     enddo
     xtics=reg(xtics)//"'"//reg(points_name(Npts))//"'"//reg(txtfy((Npts-1)*Nk))//""
        open(unit,file=reg(file_print)//".gp")
-       write(unit,*)"set term wxt"
        write(unit,*)"#set terminal pngcairo size 350,262 enhanced font 'Verdana,10'"
        write(unit,*)"#set out '"//reg(file_print)//".png'"
        write(unit,*)""
