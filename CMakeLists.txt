@@ -3,7 +3,7 @@
 ##################################################
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.8)
 PROJECT(dmft_tools Fortran)
-SET(VERSION 1.2.6)
+SET(VERSION 1.2.7)
 
 MESSAGE(STATUS "OS: ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_VERSION}")
 SET(BUILD_TYPE "RELEASE" CACHE STRING "Build type")
@@ -342,6 +342,8 @@ $ make
 $ make install
 $ make post-install
 ")
+
+
 
 
 ADD_CUSTOM_TARGET(
