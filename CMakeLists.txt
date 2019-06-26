@@ -5,7 +5,9 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8.8)
 PROJECT(dmft_tools Fortran)
 SET(VERSION 1.2.6)
 
+MESSAGE(STATUS "OS: ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_VERSION}")
 SET(BUILD_TYPE "RELEASE" CACHE STRING "Build type")
+STRING(TOUPPER "${BUILD_TYPE}" BUILD_TYPE)
 MESSAGE(STATUS "BUILD_TYPE=${BUILD_TYPE}")
 SET(CMAKE_BUILD_TYPE ${BUILD_TYPE} CACHE INTERNAL "Build type" FORCE)
 
@@ -30,30 +32,37 @@ ENDIF()
 # Set some options the user may choose
 OPTION(USE_MPI "Use the MPI library for parallelization" ON)
 OPTION(VERBOSE "Build a verbose Makefile" OFF)
-
-# reSet compiler to MPI is required 
-IF(USE_MPI)
-  FIND_PACKAGE(MPI REQUIRED)
-  SET(CMAKE_Fortran_COMPILER ${MPI_Fortran_COMPILER})
-  SET(MPI_CPP "MPI")
-  MESSAGE(STATUS "${Yellow}Set Fortran compiler FC to ${ColourReset}${CMAKE_Fortran_COMPILER}")
-ELSE(USE_MPI)
-  SET(MPI_CPP "")
-ENDIF(USE_MPI)
-
-# Set verbosity of the Makefile according to option
 IF(VERBOSE)
   SET(CMAKE_VERBOSE_MAKEFILE ON)
 ELSE(VERBOSE)
   SET(CMAKE_VERBOSE_MAKEFILE OFF)
 ENDIF(VERBOSE)
 
-# This executes code that sets the compile flags for DEBUG, RELEASE, and TESTING.
-INCLUDE(${CMAKE_MODULE_PATH}/SetFortranFlags.cmake)
+
+############################################################
+# Look for MPI if needed
+############################################################
+# reSet compiler to MPI is required 
+IF(USE_MPI)
+  FIND_PACKAGE(MPI REQUIRED)
+  IF(MPI_Fortran_FOUND)
+    SET(CMAKE_Fortran_COMPILER ${MPI_Fortran_COMPILER})
+    MESSAGE(STATUS "${Yellow}Set Fortran compiler FC to ${ColourReset}${CMAKE_Fortran_COMPILER}, ID=${CMAKE_Fortran_COMPILER_ID}")
+    SET(MPI_CPP "MPI")		#pre-processing option
+  ELSE()
+    MESSAGE(FATAL_ERROR "MPI Found but No MPI-Fortran compiler can be determined.")    
+  ENDIF()
+ELSE(USE_MPI)
+  SET(MPI_CPP "")
+ENDIF(USE_MPI)
+
+# # This executes code that sets the compile flags for DEBUG, RELEASE, and TESTING.
+# INCLUDE(${CMAKE_MODULE_PATH}/SetFortranFlags.cmake)
 
 
-#Check for .git and extract the current SHA1 revision.
-#create the current scifor_version.inc file
+############################################################
+# Check for .git and extract the current SHA1 revision.
+############################################################
 IF(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git)
   FIND_PACKAGE(Git)
   IF(GIT_FOUND)
@@ -63,21 +72,63 @@ IF(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git)
       OUTPUT_VARIABLE GIT_SHA1
       ERROR_QUIET
       OUTPUT_STRIP_TRAILING_WHITESPACE)
-    MESSAGE( STATUS "${Yellow}Git version: ${ColourReset}${GIT_SHA1}" )
+    MESSAGE( STATUS "${Yellow}Git SHA1: ${ColourReset}${GIT_SHA1}" )
+
+    EXECUTE_PROCESS(
+      COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+      OUTPUT_VARIABLE GIT_BRANCH
+      ERROR_QUIET
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    MESSAGE( STATUS "${Yellow}Git branch: ${ColourReset}${GIT_BRANCH}" )
     
     EXECUTE_PROCESS(
       COMMAND ${GIT_EXECUTABLE} describe --tags
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-      OUTPUT_VARIABLE GIT_SF_VERSION
+      OUTPUT_VARIABLE GIT_TAG
       ERROR_QUIET
       OUTPUT_STRIP_TRAILING_WHITESPACE)
-    MESSAGE(STATUS "${Yellow}Git tag: ${ColourReset}${GIT_SF_VERSION}" )
-    SET(VERSION ${GIT_SF_VERSION})    
+    MESSAGE(STATUS "${Yellow}Git tag: ${ColourReset}${GIT_TAG}")
   ELSE(GIT_FOUND)
     SET(GIT_SHA1 0)
+    SET(GIT_BRANCH "master")
+    SET(GIT_TAG 0.0.0)
   ENDIF(GIT_FOUND)
 ENDIF(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git)
+SET(VERSION ${GIT_TAG})    	#Update version
 
+
+
+
+############################################################
+# Set Fortran options based on BUILD_TYPE and FC ID
+############################################################
+# -mcmodel=large  this is to remove the 2Gb limit of virtual memory allocation
+if(CMAKE_Fortran_COMPILER_ID MATCHES GNU) # this is gfortran
+  SET(CMAKE_Fortran_MODDIR_FLAG   "-J")
+  SET(CMAKE_Fortran_FLAGS         "-cpp -ffree-line-length-none") 
+  SET(CMAKE_Fortran_FLAGS_TESTING "-O2 -funroll-loops")
+  SET(CMAKE_Fortran_FLAGS_DEBUG   "-O0 -p -g -Wsurprising -Waliasing -fwhole-file -fcheck=all -pedantic -fbacktrace -fbounds-check")
+  SET(CMAKE_Fortran_FLAGS_RELEASE "-O3  -ffast-math -march=native -funroll-loops")   
+elseif(CMAKE_Fortran_COMPILER_ID MATCHES Intel)
+  SET(CMAKE_Fortran_MODDIR_FLAG   "-module ") #remember the ending white space here 
+  SET(CMAKE_Fortran_FLAGS         "-fpp")
+  SET(CMAKE_Fortran_FLAGS_TESTING "-O2 -ftz")
+  SET(CMAKE_Fortran_FLAGS_DEBUG   "-p -O0 -g -fpe1 -warn -debug extended -traceback -check all,noarg_temp_created")
+  SET(CMAKE_Fortran_FLAGS_RELEASE "-O3 -ftz")
+elseif(CMAKE_Fortran_COMPILER_ID MATCHES G95)
+  SET(CMAKE_Fortran_MODDIR_FLAG   "-fmod=")
+  SET(CMAKE_Fortran_FLAGS         "-cpp")
+  SET(CMAKE_Fortran_FLAGS_TESTING "-O1  -fsloppy-char")
+  SET(CMAKE_Fortran_FLAGS_DEBUG   "-O0 -g -ftrace=full")
+  SET(CMAKE_Fortran_FLAGS_RELEASE "-O3")
+elseif(CMAKE_Fortran_COMPILER_ID MATCHES PGI)
+  SET(CMAKE_Fortran_MODDIR_FLAG   "-module ")
+  SET(CMAKE_Fortran_FLAGS         "-")
+  SET(CMAKE_Fortran_FLAGS         "")
+  SET(CMAKE_Fortran_FLAGS_DEBUG   "-g -O0 -Mframe")
+  SET(CMAKE_Fortran_FLAGS_RELEASE "-O3 -mcmodel=medium -fast -Munroll")
+endif()
 
 #set MPI preprocessing defition:
 IF(USE_MPI)
@@ -87,13 +138,9 @@ ELSE(USE_MPI)
 ENDIF(USE_MPI)
 
 
-
 ############################################################
-# Define the actual files and folders that make up the build
+# Find Scifor and add to Include dir
 ############################################################
-SET(USER_HOME $ENV{HOME})
-SET(USER $ENV{USER})
-
 FIND_PACKAGE(PkgConfig)
 PKG_SEARCH_MODULE(SCIFOR REQUIRED scifor)
 IF(${SCIFOR_FOUND})
@@ -105,12 +152,30 @@ $ export PKG_CONFIG_PATH=<path_to_scifor_dir>/etc:$PKG_CONFIG_PATH"
     )
 ENDIF()
 
-#make sure FC_PLAT is lowecase
-STRING(TOLOWER "${CMAKE_Fortran_COMPILER_ID}" FC_PLAT)
 
-SET(PREFIX  "$ENV{HOME}/opt/${PROJECT_NAME}/${FC_PLAT}" CACHE PATH "Prefix prepended to install directories")
 
+############################################################
+# Define the actual files and folders that make up the build
+############################################################
+SET(USER_HOME $ENV{HOME})
+SET(USER $ENV{USER})
+
+
+#make sure FC_PLAT is lower case
+IF(GIT_BRANCH MATCHES "master")
+  STRING(TOLOWER "${CMAKE_Fortran_COMPILER_ID}" FC_PLAT)
+ELSE()
+  SET(FC_PLAT "${GIT_BRANCH}")
+ENDIF()
+
+IF("${CMAKE_BUILD_TYPE}" MATCHES "DEBUG")
+  SET(PREFIX "$ENV{HOME}/opt/${PROJECT_NAME}/${FC_PLAT}_${CMAKE_BUILD_TYPE}" CACHE PATH "Prefix prepended to install directories")
+ELSE()
+  SET(PREFIX "$ENV{HOME}/opt/${PROJECT_NAME}/${FC_PLAT}" CACHE PATH "Prefix prepended to install directories")
+ENDIF()
 SET(CMAKE_INSTALL_PREFIX "${PREFIX}" CACHE INTERNAL "Prefix prepended to install directories" FORCE)
+
+
 
 # Define the library name
 SET(DMFT_TOOLSLIB dmft_tools)
@@ -123,16 +188,19 @@ SET(DT_BIN ${CMAKE_SOURCE_DIR}/bin)
 SET(DT_TMP_INC ${CMAKE_BINARY_DIR}/include)
 SET(DT_TMP_ETC ${CMAKE_BINARY_DIR}/etc)
 SET(DT_TMP_BIN ${CMAKE_BINARY_DIR}/bin)
+SET(DT_TMP_VER ${CMAKE_BINARY_DIR}/version)
 SET(DT_TARGET_LIB ${CMAKE_INSTALL_PREFIX}/lib)
 SET(DT_TARGET_INC ${CMAKE_INSTALL_PREFIX}/include)
 SET(DT_TARGET_ETC ${CMAKE_INSTALL_PREFIX}/etc)
 SET(DT_TARGET_BIN ${CMAKE_INSTALL_PREFIX}/bin)
-SET(DT_TARGET_VER ${CMAKE_INSTALL_PREFIX}/version)
+SET(DT_TARGET_DIR ${CMAKE_INSTALL_PREFIX})
 
 # Have the .mod files placed in the INC folder
 SET(CMAKE_Fortran_MODULE_DIRECTORY ${DT_TMP_INC})
 INCLUDE_DIRECTORIES(BEFORE ${CMAKE_Fortran_MODULE_DIRECTORY})
 INCLUDE_DIRECTORIES(BEFORE ${SCIFOR_INCLUDE_DIRS})
+
+
 
 SET(SRC_DIR_DMFT_CTRL_VARS ${DT_SRC}/DMFT_CTRL_VARS)
 ADD_SUBDIRECTORY(${SRC_DIR_DMFT_CTRL_VARS})
@@ -246,6 +314,7 @@ BUILD_CONFIGVARS_GLOBAL(${TMP_CONFIGVARS_GLOBAL_FILE})
 SET(TMP_PKCONFIG_FILE ${DT_TMP_ETC}/${PROJECT_NAME}.pc)
 BUILD_PKCONFIG(${TMP_PKCONFIG_FILE})
 
+FILE(WRITE  ${DT_TMP_VER}  "${VERSION}\n")
 
 INSTALL(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}/ DESTINATION ${DT_TARGET_INC})
 
@@ -261,7 +330,8 @@ INSTALL(FILES ${TMP_CONFIGVARS_USER_FILE} DESTINATION ${DT_TARGET_BIN}/
 INSTALL(FILES ${TMP_CONFIGVARS_GLOBAL_FILE} DESTINATION ${DT_TARGET_BIN}/
   PERMISSIONS ${PERMISSION_777} SETUID)
 
-FILE(WRITE  ${DT_TARGET_VER}  "${VERSION}\n")
+INSTALL(FILES ${DT_TMP_VER} DESTINATION ${DT_TARGET_DIR} 
+  PERMISSIONS ${PERMISSION_777} SETUID)
 
 
 MESSAGE( STATUS "${Red}Library version:${ColourReset} ${VERSION}")

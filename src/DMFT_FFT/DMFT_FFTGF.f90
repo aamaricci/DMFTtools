@@ -231,7 +231,7 @@ contains
     endif
     !
     Fiw=zero
-    Fiw(2::2)=Giw(:L-1)-Tiw(:)
+    Fiw(2::2)=Giw(:L-1)-Tiw(:L-1)
     !
     call fft(Fiw)
     Ftau = dreal(Fiw)*2*size(Fiw)/beta

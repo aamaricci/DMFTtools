@@ -1,0 +1,148 @@
+!< Setup the default_w90 structure with information coming from specified w90_file
+subroutine setup_w90(w90_file,nlat,nspin,norb,verbose)
+  character(len=*),intent(in) :: w90_file
+  integer,optional            :: Nlat
+  integer,optional            :: Norb
+  integer,optional            :: Nspin
+  logical,optional            :: verbose
+  logical                     :: verbose_
+  integer                     :: unitIO
+  integer                     :: Num_wann
+  integer                     :: Nrpts
+  integer                     :: i,j,ir,a,b
+  integer                     :: rx,ry,rz
+  real(8)                     :: re,im
+  !
+  verbose_ = .false. ;if(present(verbose))verbose_=verbose
+  !
+  TB_w90%w90_file = str(w90_file)
+  open(free_unit(unitIO),&
+       file=TB_w90%w90_file,&
+       status="old",&
+       action="read")
+  read(unitIO,*)                      !skip first line
+  read(unitIO,*) Num_wann !Number of Wannier orbitals
+  read(unitIO,*) Nrpts    !Number of Wigner-Seitz vectors
+  !
+  call delete_w90
+  if(.not.set_eivec)stop "setup_w90: set_eivec=false"
+  !
+  !Massive structure allocation:
+  TB_w90%Nlat     = 1 ; if(present(Nlat))TB_w90%Nlat=Nlat
+  TB_w90%Norb     = 1 ; if(present(Norb))TB_w90%Norb=Norb
+  TB_w90%Nspin    = 1 ; if(present(Nspin))TB_w90%Nspin=Nspin
+  !
+  TB_w90%Num_wann = Num_wann
+  if(Num_wann /= TB_w90%Nlat*TB_w90%Norb)stop "setup_w90: Num_wann != Nlat*Norb"
+  TB_w90%Nrpts    = Nrpts
+  TB_w90%Qst      = int(Nrpts/TB_w90%N15)
+  TB_w90%Rst      = mod(Nrpts,TB_w90%N15)
+  allocate(TB_w90%Ndegen(Nrpts))
+  allocate(TB_w90%Rvec(Nrpts,3))
+  allocate(TB_w90%Rgrid(Nrpts,3))
+  allocate(TB_w90%Hij(num_wann*TB_w90%Nspin,num_wann*TB_w90%Nspin,Nrpts))
+  allocate(TB_w90%Hloc(num_wann*TB_w90%Nspin,num_wann*TB_w90%Nspin))
+  TB_w90%Ndegen   = 0
+  TB_w90%Rvec     = 0
+  TB_w90%Hij      = zero
+  TB_w90%Hloc     = zero
+  TB_w90%status   =.true.
+  !
+  write(*,*)
+  write(*,'(1A)')         "-------------- H_LDA --------------"
+  write(*,'(A,I6)')      "  Number of Wannier functions:   ",TB_w90%num_wann
+  write(*,'(A,I6)')      "  Number of Wigner-Seitz vectors:",TB_w90%nrpts
+  write(*,'(A,I6,A,I6)') "  Deg rows:",TB_w90%qst," N last row   :",TB_w90%rst
+  !
+  !Read Ndegen from file:
+  do i=1,TB_w90%Qst
+     read(unitIO,*)(TB_w90%Ndegen(j+(i-1)*TB_w90%N15),j=1,TB_w90%N15)
+  enddo
+  if(TB_w90%Rst/=0)read(unitIO,*)(TB_w90%Ndegen(j+TB_w90%Qst*TB_w90%N15),j=1,TB_w90%Rst)
+  print*,TB_w90%Ndegen
+
+  !Read w90 TB Hamiltonian (no spinup-spindw hybridizations assumed)
+  do ir=1,Nrpts
+     do i=1,Num_wann
+        do j=1,Num_wann
+           !
+           read(unitIO,*)rx,ry,rz,a,b,re,im
+           !
+           TB_w90%Rvec(ir,1)  = rx
+           TB_w90%Rvec(ir,2)  = ry
+           TB_w90%Rvec(ir,3)  = rz
+           TB_w90%Rgrid(ir,:) = rx*ei_x + ry*ei_y + rz*ei_z
+           !
+           TB_w90%Hij(a,b,ir)=dcmplx(re,im)
+           if(TB_w90%Nspin==2)TB_w90%Hij(a+num_wann, b+num_wann, ir)=dcmplx(re,im)
+           !
+           if( all(TB_w90%Rvec(ir,:)==0) )then
+              TB_w90%Hloc(a,b)=dcmplx(re,im)
+              if(Nspin==2)TB_w90%Hloc(a+num_wann, b+num_wann)=dcmplx(re,im)
+           endif
+        enddo
+     enddo
+  enddo
+  close(unitIO)
+  !
+  TB_w90%Hloc=slo2lso(TB_w90%Hloc,TB_w90%Nlat,TB_w90%Nspin,TB_w90%Norb)
+  !
+end subroutine setup_w90
+
+
+subroutine delete_w90()
+  if(.not.TB_w90%status)return
+  TB_w90%Num_wann=0
+  TB_w90%Nrpts=0
+  TB_w90%N15=15
+  TB_w90%Qst=0
+  TB_w90%Rst=0
+  TB_w90%Nlat=0
+  TB_w90%Norb=0
+  TB_w90%Nspin=0
+  deallocate(TB_w90%w90_file)
+  deallocate(TB_w90%Ndegen)
+  deallocate(TB_w90%Rvec)
+  deallocate(TB_w90%Rgrid)
+  deallocate(TB_w90%Hij)
+  deallocate(TB_w90%Hloc)
+  TB_w90%status=.false.
+end subroutine delete_w90
+
+
+
+!< generate an internal function to be called in the building procedure
+function w90_hk_model(kvec,N) result(Hk)
+  real(8),dimension(:)      :: kvec
+  integer                   :: N
+  complex(8),dimension(N,N) :: Hk
+  complex(8),dimension(N,N) :: Htmp
+  integer                   :: nDim,Nso
+  integer                   :: i,j,ir
+  real(8)                   :: rvec(size(kvec)),rdotk
+  !
+  if(.not.TB_w90%status)stop "w90_hk_model: TB_w90 was not setup"
+  !
+  nDim = size(kvec)
+  Nso  = TB_w90%Nspin*TB_w90%Num_wann
+  if(Nso /= N )stop "w90_hk_model: Nso != N"
+  Htmp = zero
+  do ir=1,TB_w90%Nrpts
+     Rvec = TB_w90%Rgrid(ir,:nDim)
+     rdotk= dot_product(Kvec,Rvec)
+     do i=1,N
+        do j=1,N
+           Htmp(i,j)=Htmp(i,j)+TB_w90%Hij(i,j,ir)*dcmplx(cos(rdotk),-sin(rdotk))/TB_w90%Ndegen(ir)
+        enddo
+     enddo
+  enddo
+  !
+  if(TB_w90%Nspin==1)then
+     Hk = Htmp
+  else
+     Hk =slo2lso(Htmp,TB_w90%Nlat,TB_w90%Nlat,TB_w90%Nlat)
+  endif
+  !
+  call herm_check(Hk)
+  !
+end function w90_hk_model
