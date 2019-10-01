@@ -13,6 +13,23 @@ subroutine dmft_sc_normal_main_mpi(MpiComm,Gloc,Smats,Weiss,Hloc,SCtype)
   end select
 end subroutine dmft_sc_normal_main_mpi
 
+
+subroutine dmft_sc_normal_cluster_mpi(MpiComm,Gloc,Smats,Weiss,Hloc,SCtype)
+  integer                                           :: MpiComm
+  complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Gloc         ! [Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+  complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Smats        ! [Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+  complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Weiss        ! [Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+  complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Hloc         ! [Nlat][Nlat][Nspin][Nspin][Norb][Norb]
+  character(len=*)                                  :: SCtype
+  select case(SCtype)
+  case default
+     call dmft_weiss(MpiComm,Gloc,Smats,Weiss,Hloc)
+  case ("delta")
+     call dmft_delta(MpiComm,Gloc,Smats,Weiss,Hloc)
+  end select
+end subroutine dmft_sc_normal_cluster_mpi
+
+
 subroutine dmft_sc_normal_ineq_mpi(MpiComm,Gloc,Smats,Weiss,Hloc,SCtype)
   integer                                         :: MpiComm
   complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Gloc         ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]

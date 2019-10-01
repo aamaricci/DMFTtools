@@ -15,6 +15,7 @@ module DMFT_GLOC
 
   interface dmft_gloc_matsubara
      module procedure :: dmft_get_gloc_matsubara_normal_main
+     module procedure :: dmft_get_gloc_matsubara_normal_cluster
      module procedure :: dmft_get_gloc_matsubara_normal_dos
      module procedure :: dmft_get_gloc_matsubara_normal_ineq
      module procedure :: dmft_get_gloc_matsubara_superc_main
@@ -22,6 +23,7 @@ module DMFT_GLOC
      module procedure :: dmft_get_gloc_matsubara_superc_ineq
 #ifdef _MPI
      module procedure :: dmft_get_gloc_matsubara_normal_main_mpi
+     module procedure :: dmft_get_gloc_matsubara_normal_cluster_mpi
      module procedure :: dmft_get_gloc_matsubara_normal_dos_mpi
      module procedure :: dmft_get_gloc_matsubara_normal_ineq_mpi
      module procedure :: dmft_get_gloc_matsubara_superc_main_mpi
@@ -34,6 +36,7 @@ module DMFT_GLOC
 
   interface dmft_gloc_realaxis
      module procedure :: dmft_get_gloc_realaxis_normal_main
+     module procedure :: dmft_get_gloc_realaxis_normal_cluster
      module procedure :: dmft_get_gloc_realaxis_normal_dos
      module procedure :: dmft_get_gloc_realaxis_normal_ineq
      module procedure :: dmft_get_gloc_realaxis_superc_main
@@ -41,6 +44,7 @@ module DMFT_GLOC
      module procedure :: dmft_get_gloc_realaxis_superc_ineq
 #ifdef _MPI
      module procedure :: dmft_get_gloc_realaxis_normal_main_mpi
+     module procedure :: dmft_get_gloc_realaxis_normal_cluster_mpi
      module procedure :: dmft_get_gloc_realaxis_normal_dos_mpi
      module procedure :: dmft_get_gloc_realaxis_normal_ineq_mpi
      module procedure :: dmft_get_gloc_realaxis_superc_main_mpi
@@ -104,6 +108,10 @@ module DMFT_GLOC
      module procedure d_nlso2nnn
      module procedure c_nlso2nnn
   end interface lso2nnn_reshape
+  interface lso2nnn_cluster_reshape
+     module procedure d_nlso2nnn_cluster
+     module procedure c_nlso2nnn_cluster
+  end interface lso2nnn_cluster_reshape
   interface so2nn_reshape
      module procedure d_nso2nn
      module procedure c_nso2nn
@@ -112,6 +120,10 @@ module DMFT_GLOC
      module procedure d_nnn2nlso
      module procedure c_nnn2nlso
   end interface nnn2lso_reshape
+  interface nnn2lso_cluster_reshape
+     module procedure d_nnn2nlso_cluster
+     module procedure c_nnn2nlso_cluster
+  end interface nnn2lso_cluster_reshape
   interface nn2so_reshape
      module procedure d_nn2nso
      module procedure c_nn2nso
@@ -289,6 +301,91 @@ contains
 #endif
 
 
+  ! INVERT_GK_NORMAL_CLUSTER(_MPI)
+  !
+  !SERIAL (OR PARALLEL ON K):
+  subroutine invert_gk_normal_cluster(zeta,Hk,hk_symm,Gkout)
+    complex(8),dimension(:,:,:),intent(in)            :: zeta    ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lfreq]
+    complex(8),dimension(:,:),intent(in)              :: Hk      ![Nlat*Nspin*Norb][Nlat*Nspin*Norb]
+    logical,intent(in)                                :: hk_symm
+    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gkout   ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:,:),allocatable   :: Gktmp   ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
+    complex(8),dimension(:,:),allocatable             :: Gmatrix ![Nlat*Nspin*Norb][Nlat*Nspin*Norb]
+    integer                                           :: Nspin,Norb,Nlso,Lfreq
+    integer                                           :: i,iorb,jorb,ispin,jspin,io,jo
+    !
+    Nlat  = size(Gkout,1)
+    Nspin = size(Gkout,3)
+    Norb  = size(Gkout,5)
+    Lfreq = size(zeta,3)
+    Nlso  = Nlat*Nspin*Norb
+    !testing
+    call assert_shape(zeta,[Nlso,Nlso,Lfreq],"invert_gk_normal_cluster","zeta")
+    call assert_shape(Hk,[Nlso,Nlso],"invert_gk_normal_cluster","Hk")
+    call assert_shape(Gkout,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_normal_cluster","Gkout")
+    !
+    allocate(Gktmp(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq))
+    allocate(Gmatrix(Nlso,Nlso))
+    Gktmp=zero
+    do i=1,Lfreq
+       Gmatrix  = zeta(:,:,i) - Hk
+       if(hk_symm) then
+          call inv_sym(Gmatrix)
+       else
+          call inv(Gmatrix)  ! PAY ATTENTION HERE: it is not guaranteed that Gloc is a symmetric matrix
+       end if
+       !store the diagonal blocks directly into the tmp output 
+       Gktmp(:,:,:,:,:,:,i)=lso2nnn_cluster_reshape(Gmatrix,Nlat,Nspin,Norb)
+    enddo
+    Gkout = Gktmp
+  end subroutine invert_gk_normal_cluster
+
+  !PARALLEL ON FREQ:
+#ifdef _MPI
+  subroutine invert_gk_normal_cluster_mpi(MpiComm,zeta,Hk,hk_symm,Gkout)
+    integer                                           :: MpiComm
+    complex(8),dimension(:,:,:),intent(in)            :: zeta    ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lfreq]
+    complex(8),dimension(:,:),intent(in)              :: Hk      ![Nlat*Nspin*Norb][Nlat*Nspin*Norb]
+    logical,intent(in)                                :: hk_symm
+    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gkout   ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:,:),allocatable   :: Gktmp   ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
+    complex(8),dimension(:,:),allocatable             :: Gmatrix ![Nlat*Nspin*Norb][Nlat*Nspin*Norb]
+    integer                                           :: Nspin,Norb,Nlso,Lfreq
+    integer                                           :: i,iorb,jorb,ispin,jspin,io,jo
+    !
+    !
+    !MPI setup:
+    mpi_size  = MPI_Get_size(MpiComm)
+    mpi_rank =  MPI_Get_rank(MpiComm)
+    mpi_master= MPI_Get_master(MpiComm)
+    !
+    Nlat  = size(Gkout,1)
+    Nspin = size(Gkout,3)
+    Norb  = size(Gkout,5)
+    Lfreq = size(zeta,3)
+    Nlso   = Nlat*Nspin*Norb
+    !testing
+    call assert_shape(zeta,[Nlso,Nlso,Lfreq],"invert_gk_normal_mpi","zeta")
+    call assert_shape(Hk,[Nlso,Nlso],"invert_gk_normal_mpi","Hk")
+    call assert_shape(Gkout,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_normal_mpi","Gkout")
+    !
+    allocate(Gktmp(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq))
+    allocate(Gmatrix(Nlso,Nlso))
+    Gktmp=zero
+    do i=1+mpi_rank,Lfreq,mpi_size
+       Gmatrix  = zeta(:,:,i) - Hk
+       if(hk_symm) then
+          call inv_sym(Gmatrix)
+       else
+          call inv(Gmatrix)  ! PAY ATTENTION HERE: it is not guaranteed that Gloc is a symmetric matrix
+       end if
+       !store the diagonal blocks directly into the tmp output 
+       Gktmp(:,:,:,:,:,:,i)=lso2nnn_cluster_reshape(Gmatrix,Nlat,Nspin,Norb)
+    enddo
+    Gkout=zero
+    call MPI_AllReduce(Gktmp, Gkout, size(Gkout), MPI_Double_Complex, MPI_Sum, MpiComm, mpi_ierr)
+  end subroutine invert_gk_normal_cluster_mpi
+#endif
 
 
 
@@ -1500,6 +1597,123 @@ contains
        enddo
     enddo
   end function c_nn2nso
+  
+  
+  
+  !+-----------------------------------------------------------------------------+!
+  !PURPOSE: 
+  ! reshape a matrix from the [Nlso][Nlso] shape
+  ! _nlso2nnn : from [Nlso][Nlso] to [Nlat][Nlat][Nspin][Nspin][Norb][Norb]  !
+  !+-----------------------------------------------------------------------------+!
+
+  function d_nlso2nnn_cluster(Hlso,Nlat,Nspin,Norb) result(Hnnn)
+    integer                                            :: Nlat,Nspin,Norb
+    real(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hlso
+    real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hnnn
+    integer                                            :: ilat,jlat
+    integer                                            :: iorb,jorb
+    integer                                            :: ispin,jspin
+    integer                                            :: is,js
+    Hnnn=zero
+    do ilat=1,Nlat
+       do jlat=1,Nlat
+          do ispin=1,Nspin
+             do jspin=1,Nspin
+                do iorb=1,Norb
+                   do jorb=1,Norb
+                      is = iorb + (ilat-1)*Norb + (ispin-1)*Norb*Nlat
+                      js = jorb + (jlat-1)*Norb + (jspin-1)*Norb*Nlat
+                      Hnnn(ilat,jlat,ispin,jspin,iorb,jorb) = Hlso(is,js)
+                   enddo
+                enddo
+             enddo
+          enddo
+       enddo
+    enddo
+  end function d_nlso2nnn_cluster
+  !
+  function c_nlso2nnn_cluster(Hlso,Nlat,Nspin,Norb) result(Hnnn)
+    integer                                               :: Nlat,Nspin,Norb
+    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hlso
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hnnn
+    integer                                               :: ilat,jlat
+    integer                                               :: iorb,jorb
+    integer                                               :: ispin,jspin
+    integer                                               :: is,js
+    Hnnn=zero
+    do ilat=1,Nlat
+       do jlat=1,Nlat
+          do ispin=1,Nspin
+             do jspin=1,Nspin
+                do iorb=1,Norb
+                   do jorb=1,Norb
+                      is = iorb + (ilat-1)*Norb + (ispin-1)*Norb*Nlat
+                      js = jorb + (jlat-1)*Norb + (jspin-1)*Norb*Nlat
+                      Hnnn(ilat,jlat,ispin,jspin,iorb,jorb) = Hlso(is,js)
+                   enddo
+                enddo
+             enddo
+          enddo
+       enddo
+    enddo
+  end function c_nlso2nnn_cluster
 
 
+  !+-----------------------------------------------------------------------------+!
+  !PURPOSE: 
+  ! reshape a matrix from the [Nlat][Nlat][Nspin][Nspin][Norb][Norb] shape
+  ! _nnn2nlso : from [Nlat][Nlat][Nspin][Nspin][Norb][Norb] to [Nlso][Nlso]
+  !+-----------------------------------------------------------------------------+!
+
+  function d_nnn2nlso_cluster(Hnnn,Nlat,Nspin,Norb) result(Hlso)
+    integer                                            :: Nlat,Nspin,Norb
+    real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hnnn
+    real(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hlso
+    integer                                            :: ilat,jlat
+    integer                                            :: iorb,jorb
+    integer                                            :: ispin,jspin
+    integer                                            :: is,js
+    Hlso=zero
+    do ilat=1,Nlat
+       do jlat=1,Nlat
+          do ispin=1,Nspin
+             do jspin=1,Nspin
+                do iorb=1,Norb
+                   do jorb=1,Norb
+                      is = iorb + (ilat-1)*Norb + (ispin-1)*Norb*Nlat
+                      js = jorb + (jlat-1)*Norb + (jspin-1)*Norb*Nlat
+                      Hlso(is,js) = Hnnn(ilat,jlat,ispin,jspin,iorb,jorb)
+                   enddo
+                enddo
+             enddo
+          enddo
+       enddo
+    enddo
+  end function d_nnn2nlso_cluster
+  !
+  function c_nnn2nlso_cluster(Hnnn,Nlat,Nspin,Norb) result(Hlso)
+    integer                                               :: Nlat,Nspin,Norb
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hnnn
+    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hlso
+    integer                                               :: ilat,jlat
+    integer                                               :: iorb,jorb
+    integer                                               :: ispin,jspin
+    integer                                               :: is,js
+    Hlso=zero
+    do ilat=1,Nlat
+       do jlat=1,Nlat
+          do ispin=1,Nspin
+             do jspin=1,Nspin
+                do iorb=1,Norb
+                   do jorb=1,Norb
+                      is = iorb + (ilat-1)*Norb + (ispin-1)*Norb*Nlat
+                      js = jorb + (jlat-1)*Norb + (jspin-1)*Norb*Nlat
+                      Hlso(is,js) = Hnnn(ilat,jlat,ispin,jspin,iorb,jorb)
+                   enddo
+                enddo
+             enddo
+          enddo
+       enddo
+    enddo
+  end function c_nnn2nlso_cluster
 end module DMFT_GLOC

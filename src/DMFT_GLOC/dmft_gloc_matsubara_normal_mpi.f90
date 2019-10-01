@@ -70,6 +70,79 @@ subroutine dmft_get_gloc_matsubara_normal_main_mpi(MpiComm,Hk,Wtk,Gmats,Smats,mp
 end subroutine dmft_get_gloc_matsubara_normal_main_mpi
 
 
+subroutine dmft_get_gloc_matsubara_normal_cluster_mpi(MpiComm,Hk,Wtk,Gmats,Smats,mpi_split,hk_symm)
+  integer                                           :: MpiComm
+  complex(8),dimension(:,:,:),intent(in)            :: Hk        ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lk]
+  real(8),dimension(size(Hk,3)),intent(in)          :: Wtk       ![Nk]
+  complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Smats     ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+  complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gmats     !as Smats
+  character(len=*),optional                         :: mpi_split
+  character(len=1)                                  :: mpi_split_
+  logical,dimension(size(Hk,3)),optional            :: hk_symm   ![Lk]
+  logical,dimension(size(Hk,3))                     :: hk_symm_  ![Lk]
+  !allocatable arrays
+  complex(8),dimension(:,:,:,:,:,:,:),allocatable   :: Gkmats    !as Smats
+  complex(8),dimension(:,:,:,:,:,:,:),allocatable   :: Gtmp      !as Smats
+  complex(8),dimension(:,:,:),allocatable           :: zeta_mats ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lmats]
+  !
+  !MPI setup:
+  mpi_size  = MPI_Get_size(MpiComm)
+  mpi_rank =  MPI_Get_rank(MpiComm)
+  mpi_master= MPI_Get_master(MpiComm)
+  !Retrieve parameters:
+  call get_ctrl_var(beta,"BETA")
+  call get_ctrl_var(xmu,"XMU")
+  !
+  mpi_split_='w'    ;if(present(mpi_split)) mpi_split_=mpi_split
+  hk_symm_  =.false.;if(present(hk_symm)) hk_symm_=hk_symm
+  !
+  Nlat  = size(Smats,1)
+  Nspin = size(Smats,3)
+  Norb  = size(Smats,5)
+  Lmats = size(Smats,7)
+  Lk    = size(Hk,3)
+  Nso   = Nlat*Nspin*Norb    
+  !Testing part:
+  call assert_shape(Hk,[Nlso,Nlso,Lk],"dmft_get_gloc_matsubara_normal_cluster_mpi","Hk")
+  call assert_shape(Smats,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_gloc_matsubara_normal_cluster_mpi","Smats")
+  call assert_shape(Gmats,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_gloc_matsubara_normal_cluster_mpi","Gmats")
+  !
+  !Allocate and setup the Matsubara freq.
+  allocate(Gkmats(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats))
+  allocate(zeta_mats(Nlso,Nlso,Lmats))
+  if(allocated(wm))deallocate(wm);allocate(wm(Lmats))
+  wm = pi/beta*dble(2*arange(1,Lmats)-1)
+  !
+  do i=1,Lmats
+     zeta_mats(:,:,i)=(xi*wm(i)+xmu)*eye(Nlso) - nnn2lso_cluster_reshape(Smats(:,:,:,:,:,:,i),Nlat,Nspin,Norb)
+  enddo
+  !
+  !invert (Z-Hk) for each k-point
+  if(mpi_master)write(*,"(A)")"Get local Matsubara Green's function (no print)"
+  if(mpi_master)call start_timer
+  Gmats=zero
+  select case(mpi_split_)
+  case default
+     stop "dmft_get_gloc_matsubara_normal_main_mpi: ! mpi_split_ in ['w','k'] "
+  case ('w')
+     do ik=1,Lk
+        call invert_gk_normal_cluster_mpi(MpiComm,zeta_mats,Hk(:,:,ik),hk_symm_(ik),Gkmats)      
+        Gmats = Gmats + Gkmats*Wtk(ik)
+        if(mpi_master)call eta(ik,Lk)
+     end do
+  case ('k')
+     allocate(Gtmp(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats));Gtmp=zero
+     do ik=1+mpi_rank,Lk,mpi_size
+        call invert_gk_normal_cluster(zeta_mats,Hk(:,:,ik),hk_symm_(ik),Gkmats)
+        Gtmp = Gtmp + Gkmats*Wtk(ik)
+        if(mpi_master)call eta(ik,Lk)
+     end do
+     call Mpi_AllReduce(Gtmp,Gmats, size(Gmats), MPI_Double_Complex, MPI_Sum, MpiComm, MPI_ierr)
+  end select
+  if(mpi_master)call stop_timer
+end subroutine dmft_get_gloc_matsubara_normal_cluster_mpi
+
+
 subroutine dmft_get_gloc_matsubara_normal_dos_mpi(MpiComm,Ebands,Dbands,Hloc,Gmats,Smats,mpi_split)
   integer                                                     :: MpiComm
   real(8),dimension(:,:),intent(in)                           :: Ebands    ![Nspin*Norb][Lk]

@@ -52,6 +52,59 @@ subroutine dmft_get_gloc_matsubara_normal_main(Hk,Wtk,Gmats,Smats,hk_symm)
 end subroutine dmft_get_gloc_matsubara_normal_main
 
 
+subroutine dmft_get_gloc_matsubara_normal_cluster(Hk,Wtk,Gmats,Smats,hk_symm)
+  complex(8),dimension(:,:,:),intent(in)            :: Hk        ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lk]
+  real(8),dimension(size(Hk,3)),intent(in)          :: Wtk       ![Nk]
+  complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Smats     ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+  complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gmats     !as Smats
+  logical,dimension(size(Hk,3)),optional            :: hk_symm   ![Lk]
+  logical,dimension(size(Hk,3))                     :: hk_symm_  ![Lk]
+  !allocatable arrays
+  complex(8),dimension(:,:,:,:,:,:,:),allocatable   :: Gkmats    !as Smats
+  complex(8),dimension(:,:,:),allocatable           :: zeta_mats ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lmats]
+  !
+  real(8)                                           :: beta
+  real(8)                                           :: xmu,eps
+  real(8)                                           :: wini,wfin
+  !
+  !Retrieve parameters:
+  call get_ctrl_var(beta,"BETA")
+  call get_ctrl_var(xmu,"XMU")
+  !
+  hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
+  !
+  Nlat  = size(Smats,1)
+  Nspin = size(Smats,3)
+  Norb  = size(Smats,5)
+  Lmats = size(Smats,7)
+  Lk    = size(Hk,3)
+  Nlso   = Nlat*Nspin*Norb    
+  !Testing part:
+  call assert_shape(Hk,[Nlso,Nlso,Lk],'dmft_get_gloc_matsubara_normal_main',"Hk")
+  call assert_shape(Smats,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gloc_matsubara_normal_main',"Smats")
+  call assert_shape(Gmats,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gloc_matsubara_normal_main',"Gmats")
+  !
+  !Allocate and setup the Matsubara freq.
+  allocate(Gkmats(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats))
+  allocate(zeta_mats(Nlso,Nlso,Lmats))
+  if(allocated(wm))deallocate(wm);allocate(wm(Lmats))
+  wm = pi/beta*dble(2*arange(1,Lmats)-1)
+  !
+  do i=1,Lmats
+     zeta_mats(:,:,i)=(xi*wm(i)+xmu)*eye(Nlso) - nnn2lso_cluster_reshape(Smats(:,:,:,:,:,:,i),Nlat,Nspin,Norb)
+  enddo
+  !
+  !invert (Z-Hk) for each k-point
+  write(*,"(A)")"Get local Matsubara Green's function (no print)"
+  call start_timer
+  Gmats=zero
+  do ik=1,Lk
+     call invert_gk_normal_cluster(zeta_mats,Hk(:,:,ik),hk_symm_(ik),Gkmats)      
+     Gmats = Gmats + Gkmats*Wtk(ik)
+     call eta(ik,Lk)
+  end do
+  call stop_timer
+end subroutine dmft_get_gloc_matsubara_normal_cluster
 
 
 
