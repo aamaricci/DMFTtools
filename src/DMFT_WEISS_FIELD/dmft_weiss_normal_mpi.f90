@@ -100,7 +100,7 @@ subroutine dmft_get_weiss_normal_cluster_mpi(MpiComm,Gloc,Smats,Weiss,Hloc)
      Nspin = size(Gloc,1)
      Norb  = size(Gloc,3)
      Lmats = size(Gloc,5)
-     Nlso   = Nspin*Norb
+     Nlso   = Nlat*Nspin*Norb
      call assert_shape(Gloc,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_normal_cluster","Gloc")
      call assert_shape(Smats,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_normal_cluster","Smats")
      call assert_shape(Weiss,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_normal_cluster","Weiss")

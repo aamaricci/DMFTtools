@@ -36,7 +36,7 @@ subroutine dmft_kinetic_energy_normal_main(Hk,Wtk,Sigma,Ekin,Eloc)
   Lk  = size(Hk,3)
   Liw = size(Sigma,3)
   !Testing:
-  if(Nso/=Norb*Nspin)stop "dmft_kinetic_energy_normal_main: Nso != Norb*Nspin [from Hk]"
+  !if(Nso/=Norb*Nspin)stop "dmft_kinetic_energy_normal_main: Nso != Norb*Nspin [from Hk]"
   call assert_shape(Hk,[Nso,Nso,Lk],"dmft_kinetic_energy_normal_main","Hk")
   call assert_shape(Sigma,[Nso,Nso,Liw],"dmft_kinetic_energy_normal_main","Sigma")
   !
