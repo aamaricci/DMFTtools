@@ -101,7 +101,7 @@ subroutine dmft_get_gloc_matsubara_normal_cluster_mpi(MpiComm,Hk,Wtk,Gmats,Smats
   Norb  = size(Smats,5)
   Lmats = size(Smats,7)
   Lk    = size(Hk,3)
-  Nso   = Nlat*Nspin*Norb    
+  Nlso   = Nlat*Nspin*Norb    
   !Testing part:
   call assert_shape(Hk,[Nlso,Nlso,Lk],"dmft_get_gloc_matsubara_normal_cluster_mpi","Hk")
   call assert_shape(Smats,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_gloc_matsubara_normal_cluster_mpi","Smats")
