@@ -127,7 +127,7 @@ subroutine dmft_get_delta_normal_cluster_mpi(MpiComm,Gloc,Smats,Delta,Hloc)
      calG0_site(:,:,1:Lmats) = zeta_site(:,:,1:Lmats) - invGloc_site(:,:,1:Lmats)
      !
      !Dump back the [Nlat*Norb*Nspin]**2 block of the ilat-th site into the 
-     !output structure of [Nspsin,Nspin,Norb,Norb] matrix
+     !output structure of [Nlat,Nlat,Nspin,Nspin,Norb,Norb] matrix
      do i=1,Lmats
         Delta(:,:,:,:,:,:,i) = lso2nnn_reshape(calG0_site(:,:,i),Nlat,Nspin,Norb)
      enddo
