@@ -78,9 +78,10 @@ subroutine dmft_get_weiss_normal_cluster(Gloc,Smats,Weiss,Hloc)
   call get_ctrl_var(xmu,"XMU")
   !
   !Testing part:
-  Nspin = size(Gloc,1)
-  Norb  = size(Gloc,3)
-  Lmats = size(Gloc,5)
+  Nlat  = size(Gloc,1)
+  Nspin = size(Gloc,3)
+  Norb  = size(Gloc,5)
+  Lmats = size(Gloc,7)
   Nlso   = Nlat*Nspin*Norb
   call assert_shape(Gloc,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_normal_cluster","Gloc")
   call assert_shape(Smats,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_normal_cluster","Smats")
