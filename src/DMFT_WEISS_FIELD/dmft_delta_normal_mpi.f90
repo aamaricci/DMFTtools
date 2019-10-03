@@ -68,16 +68,16 @@ end subroutine dmft_get_delta_normal_main_mpi
 
 
 subroutine dmft_get_delta_normal_cluster_mpi(MpiComm,Gloc,Smats,Delta,Hloc)
-  integer                                       :: MpiComm
+  integer                                           :: MpiComm
   complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Gloc  ! [Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
   complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Smats ! [Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
   complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Delta ! [Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
   complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Hloc  ! [Nlat][Nlat][Nspin][Nspin][Norb][Norb]
   !aux
-  complex(8),dimension(:,:,:),allocatable           :: zeta_site ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lmats]
-  complex(8),dimension(:,:,:),allocatable           :: Smats_site![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lmats]
-  complex(8),dimension(:,:,:),allocatable           :: invGloc_site![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lmats]
-  complex(8),dimension(:,:,:),allocatable           :: calG0_site![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lmats]
+  complex(8),dimension(:,:,:),allocatable           :: zeta_site     ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lmats]
+  complex(8),dimension(:,:,:),allocatable           :: Smats_site    ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lmats]
+  complex(8),dimension(:,:,:),allocatable           :: invGloc_site  ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lmats]
+  complex(8),dimension(:,:,:),allocatable           :: calG0_site    ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lmats]
   integer                                           :: Nlat,Nspin,Norb,Nlso,Lmats
   integer                                           :: i,ilat,jlat,iorb,jorb,ispin,jspin,io,jo
   !
