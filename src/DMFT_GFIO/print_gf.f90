@@ -62,7 +62,6 @@ subroutine dmft_gf_print_matsubara_main(Gmats,fname,iprint)
 end subroutine dmft_gf_print_matsubara_main
 
 
-
 !> MATSUBARA: ineq sites
 subroutine dmft_gf_print_matsubara_ineq(Gmats,fname,iprint,ineq_index,ineq_pad,itar)
    complex(8),dimension(:,:,:,:,:,:),intent(in) :: Gmats
@@ -233,10 +232,10 @@ subroutine dmft_gij_print_matsubara(Gmats,fname,iprint)
    wm = pi/beta*(2*arange(1,Lmats)-1)
    !
    select case(iprint)
-   case (0)
+   case(0)
       write(*,"(A,1x,A)")reg(fname),"matsubara: not written on file."
-   case(1)                  !print only diagonal elements     
-      write(*,"(A,1x,A)")reg(fname),"matsubara: spin-orbital diagonal elements."
+   case(1)                  !print only diagonal elements, single file  
+      write(*,"(A,1x,A)")reg(fname),"matsubara: spin-orbital diagonal elements on one file."
       do ispin=1,Nspin
          do iorb=1,Norb
             suffix=reg(fname)//&
@@ -247,13 +246,29 @@ subroutine dmft_gij_print_matsubara(Gmats,fname,iprint)
             call file_gzip(reg(suffix))
          enddo
       enddo
-   case(2)                  !print spin-diagonal, all orbitals 
-      write(*,"(A,1x,A)")reg(fname),"matsubara: write spin diagonal and all orbitals elements."
+   case(2)                  !print only diagonal elements, many files
+      write(*,"(A,1x,A)") reg(fname),"matsubara: write spin-orbital diagonal elements on many files."
+      do ilat=1,Nlat
+         do jlat=1,Nlat
+            do ispin=1,Nspin
+               do iorb=1,Norb
+                  suffix=reg(fname)//&
+                     "_i"//str(ilat)//str(jlat)//&
+                     "_l"//str(iorb)//str(iorb)//&
+                     "_s"//str(ispin)//&
+                     "_iw"//str(gf_suffix)
+                  call splot(reg(suffix),wm,Gmats(ilat,jlat,ispin,ispin,iorb,iorb,:))
+               enddo
+            enddo
+         enddo
+      enddo
+   case(3)                  !print only diagonal elements, single file  
+      write(*,"(A,1x,A)")reg(fname),"matsubara: spin diagonal elements on one file."
       do ispin=1,Nspin
          do iorb=1,Norb
             do jorb=1,Norb
                suffix=reg(fname)//&
-                  "_l"//str(iorb)//str(jorb)//&
+                  "_l"//str(iorb)//str(iorb)//&
                   "_s"//str(ispin)//&
                   "_iw"//reg(gf_suffix)
                call splot(reg(suffix),wm,Gmats(:,:,ispin,ispin,iorb,jorb,:))
@@ -261,7 +276,25 @@ subroutine dmft_gij_print_matsubara(Gmats,fname,iprint)
             enddo
          enddo
       enddo
-   case default              !print all off-diagonals
+   case(4)                  !print only diagonal elements, many files
+      write(*,"(A,1x,A)") reg(fname),"matsubara: write spin diagonal elements on many files."
+      do ilat=1,Nlat
+         do jlat=1,Nlat
+            do ispin=1,Nspin
+               do iorb=1,Norb
+                  do jorb=1,Norb
+                     suffix=reg(fname)//&
+                        "_i"//str(ilat)//str(jlat)//&
+                        "_l"//str(iorb)//str(jorb)//&
+                        "_s"//str(ispin)//&
+                        "_iw"//str(gf_suffix)
+                     call splot(reg(suffix),wm,Gmats(ilat,jlat,ispin,ispin,iorb,jorb,:))
+                  enddo
+               enddo
+            enddo
+         enddo
+      enddo
+   case(5)              !print all off-diagonals
       write(*,"(A,1x,A)")reg(fname),"matsubara: write all elements."
       do ispin=1,Nspin
          do jspin=1,Nspin
@@ -273,6 +306,26 @@ subroutine dmft_gij_print_matsubara(Gmats,fname,iprint)
                      "_iw"//reg(gf_suffix)
                   call splot(reg(suffix),wm,Gmats(:,:,ispin,jspin,iorb,jorb,:))
                   call file_gzip(reg(suffix))
+               enddo
+            enddo
+         enddo
+      enddo
+   case default                  !print all off-diagonals, many files
+      write(*,"(A,1x,A)") reg(fname),"matsubara: write all elements on many files."
+      do ilat=1,Nlat
+         do jlat=1,Nlat
+            do ispin=1,Nspin
+               do jspin=1,Nspin
+                  do iorb=1,Norb
+                     do jorb=1,Norb
+                        suffix=reg(fname)//&
+                           "_i"//str(ilat)//str(jlat)//&
+                           "_l"//str(iorb)//str(jorb)//&
+                           "_s"//str(ispin)//str(jspin)//&
+                           "_iw"//reg(gf_suffix)
+                        call splot(reg(suffix),wm,Gmats(ilat,jlat,ispin,jspin,iorb,jorb,:))
+                     enddo
+                  enddo
                enddo
             enddo
          enddo
@@ -357,7 +410,6 @@ subroutine dmft_gf_print_realaxis_main(Greal,fname,iprint)
       !
    end select
 end subroutine dmft_gf_print_realaxis_main
-
 
 
 !> REALAXIS: ineq sites
@@ -512,7 +564,6 @@ end subroutine dmft_gf_print_realaxis_ineq
 !> REALAXIS: full GF
 subroutine dmft_gij_print_realaxis(Greal,fname,iprint)
    complex(8),dimension(:,:,:,:,:,:,:),intent(in) :: Greal ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lreal/Lreal]
-   real(8),dimension(size(Greal,7))               :: w
    character(len=*),intent(in)                    :: fname
    integer,intent(in)                             :: iprint
    integer                                        :: Nlat,Nspin,Norb,ispin,jspin,iorb,jorb,ilat,jlat
@@ -531,10 +582,10 @@ subroutine dmft_gij_print_realaxis(Greal,fname,iprint)
    wr = linspace(wini,wfin,Lreal)
    !
    select case(iprint)
-   case (0)
+   case(0)
       write(*,"(A,1x,A)")reg(fname),"real: not written on file."
-   case(1)                  !print only diagonal elements     
-      write(*,"(A,1x,A)")reg(fname),"real: spin-orbital diagonal elements."
+   case(1)                  !print only diagonal elements, single file  
+      write(*,"(A,1x,A)")reg(fname),"real: spin-orbital diagonal elements on one file."
       do ispin=1,Nspin
          do iorb=1,Norb
             suffix=reg(fname)//&
@@ -545,13 +596,29 @@ subroutine dmft_gij_print_realaxis(Greal,fname,iprint)
             call file_gzip(reg(suffix))
          enddo
       enddo
-   case(2)                  !print spin-diagonal, all orbitals 
-      write(*,"(A,1x,A)")reg(fname),"real: write spin diagonal and all orbitals elements."
+   case(2)                  !print only diagonal elements, many files
+      write(*,"(A,1x,A)") reg(fname),"real: write spin-orbital diagonal elements on many files."
+      do ilat=1,Nlat
+         do jlat=1,Nlat
+            do ispin=1,Nspin
+               do iorb=1,Norb
+                  suffix=reg(fname)//&
+                     "_i"//str(ilat)//str(jlat)//&
+                     "_l"//str(iorb)//str(iorb)//&
+                     "_s"//str(ispin)//&
+                     "_realw"//str(gf_suffix)
+                  call splot(reg(suffix),wr,Greal(ilat,jlat,ispin,ispin,iorb,iorb,:))
+               enddo
+            enddo
+         enddo
+      enddo
+   case(3)                  !print only diagonal elements, single file  
+      write(*,"(A,1x,A)")reg(fname),"real: spin diagonal elements on one file."
       do ispin=1,Nspin
          do iorb=1,Norb
             do jorb=1,Norb
                suffix=reg(fname)//&
-                  "_l"//str(iorb)//str(jorb)//&
+                  "_l"//str(iorb)//str(iorb)//&
                   "_s"//str(ispin)//&
                   "_realw"//reg(gf_suffix)
                call splot(reg(suffix),wr,Greal(:,:,ispin,ispin,iorb,jorb,:))
@@ -559,7 +626,25 @@ subroutine dmft_gij_print_realaxis(Greal,fname,iprint)
             enddo
          enddo
       enddo
-   case default              !print all off-diagonals
+   case(4)                  !print only diagonal elements, many files
+      write(*,"(A,1x,A)") reg(fname),"real: write spin diagonal elements on many files."
+      do ilat=1,Nlat
+         do jlat=1,Nlat
+            do ispin=1,Nspin
+               do iorb=1,Norb
+                  do jorb=1,Norb
+                     suffix=reg(fname)//&
+                        "_i"//str(ilat)//str(jlat)//&
+                        "_l"//str(iorb)//str(jorb)//&
+                        "_s"//str(ispin)//&
+                        "_realw"//str(gf_suffix)
+                     call splot(reg(suffix),wr,Greal(ilat,jlat,ispin,ispin,iorb,jorb,:))
+                  enddo
+               enddo
+            enddo
+         enddo
+      enddo
+   case(5)              !print all off-diagonals
       write(*,"(A,1x,A)")reg(fname),"real: write all elements."
       do ispin=1,Nspin
          do jspin=1,Nspin
@@ -571,6 +656,26 @@ subroutine dmft_gij_print_realaxis(Greal,fname,iprint)
                      "_realw"//reg(gf_suffix)
                   call splot(reg(suffix),wr,Greal(:,:,ispin,jspin,iorb,jorb,:))
                   call file_gzip(reg(suffix))
+               enddo
+            enddo
+         enddo
+      enddo
+   case default                  !print all off-diagonals, many files
+      write(*,"(A,1x,A)") reg(fname),"rea: write all elements on many files."
+      do ilat=1,Nlat
+         do jlat=1,Nlat
+            do ispin=1,Nspin
+               do jspin=1,Nspin
+                  do iorb=1,Norb
+                     do jorb=1,Norb
+                        suffix=reg(fname)//&
+                           "_i"//str(ilat)//str(jlat)//&
+                           "_l"//str(iorb)//str(jorb)//&
+                           "_s"//str(ispin)//str(jspin)//&
+                           "_realw"//reg(gf_suffix)
+                        call splot(reg(suffix),wr,Greal(ilat,jlat,ispin,jspin,iorb,jorb,:))
+                     enddo
+                  enddo
                enddo
             enddo
          enddo
