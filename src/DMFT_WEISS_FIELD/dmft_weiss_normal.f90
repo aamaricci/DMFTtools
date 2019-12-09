@@ -60,6 +60,69 @@ subroutine dmft_get_weiss_normal_main(Gloc,Smats,Weiss,Hloc)
 end subroutine dmft_get_weiss_normal_main
 
 
+subroutine dmft_get_weiss_normal_cluster(Gloc,Smats,Weiss,Hloc)
+  complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Gloc  ! [Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+  complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Smats ! [Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+  complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Weiss ! [Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+  complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Hloc  ! [Nlat][Nlat][Nspin][Nspin][Norb][Norb]
+  !aux
+  complex(8),dimension(:,:,:),allocatable           :: zeta_site ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lmats]
+  complex(8),dimension(:,:,:),allocatable           :: Smats_site![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lmats]
+  complex(8),dimension(:,:,:),allocatable           :: invGloc_site![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lmats]
+  complex(8),dimension(:,:,:),allocatable           :: calG0_site![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lmats]
+  integer                                           :: Nlat,Nspin,Norb,Nlso,Lmats
+  integer                                           :: i,ilat,jlat,iorb,jorb,ispin,jspin,io,jo
+  !
+  !Retrieve parameters:
+  call get_ctrl_var(beta,"BETA")
+  call get_ctrl_var(xmu,"XMU")
+  !
+  !Testing part:
+  Nlat  = size(Gloc,1)
+  Nspin = size(Gloc,3)
+  Norb  = size(Gloc,5)
+  Lmats = size(Gloc,7)
+  Nlso   = Nlat*Nspin*Norb
+  call assert_shape(Gloc,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_normal_cluster","Gloc")
+  call assert_shape(Smats,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_normal_cluster","Smats")
+  call assert_shape(Weiss,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_normal_cluster","Weiss")
+  call assert_shape(Hloc,[Nlat,Nlat,Nspin,Nspin,Norb,Norb],"dmft_get_weiss_normal_cluster","Hloc")
+  !
+  if(allocated(wm))deallocate(wm)
+  allocate(wm(Lmats))
+  allocate(zeta_site(Nlso,Nlso,Lmats))
+  allocate(Smats_site(Nlso,Nlso,Lmats))
+  allocate(invGloc_site(Nlso,Nlso,Lmats))
+  allocate(calG0_site(Nlso,Nlso,Lmats))
+  !
+  wm = pi/beta*(2*arange(1,Lmats)-1)
+  !Dump the Gloc and the Smats into a [Norb*Nspin]^2 matrix and create the zeta_site
+  do i=1,Lmats
+     zeta_site(:,:,i)    = (xi*wm(i)+xmu)*eye(Nlso) - nnn2lso_reshape(Hloc,Nlat,Nspin,Norb) -&
+                           nnn2lso_reshape(Smats(:,:,:,:,:,:,i),Nlat,Nspin,Norb)
+     invGloc_site(:,:,i) = nnn2lso_reshape(Gloc(:,:,:,:,:,:,i),Nlat,Nspin,Norb)
+     Smats_site(:,:,i)   = nnn2lso_reshape(Smats(:,:,:,:,:,:,i),Nlat,Nspin,Norb)
+  enddo
+  !
+  !Invert the ilat-th site [Norb*Nspin]**2 Gloc block matrix 
+  do i=1,Lmats
+     call inv(invGloc_site(:,:,i))
+  enddo
+  !
+  ![calG0]_ilat = [ [Gloc]_ilat^-1 + [Smats]_ilat ]^-1
+  calG0_site(:,:,1:Lmats) = invGloc_site(:,:,1:Lmats) + Smats_site(:,:,1:Lmats)
+  do i=1,Lmats
+     call inv(calG0_site(:,:,i))
+  enddo
+  !
+  !Dump back the [Norb*Nspin]**2 block of the ilat-th site into the 
+  !output structure of [Nspsin,Nspin,Norb,Norb] matrix
+  do i=1,Lmats
+     Weiss(:,:,:,:,:,:,i) = lso2nnn_reshape(calG0_site(:,:,i),Nlat,Nspin,Norb)
+  enddo
+  !
+end subroutine dmft_get_weiss_normal_cluster
+
 
 subroutine dmft_get_weiss_normal_ineq(Gloc,Smats,Weiss,Hloc)
   complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Gloc         ! [Nlat][Nspin][Nspin][Norb][Norb][Lmats]

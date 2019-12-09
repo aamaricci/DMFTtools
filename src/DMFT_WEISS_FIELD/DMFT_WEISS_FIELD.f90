@@ -17,6 +17,7 @@ module DMFT_WEISS_FIELD
 
   interface dmft_self_consistency
      module procedure :: dmft_sc_normal_main
+     module procedure :: dmft_sc_normal_cluster
      module procedure :: dmft_sc_normal_ineq
      module procedure :: dmft_sc_normal_bethe
      module procedure :: dmft_sc_normal_bethe_ineq
@@ -24,6 +25,7 @@ module DMFT_WEISS_FIELD
      module procedure :: dmft_sc_superc_ineq
 #ifdef _MPI
      module procedure :: dmft_sc_normal_main_mpi
+     module procedure :: dmft_sc_normal_cluster_mpi
      module procedure :: dmft_sc_normal_ineq_mpi
      module procedure :: dmft_sc_normal_bethe_mpi
      module procedure :: dmft_sc_normal_bethe_ineq_mpi
@@ -35,6 +37,7 @@ module DMFT_WEISS_FIELD
 
   interface dmft_weiss
      module procedure :: dmft_get_weiss_normal_main
+     module procedure :: dmft_get_weiss_normal_cluster
      module procedure :: dmft_get_weiss_normal_ineq
      module procedure :: dmft_get_weiss_normal_bethe
      module procedure :: dmft_get_weiss_normal_bethe_ineq
@@ -42,6 +45,7 @@ module DMFT_WEISS_FIELD
      module procedure :: dmft_get_weiss_superc_ineq
 #ifdef _MPI
      module procedure :: dmft_get_weiss_normal_main_mpi
+     module procedure :: dmft_get_weiss_normal_cluster_mpi
      module procedure :: dmft_get_weiss_normal_ineq_mpi
      module procedure :: dmft_get_weiss_normal_bethe_mpi
      module procedure :: dmft_get_weiss_normal_bethe_ineq_mpi
@@ -53,6 +57,7 @@ module DMFT_WEISS_FIELD
 
   interface dmft_delta
      module procedure :: dmft_get_delta_normal_main
+     module procedure :: dmft_get_delta_normal_cluster
      module procedure :: dmft_get_delta_normal_ineq
      module procedure :: dmft_get_delta_normal_bethe
      module procedure :: dmft_get_delta_normal_bethe_ineq
@@ -60,6 +65,7 @@ module DMFT_WEISS_FIELD
      module procedure :: dmft_get_delta_superc_ineq
 #ifdef _MPI
      module procedure :: dmft_get_delta_normal_main_mpi
+     module procedure :: dmft_get_delta_normal_cluster_mpi
      module procedure :: dmft_get_delta_normal_ineq_mpi
      module procedure :: dmft_get_delta_normal_bethe_mpi
      module procedure :: dmft_get_delta_normal_bethe_ineq_mpi
@@ -294,53 +300,63 @@ contains
   !+-----------------------------------------------------------------------------+!
   !PURPOSE: 
   ! reshape a matrix from the [Nlso][Nlso] shape
-  ! from/to the [Nlat][Nspin][Nspin][Norb][Norb] shape.
-  ! _nlso2nnn : from [Nlso][Nlso] to [Nlat][Nspin][Nspin][Norb][Norb]  !
-  ! _nso2nn   : from [Nso][Nso]   to [Nspin][Nspin][Norb][Norb]
+  ! from/to the [Nlat][Nlat][Nspin][Nspin][Norb][Norb] shape.
+  ! _nlso2nnn : from [Nlso][Nlso] to [Nlat][Nlat][Nspin][Nspin][Norb][Norb]  !
+  ! _nso2nn   : from [Nso][Nso]   to [Nspin][Nlat][Nspin][Norb][Norb]
   !+-----------------------------------------------------------------------------+!
+
   function d_nlso2nnn(Hlso,Nlat,Nspin,Norb) result(Hnnn)
-    real(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hlso
     integer                                            :: Nlat,Nspin,Norb
-    real(8),dimension(Nlat,Nspin,Nspin,Norb,Norb)      :: Hnnn
-    integer                                            :: iorb,ispin,ilat,is
-    integer                                            :: jorb,jspin,jlat,js
+    real(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hlso
+    real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hnnn
+    integer                                            :: ilat,jlat
+    integer                                            :: iorb,jorb
+    integer                                            :: ispin,jspin
+    integer                                            :: is,js
     Hnnn=zero
     do ilat=1,Nlat
-       do ispin=1,Nspin
-          do jspin=1,Nspin
-             do iorb=1,Norb
-                do jorb=1,Norb
-                   is = iorb + (ispin-1)*Norb + (ilat-1)*Norb*Nspin !lattice-spin-orbit stride
-                   js = jorb + (jspin-1)*Norb + (ilat-1)*Norb*Nspin !lattice-spin-orbit stride
-                   Hnnn(ilat,ispin,jspin,iorb,jorb) = Hlso(is,js)
+       do jlat=1,Nlat
+          do ispin=1,Nspin
+             do jspin=1,Nspin
+                do iorb=1,Norb
+                   do jorb=1,Norb
+                      is = iorb + (ilat-1)*Norb + (ispin-1)*Norb*Nlat
+                      js = jorb + (jlat-1)*Norb + (jspin-1)*Norb*Nlat
+                      Hnnn(ilat,jlat,ispin,jspin,iorb,jorb) = Hlso(is,js)
+                   enddo
                 enddo
              enddo
           enddo
        enddo
     enddo
   end function d_nlso2nnn
+  !
   function c_nlso2nnn(Hlso,Nlat,Nspin,Norb) result(Hnnn)
-    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hlso
     integer                                               :: Nlat,Nspin,Norb
-    complex(8),dimension(Nlat,Nspin,Nspin,Norb,Norb)      :: Hnnn
-    integer                                               :: iorb,ispin,ilat,is
-    integer                                               :: jorb,jspin,jlat,js
+    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hlso
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hnnn
+    integer                                               :: ilat,jlat
+    integer                                               :: iorb,jorb
+    integer                                               :: ispin,jspin
+    integer                                               :: is,js
     Hnnn=zero
     do ilat=1,Nlat
-       do ispin=1,Nspin
-          do jspin=1,Nspin
-             do iorb=1,Norb
-                do jorb=1,Norb
-                   is = iorb + (ispin-1)*Norb + (ilat-1)*Norb*Nspin !lattice-spin-orbit stride
-                   js = jorb + (jspin-1)*Norb + (ilat-1)*Norb*Nspin !lattice-spin-orbit stride
-                   Hnnn(ilat,ispin,jspin,iorb,jorb) = Hlso(is,js)
+       do jlat=1,Nlat
+          do ispin=1,Nspin
+             do jspin=1,Nspin
+                do iorb=1,Norb
+                   do jorb=1,Norb
+                      is = iorb + (ilat-1)*Norb + (ispin-1)*Norb*Nlat
+                      js = jorb + (jlat-1)*Norb + (jspin-1)*Norb*Nlat
+                      Hnnn(ilat,jlat,ispin,jspin,iorb,jorb) = Hlso(is,js)
+                   enddo
                 enddo
              enddo
           enddo
        enddo
     enddo
   end function c_nlso2nnn
-
+  
   function d_nso2nn(Hso,Nspin,Norb) result(Hnn)
     real(8),dimension(Nspin*Norb,Nspin*Norb) :: Hso
     integer                                  :: Nspin,Norb
@@ -385,55 +401,64 @@ contains
 
   !+-----------------------------------------------------------------------------+!
   !PURPOSE: 
-  ! reshape a matrix from the [Nlat][Nspin][Nspin][Norb][Norb] shape
+  ! reshape a matrix from the [Nlat][Nlat][Nspin][Nspin][Norb][Norb] shape
   ! from/to the [Nlso][Nlso] shape.
-  ! _nnn2nlso : from [Nlat][Nspin][Nspin][Norb][Norb] to [Nlso][Nlso]
+  ! _nnn2nlso : from [Nlat][Nlat][Nspin][Nspin][Norb][Norb] to [Nlso][Nlso]
   ! _nn2nso   : from [Nspin][Nspin][Norb][Norb]       to [Nso][Nso]
   !+-----------------------------------------------------------------------------+!
+
   function d_nnn2nlso(Hnnn,Nlat,Nspin,Norb) result(Hlso)
-    real(8),dimension(Nlat,Nspin,Nspin,Norb,Norb)      :: Hnnn
     integer                                            :: Nlat,Nspin,Norb
+    real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hnnn
     real(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hlso
-    integer                                            :: iorb,ispin,ilat,is
-    integer                                            :: jorb,jspin,jlat,js
+    integer                                            :: ilat,jlat
+    integer                                            :: iorb,jorb
+    integer                                            :: ispin,jspin
+    integer                                            :: is,js
     Hlso=zero
     do ilat=1,Nlat
-       do ispin=1,Nspin
-          do jspin=1,Nspin
-             do iorb=1,Norb
-                do jorb=1,Norb
-                   is = iorb + (ispin-1)*Norb + (ilat-1)*Norb*Nspin !lattice-spin-orbit stride
-                   js = jorb + (jspin-1)*Norb + (ilat-1)*Norb*Nspin !lattice-spin-orbit stride
-                   Hlso(is,js) = Hnnn(ilat,ispin,jspin,iorb,jorb)
+       do jlat=1,Nlat
+          do ispin=1,Nspin
+             do jspin=1,Nspin
+                do iorb=1,Norb
+                   do jorb=1,Norb
+                      is = iorb + (ilat-1)*Norb + (ispin-1)*Norb*Nlat
+                      js = jorb + (jlat-1)*Norb + (jspin-1)*Norb*Nlat
+                      Hlso(is,js) = Hnnn(ilat,jlat,ispin,jspin,iorb,jorb)
+                   enddo
                 enddo
              enddo
           enddo
        enddo
     enddo
   end function d_nnn2nlso
-
+  !
   function c_nnn2nlso(Hnnn,Nlat,Nspin,Norb) result(Hlso)
-    complex(8),dimension(Nlat,Nspin,Nspin,Norb,Norb)      :: Hnnn
     integer                                               :: Nlat,Nspin,Norb
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hnnn
     complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hlso
-    integer                                               :: iorb,ispin,ilat,is
-    integer                                               :: jorb,jspin,jlat,js
+    integer                                               :: ilat,jlat
+    integer                                               :: iorb,jorb
+    integer                                               :: ispin,jspin
+    integer                                               :: is,js
     Hlso=zero
     do ilat=1,Nlat
-       do ispin=1,Nspin
-          do jspin=1,Nspin
-             do iorb=1,Norb
-                do jorb=1,Norb
-                   is = iorb + (ispin-1)*Norb + (ilat-1)*Norb*Nspin !lattice-spin-orbit stride
-                   js = jorb + (jspin-1)*Norb + (ilat-1)*Norb*Nspin !lattice-spin-orbit stride
-                   Hlso(is,js) = Hnnn(ilat,ispin,jspin,iorb,jorb)
+       do jlat=1,Nlat
+          do ispin=1,Nspin
+             do jspin=1,Nspin
+                do iorb=1,Norb
+                   do jorb=1,Norb
+                      is = iorb + (ilat-1)*Norb + (ispin-1)*Norb*Nlat
+                      js = jorb + (jlat-1)*Norb + (jspin-1)*Norb*Nlat
+                      Hlso(is,js) = Hnnn(ilat,jlat,ispin,jspin,iorb,jorb)
+                   enddo
                 enddo
              enddo
           enddo
        enddo
     enddo
   end function c_nnn2nlso
-
+  
   function d_nn2nso(Hnn,Nspin,Norb) result(Hso)
     real(8),dimension(Nspin,Nspin,Norb,Norb) :: Hnn
     integer                                  :: Nspin,Norb

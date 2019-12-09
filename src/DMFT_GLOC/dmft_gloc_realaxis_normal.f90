@@ -54,6 +54,63 @@ subroutine dmft_get_gloc_realaxis_normal_main(Hk,Wtk,Greal,Sreal,hk_symm)
 end subroutine dmft_get_gloc_realaxis_normal_main
 
 
+subroutine dmft_get_gloc_realaxis_normal_cluster(Hk,Wtk,Greal,Sreal,hk_symm)
+  complex(8),dimension(:,:,:),intent(in)            :: Hk        ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lk]
+  real(8),dimension(size(Hk,3)),intent(in)          :: Wtk       ![Nk]
+  complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Sreal     ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lreal]
+  complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Greal     !as Sreal
+  logical,dimension(size(Hk,3)),optional            :: hk_symm   ![Lk]
+  logical,dimension(size(Hk,3))                     :: hk_symm_  ![Lk]
+  !allocatable arrays
+  complex(8),dimension(:,:,:,:,:,:,:),allocatable   :: Gkreal    !as Sreal
+  complex(8),dimension(:,:,:),allocatable           :: zeta_real ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lreal]
+  !
+  real(8)                                           :: beta
+  real(8)                                           :: xmu,eps
+  real(8)                                           :: wini,wfin
+  !Retrieve parameters:
+  call get_ctrl_var(beta,"BETA")
+  call get_ctrl_var(xmu,"XMU")
+  call get_ctrl_var(wini,"WINI")
+  call get_ctrl_var(wfin,"WFIN")
+  call get_ctrl_var(eps,"EPS")
+  !
+  hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
+  !
+  Nlat  = size(Sreal,1)
+  Nspin = size(Sreal,3)
+  Norb  = size(Sreal,5)
+  Lreal = size(Sreal,7)
+  Lk    = size(Hk,3)
+  Nlso  = Nlat*Nspin*Norb    
+  !Testing part:
+  call assert_shape(Hk,[Nlso,Nlso,Lk],'dmft_get_gloc_realaxis_normal_cluster',"Hk")
+  call assert_shape(Sreal,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_normal_cluster',"Sreal")
+  call assert_shape(Greal,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_normal_cluster',"Greal")
+  !
+  !Allocate and setup the Realaxis freq.
+  allocate(Gkreal(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
+  allocate(zeta_real(Nlso,Nlso,Lreal))
+  if(allocated(wr))deallocate(wr);allocate(wr(Lreal))
+  wr = linspace(wini,wfin,Lreal)
+  !
+  do i=1,Lreal
+     zeta_real(:,:,i)=(wr(i)+xi*eps+xmu)*eye(Nlso) - nnn2lso_cluster_reshape(Sreal(:,:,:,:,:,:,i),Nlat,Nspin,Norb)
+  enddo
+  !
+  !invert (Z-Hk) for each k-point
+  write(*,"(A)")"Get local Realaxis Green's function (no print)"
+  call start_timer
+  Greal=zero
+  do ik=1,Lk
+     call invert_gk_normal_cluster(zeta_real,Hk(:,:,ik),hk_symm_(ik),Gkreal)      
+     Greal = Greal + Gkreal*Wtk(ik)
+     call eta(ik,Lk)
+  end do
+  call stop_timer
+end subroutine dmft_get_gloc_realaxis_normal_cluster
+
+
 subroutine dmft_get_gloc_realaxis_normal_dos(Ebands,Dbands,Hloc,Greal,Sreal)
   real(8),dimension(:,:),intent(in)                           :: Ebands    ![Nspin*Norb][Lk]
   real(8),dimension(size(Ebands,1),size(Ebands,2)),intent(in) :: Dbands    ![Nspin*Norb][Lk]
