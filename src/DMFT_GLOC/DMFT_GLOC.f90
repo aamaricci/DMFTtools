@@ -13,6 +13,62 @@ module DMFT_GLOC
   implicit none
   private
 
+
+  interface get_gloc_matsubara
+     module procedure :: dmft_get_gloc_matsubara_normal_main
+     module procedure :: dmft_get_gloc_matsubara_normal_dos
+     module procedure :: dmft_get_gloc_matsubara_normal_ineq
+     module procedure :: dmft_get_gloc_matsubara_superc_main
+     module procedure :: dmft_get_gloc_matsubara_superc_dos
+     module procedure :: dmft_get_gloc_matsubara_superc_ineq
+#ifdef _MPI
+     module procedure :: dmft_get_gloc_matsubara_normal_main_mpi
+     module procedure :: dmft_get_gloc_matsubara_normal_dos_mpi
+     module procedure :: dmft_get_gloc_matsubara_normal_ineq_mpi
+     module procedure :: dmft_get_gloc_matsubara_superc_main_mpi
+     module procedure :: dmft_get_gloc_matsubara_superc_dos_mpi
+     module procedure :: dmft_get_gloc_matsubara_superc_ineq_mpi     
+#endif
+  end interface get_gloc_matsubara
+
+  interface get_gloc_realaxis
+     module procedure :: dmft_get_gloc_realaxis_normal_main
+     module procedure :: dmft_get_gloc_realaxis_normal_dos
+     module procedure :: dmft_get_gloc_realaxis_normal_ineq
+     module procedure :: dmft_get_gloc_realaxis_superc_main
+     module procedure :: dmft_get_gloc_realaxis_superc_dos
+     module procedure :: dmft_get_gloc_realaxis_superc_ineq
+#ifdef _MPI
+     module procedure :: dmft_get_gloc_realaxis_normal_main_mpi
+     module procedure :: dmft_get_gloc_realaxis_normal_dos_mpi
+     module procedure :: dmft_get_gloc_realaxis_normal_ineq_mpi
+     module procedure :: dmft_get_gloc_realaxis_superc_main_mpi
+     module procedure :: dmft_get_gloc_realaxis_superc_dos_mpi
+     module procedure :: dmft_get_gloc_realaxis_superc_ineq_mpi
+#endif
+  end interface get_gloc_realaxis
+
+  interface get_gij_matsubara
+     module procedure :: dmft_get_gloc_matsubara_normal_gij
+     module procedure :: dmft_get_gloc_matsubara_superc_gij
+#ifdef _MPI
+     module procedure :: dmft_get_gloc_matsubara_normal_gij_mpi
+     module procedure :: dmft_get_gloc_matsubara_superc_gij_mpi
+#endif     
+  end interface get_gij_matsubara
+
+  interface get_gij_realaxis
+     module procedure :: dmft_get_gloc_realaxis_normal_gij
+     module procedure :: dmft_get_gloc_realaxis_superc_gij
+#ifdef _MPI
+     module procedure :: dmft_get_gloc_realaxis_normal_gij_mpi
+     module procedure :: dmft_get_gloc_realaxis_superc_gij_mpi
+#endif     
+  end interface get_gij_realaxis
+
+
+
+
   interface dmft_gloc_matsubara
      module procedure :: dmft_get_gloc_matsubara_normal_main
      module procedure :: dmft_get_gloc_matsubara_normal_dos
@@ -29,7 +85,6 @@ module DMFT_GLOC
      module procedure :: dmft_get_gloc_matsubara_superc_ineq_mpi     
 #endif
   end interface dmft_gloc_matsubara
-
 
 
   interface dmft_gloc_realaxis
@@ -51,7 +106,6 @@ module DMFT_GLOC
 
 
 
-
   interface dmft_gij_matsubara
      module procedure :: dmft_get_gloc_matsubara_normal_gij
      module procedure :: dmft_get_gloc_matsubara_superc_gij
@@ -62,9 +116,6 @@ module DMFT_GLOC
   end interface dmft_gij_matsubara
 
 
-
-
-
   interface dmft_gij_realaxis
      module procedure :: dmft_get_gloc_realaxis_normal_gij
      module procedure :: dmft_get_gloc_realaxis_superc_gij
@@ -73,8 +124,6 @@ module DMFT_GLOC
      module procedure :: dmft_get_gloc_realaxis_superc_gij_mpi
 #endif     
   end interface dmft_gij_realaxis
-
-
 
 
 
@@ -138,22 +187,24 @@ module DMFT_GLOC
 
 
   !PUBLIC IN DMFT:
+  public :: get_gloc_matsubara
+  public :: get_gloc_realaxis
+  public :: get_gij_matsubara
+  public :: get_gij_realaxis
+
   public :: dmft_gloc_matsubara
-
   public :: dmft_gloc_realaxis
-
   public :: dmft_gij_matsubara
-
   public :: dmft_gij_realaxis
 
   public :: dmft_set_Gamma_matsubara
-
   public :: dmft_set_Gamma_realaxis
 
 
 
   !####################################################################
   !####################################################################
+
 
 contains
 

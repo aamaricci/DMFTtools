@@ -107,6 +107,7 @@ module DMFT_WEISS_FIELD
      module procedure c_nn2nso
   end interface nn2so_reshape
 
+
   real(8),dimension(:),allocatable :: wm !Matsubara frequencies
   character(len=128)               :: suffix
   character(len=128)               :: weiss_suffix=".dat"

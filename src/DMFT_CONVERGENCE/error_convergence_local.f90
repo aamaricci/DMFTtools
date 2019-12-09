@@ -3,11 +3,11 @@
 !+-------------------------------------------------------------------+
 function i0_check_convergence_local(Xnew,eps,N1,N2,id,file,index,total,oerr,reset,extend) result(convergence)
   integer,intent(in)                           :: Xnew
-  real(8),intent(inout)                        :: eps
+  real(8)                        :: eps
   real(8),optional                             :: oerr
   logical,optional                             :: reset, extend
   logical                                      :: reset_, extend_
-  integer,intent(inout)                        :: N1,N2
+  integer                        :: N1,N2
   integer,optional                             :: id,index,total
   integer                                      :: id_,index_,total_
   integer                                      :: i,j,Msize
@@ -47,11 +47,11 @@ end function i0_check_convergence_local
 
 function i1_check_convergence_local(Xnew,eps,N1,N2,id,file,index,total,strict,oerr,reset,extend) result(convergence)
   integer,intent(in)                           :: Xnew(:)
-  real(8),intent(inout)                        :: eps
+  real(8)                        :: eps
   real(8),optional                             :: oerr
   logical,optional                             :: reset, extend
   logical                                      :: reset_, extend_
-  integer,intent(inout)                        :: N1,N2
+  integer                        :: N1,N2
   integer,optional                             :: id,index,total
   integer                                      :: id_,index_,total_
   integer                                      :: i,j,Msize1
@@ -100,11 +100,11 @@ end function i1_check_convergence_local
 
 function i2_check_convergence_local(Xnew,eps,N1,N2,id,file,index,total,strict,oerr,reset,extend) result(convergence)
   integer,intent(in)                           :: Xnew(:,:)
-  real(8),intent(inout)                        :: eps
+  real(8)                        :: eps
   real(8),optional                             :: oerr
   logical,optional                             :: reset, extend
   logical                                      :: reset_, extend_
-  integer,intent(inout)                        :: N1,N2
+  integer                        :: N1,N2
   integer,optional                             :: id,index,total
   integer                                      :: id_,index_,total_
   integer                                      :: i,j,Msize1,Msize2
@@ -157,11 +157,11 @@ end function i2_check_convergence_local
 
 function d0_check_convergence_local(Xnew,eps,N1,N2,id,file,index,total,oerr,reset,extend) result(convergence)
   real(8),intent(in)                           :: Xnew
-  real(8),intent(inout)                        :: eps
+  real(8)                        :: eps
   real(8),optional                             :: oerr
   logical,optional                             :: reset, extend
   logical                                      :: reset_, extend_
-  integer,intent(inout)                        :: N1,N2
+  integer                        :: N1,N2
   integer,optional                             :: id,index,total
   integer                                      :: id_,index_,total_
   integer                                      :: i,j,Msize
@@ -201,11 +201,11 @@ end function d0_check_convergence_local
 
 function d1_check_convergence_local(Xnew,eps,N1,N2,id,file,index,total,strict,oerr,reset,extend) result(convergence)
   real(8),intent(in)                           :: Xnew(:)
-  real(8),intent(inout)                        :: eps
+  real(8)                        :: eps
   real(8),optional                             :: oerr
   logical,optional                             :: reset, extend
   logical                                      :: reset_, extend_
-  integer,intent(inout)                        :: N1,N2
+  integer                        :: N1,N2
   integer,optional                             :: id,index,total
   integer                                      :: id_,index_,total_
   integer                                      :: i,j,Msize1
@@ -254,11 +254,11 @@ end function d1_check_convergence_local
 
 function d2_check_convergence_local(Xnew,eps,N1,N2,id,file,index,total,strict,oerr,reset,extend) result(convergence)
   real(8),intent(in)                           :: Xnew(:,:)
-  real(8),intent(inout)                        :: eps
+  real(8)                        :: eps
   real(8),optional                             :: oerr
   logical,optional                             :: reset, extend
   logical                                      :: reset_, extend_
-  integer,intent(inout)                        :: N1,N2
+  integer                        :: N1,N2
   integer,optional                             :: id,index,total
   integer                                      :: id_,index_,total_
   integer                                      :: i,j,Msize1,Msize2
@@ -311,11 +311,11 @@ end function d2_check_convergence_local
 
 function z0_check_convergence_local(Xnew,eps,N1,N2,id,file,index,total,oerr,reset,extend) result(convergence)
   complex(8),intent(in)                        :: Xnew
-  real(8),intent(inout)                        :: eps
+  real(8)                        :: eps
   real(8),optional                             :: oerr
   logical,optional                             :: reset, extend
   logical                                      :: reset_, extend_
-  integer,intent(inout)                        :: N1,N2
+  integer                        :: N1,N2
   integer,optional                             :: id,index,total
   integer                                      :: id_,index_,total_
   integer                                      :: i,j,Msize
@@ -355,11 +355,11 @@ end function z0_check_convergence_local
 
 function z1_check_convergence_local(Xnew,eps,N1,N2,id,file,index,total,strict,oerr,reset,extend) result(convergence)
   complex(8),intent(in)                        :: Xnew(:)
-  real(8),intent(inout)                        :: eps
+  real(8)                        :: eps
   real(8),optional                             :: oerr
   logical,optional                             :: reset, extend
   logical                                      :: reset_, extend_
-  integer,intent(inout)                        :: N1,N2
+  integer                        :: N1,N2
   integer,optional                             :: id,index,total
   integer                                      :: id_,index_,total_
   integer                                      :: i,j,Msize1
@@ -408,11 +408,11 @@ end function z1_check_convergence_local
 
 function z2_check_convergence_local(Xnew,eps,N1,N2,id,file,index,total,strict,oerr,reset,extend) result(convergence)
   complex(8),intent(in)                        :: Xnew(:,:)
-  real(8),intent(inout)                        :: eps
+  real(8)                        :: eps
   real(8),optional                             :: oerr
   logical,optional                             :: reset, extend
   logical                                      :: reset_, extend_
-  integer,intent(inout)                        :: N1,N2
+  integer                        :: N1,N2
   integer,optional                             :: id,index,total
   integer                                      :: id_,index_,total_
   integer                                      :: i,j,Msize1,Msize2

@@ -9,6 +9,34 @@ module DMFT_GFIO
   private
 
 
+  interface print_gf_matsubara
+     module procedure :: dmft_gf_print_matsubara_main
+     module procedure :: dmft_gf_print_matsubara_ineq
+     module procedure :: dmft_gij_print_matsubara
+  end interface print_gf_matsubara
+  !
+  interface read_gf_matsubara
+     module procedure :: dmft_gf_read_matsubara_main
+     module procedure :: dmft_gf_read_matsubara_ineq
+     module procedure :: dmft_gij_read_matsubara
+  end interface read_gf_matsubara
+
+
+  interface print_gf_realaxis
+     module procedure :: dmft_gf_print_realaxis_main
+     module procedure :: dmft_gf_print_realaxis_ineq
+     module procedure :: dmft_gij_print_realaxis
+  end interface print_gf_realaxis
+  !
+  interface read_gf_realaxis
+     module procedure :: dmft_gf_read_realaxis_main
+     module procedure :: dmft_gf_read_realaxis_ineq
+     module procedure :: dmft_gij_read_realaxis
+  end interface read_gf_realaxis
+
+
+
+
   interface dmft_print_gf_matsubara
      module procedure :: dmft_gf_print_matsubara_main
      module procedure :: dmft_gf_print_matsubara_ineq
@@ -20,7 +48,6 @@ module DMFT_GFIO
      module procedure :: dmft_gf_read_matsubara_ineq
      module procedure :: dmft_gij_read_matsubara
   end interface dmft_read_gf_matsubara
-
 
   interface dmft_print_gf_realaxis
      module procedure :: dmft_gf_print_realaxis_main
@@ -35,14 +62,21 @@ module DMFT_GFIO
   end interface dmft_read_gf_realaxis
 
 
-
   public :: set_gf_suffix
-  !
+
+  public :: print_gf_matsubara
+  public :: print_gf_realaxis
+
+  public :: read_gf_matsubara
+  public :: read_gf_realaxis
+
   public :: dmft_print_gf_matsubara
   public :: dmft_print_gf_realaxis
 
   public :: dmft_read_gf_matsubara
   public :: dmft_read_gf_realaxis
+
+
 
   real(8),dimension(:),allocatable          :: wm !Matsubara frequencies
   real(8),dimension(:),allocatable          :: wr !Real frequencies

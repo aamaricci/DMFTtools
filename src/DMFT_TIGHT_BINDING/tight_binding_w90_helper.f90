@@ -59,7 +59,6 @@ subroutine setup_w90(w90_file,nlat,nspin,norb,verbose)
      read(unitIO,*)(TB_w90%Ndegen(j+(i-1)*TB_w90%N15),j=1,TB_w90%N15)
   enddo
   if(TB_w90%Rst/=0)read(unitIO,*)(TB_w90%Ndegen(j+TB_w90%Qst*TB_w90%N15),j=1,TB_w90%Rst)
-  print*,TB_w90%Ndegen
 
   !Read w90 TB Hamiltonian (no spinup-spindw hybridizations assumed)
   do ir=1,Nrpts
