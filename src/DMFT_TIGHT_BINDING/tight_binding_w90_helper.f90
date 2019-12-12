@@ -46,6 +46,8 @@ subroutine setup_w90(w90_file,nlat,nspin,norb,verbose)
   TB_w90%Rvec     = 0
   TB_w90%Hij      = zero
   TB_w90%Hloc     = zero
+  TB_w90%Efermi   = 0d0
+  TB_w90%verbose  = verbose_
   TB_w90%status   =.true.
   !
   write(*,*)
@@ -99,6 +101,8 @@ subroutine delete_w90()
   TB_w90%Nlat=0
   TB_w90%Norb=0
   TB_w90%Nspin=0
+  TB_w90%Efermi=0d0
+  TB_w90%verbose=.false.
   deallocate(TB_w90%w90_file)
   deallocate(TB_w90%Ndegen)
   deallocate(TB_w90%Rvec)
@@ -108,6 +112,24 @@ subroutine delete_w90()
   TB_w90%status=.false.
 end subroutine delete_w90
 
+
+subroutine FermiLevel_w90(Nkvec,filling,Ef)
+  integer,dimension(:),intent(in)          :: Nkvec
+  real(8)                                  :: filling,Efermi
+  real(8),optional                         :: Ef
+  complex(8),dimension(:,:,:),allocatable  :: Hk
+  integer                                  :: Nlso,Nk
+  if(TB_w90%Ifermi)return
+  Nlso = TB_w90%Nspin*TB_w90%Num_Wann
+  Nk   = product(Nkvec)
+  allocate(Hk(Nlso,Nlso,Nk))
+  call TB_build_model(Hk,Nlso,Nkvec)
+  call TB_get_FermiLevel(Hk,filling,Efermi)
+  if(TB_w90%verbose)write(*,*)"w90 Fermi Level: ",Efermi
+  TB_w90%Efermi = Efermi
+  if(present(Ef))Ef=Efermi
+  TB_w90%Ifermi=.true.
+end subroutine FermiLevel_w90
 
 
 !< generate an internal function to be called in the building procedure
@@ -135,13 +157,17 @@ function w90_hk_model(kvec,N) result(Hk)
         enddo
      enddo
   enddo
+  if(TB_w90%Ifermi)Htmp = Htmp - TB_w90%Efermi*eye(N)
   !
   if(TB_w90%Nspin==1)then
      Hk = Htmp
   else
-     Hk =slo2lso(Htmp,TB_w90%Nlat,TB_w90%Nlat,TB_w90%Nlat)
+     Hk =slo2lso(Htmp,TB_w90%Nlat,TB_w90%Nspin,TB_w90%Norb)
   endif
   !
   call herm_check(Hk)
   !
 end function w90_hk_model
+
+
+

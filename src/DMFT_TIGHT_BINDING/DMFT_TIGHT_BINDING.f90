@@ -4,7 +4,7 @@ module DMFT_TIGHT_BINDING
   USE SF_LINALG, only: eigh,det,eye,zeros,eig
   USE SF_COLORS
   USE SF_TIMER, only:start_timer,stop_timer,eta
-  USE SF_MISC, only: assert_shape
+  USE SF_MISC, only: assert_shape,sort_array
   USE SF_OPTIMIZE,only: fmin_cgminimize
   USE DMFT_CTRL_VARS
   USE DMFT_GLOC
@@ -56,7 +56,10 @@ module DMFT_TIGHT_BINDING
      module procedure :: delete_w90
   end interface TB_w90_delete
 
-  
+  interface TB_w90_FermiLevel
+     module procedure :: FermiLevel_w90
+  end interface TB_w90_FermiLevel
+
   interface TB_write_hk
      module procedure :: write_hk_w90_func
      module procedure :: write_hk_w90_array
@@ -129,8 +132,20 @@ module DMFT_TIGHT_BINDING
        integer                   :: N
        complex(8),dimension(N,N) :: w90_hk
      end function w90_hk
+
+     function d_hk(kpoint,N)
+       real(8),dimension(:)      :: kpoint
+       integer                   :: N
+       real(8),dimension(N,N)    :: hk_model
+     end function d_hk
+
+     function c_hk(kpoint,N)
+       real(8),dimension(:)      :: kpoint
+       integer                   :: N
+       complex(8),dimension(N,N) :: hk_model
+     end function c_hk
   end interface
-  procedure(w90_hk),pointer :: TB_w90_model=>w90_hk_model
+  procedure(w90_hk),pointer      :: TB_w90_model=>w90_hk_model
 
 
   !Some special points in the BZ:
@@ -180,8 +195,13 @@ module DMFT_TIGHT_BINDING
      real(8),allocatable,dimension(:,:)         :: Rgrid
      complex(8),allocatable,dimension(:,:,:)    :: Hij
      complex(8),allocatable,dimension(:,:)      :: Hloc
+     real(8)                                    :: Efermi
+     logical                                    :: iFermi=.false.
+     logical                                    :: verbose=.false.       
      logical                                    :: status=.false.
   end type w90_structure
+
+
 
   type(w90_structure) :: TB_w90
 
@@ -210,8 +230,11 @@ module DMFT_TIGHT_BINDING
   public :: TB_build_model
   public :: TB_solve_model
   !
+  public :: TB_get_FermiLevel
+  !
   public :: TB_w90_setup
   public :: TB_w90_delete
+  public :: TB_w90_FermiLevel
   public :: TB_w90_model
   !
   public :: TB_write_hk
@@ -275,6 +298,35 @@ contains
 #ifdef _MPI
   include "w90hr/dipole_w90hr_mpi.f90"
 #endif
+
+
+
+
+  subroutine TB_get_FermiLevel(Hk,filling,Ef)
+    complex(8),dimension(:,:,:)           :: Hk
+    real(8)                               :: filling
+    real(8)                               :: Ef
+    complex(8),dimension(:,:),allocatable :: Uk
+    real(8),dimension(:),allocatable      :: Ek
+    real(8),dimension(:),allocatable      :: Ek_all
+    integer,dimension(:),allocatable      :: Ek_indx
+    integer                               :: stride,Nk,Nso,ik,indx
+    Nk = size(Hk,3)
+    Nso = size(Hk,1)
+    call assert_shape(Hk,[Nso,Nso,Nk],"TB_FermiLevel","Hk")
+    allocate(Uk(Nso,Nso),Ek(Nso),Ek_all(Nso*Nk),Ek_indx(Nk*Nso))
+    stride = 0
+    do ik = 1,Nk 
+       Uk = Hk(:,:,ik)
+       call eigh(Uk,Ek)
+       Ek_all(stride+1:stride+Nso) = Ek
+       stride = stride+Nso
+    enddo
+    call sort_array(Ek_all,Ek_indx)
+    if(filling==0d0)filling=Nso
+    indx  = ceiling(filling*Nk/2d0)
+    Ef    = Ek_all(indx)
+  end subroutine TB_Get_FermiLevel
 
 
 
