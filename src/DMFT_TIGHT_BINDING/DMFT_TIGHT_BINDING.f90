@@ -1,7 +1,7 @@
 module DMFT_TIGHT_BINDING
   USE SF_CONSTANTS, only: pi,pi2,xi,one,zero
   USE SF_IOTOOLS
-  USE SF_LINALG, only: eigh,det,eye,zeros,eig
+  USE SF_LINALG, only: eigh,det,eye,zeros,eig,diag,operator(.x.)
   USE SF_COLORS
   USE SF_TIMER, only:start_timer,stop_timer,eta
   USE SF_MISC, only: assert_shape,sort_array
@@ -56,9 +56,22 @@ module DMFT_TIGHT_BINDING
      module procedure :: delete_w90
   end interface TB_w90_delete
 
+  interface TB_w90_Hloc
+     module procedure :: Hloc_w90
+  end interface TB_w90_Hloc
+
   interface TB_w90_FermiLevel
      module procedure :: FermiLevel_w90
   end interface TB_w90_FermiLevel
+
+  interface TB_w90_Zeta
+     module procedure :: Zeta_w90_matrix
+     module procedure :: Zeta_w90_vector
+  end interface TB_w90_Zeta
+
+  interface TB_w90_Self
+     module procedure :: Self0_w90
+  end interface TB_w90_Self
 
   interface TB_write_hk
      module procedure :: write_hk_w90_func
@@ -168,7 +181,8 @@ module DMFT_TIGHT_BINDING
   real(8),dimension(3),save                     :: bk_y=[0d0,1d0,0d0]*pi2
   real(8),dimension(3),save                     :: bk_z=[0d0,0d0,1d0]*pi2
 
-
+  logical,save                                  :: io_eivec=.false.
+  logical,save                                  :: io_bkvec=.false.
   logical,save                                  :: set_eivec=.false.
   logical,save                                  :: set_bkvec=.false.
 
@@ -196,6 +210,9 @@ module DMFT_TIGHT_BINDING
      complex(8),allocatable,dimension(:,:,:)    :: Hij
      complex(8),allocatable,dimension(:,:)      :: Hloc
      real(8)                                    :: Efermi
+     complex(8),allocatable,dimension(:,:)      :: Zeta
+     real(8),allocatable,dimension(:,:)         :: Self
+     logical                                    :: iRenorm=.false.
      logical                                    :: iFermi=.false.
      logical                                    :: verbose=.false.       
      logical                                    :: status=.false.
@@ -234,7 +251,10 @@ module DMFT_TIGHT_BINDING
   !
   public :: TB_w90_setup
   public :: TB_w90_delete
+  public :: TB_w90_Hloc
   public :: TB_w90_FermiLevel
+  public :: TB_w90_Zeta
+  public :: TB_w90_Self
   public :: TB_w90_model
   !
   public :: TB_write_hk

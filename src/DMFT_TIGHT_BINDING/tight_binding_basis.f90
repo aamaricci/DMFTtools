@@ -123,6 +123,7 @@ end subroutine TB_build_ei
 subroutine print_ei(pfile)
   character(len=*),optional :: pfile
   integer                   :: unit,i
+  if(io_eivec)return
   unit=6
   if(present(pfile))open(free_unit(unit),file=reg(pfile))
   write(unit,"(A)")"Using Direct Lattice vectors:"
@@ -130,11 +131,13 @@ subroutine print_ei(pfile)
   write(unit,"(A,3F8.4,A1)")"ei_y = [",(ei_y(i),i=1,3),"]"
   write(unit,"(A,3F8.4,A1)")"ei_z = [",(ei_z(i),i=1,3),"]"
   if(present(pfile))close(unit)
+  io_eivec=.true.
 end subroutine print_ei
 
 subroutine print_bk(pfile)
   character(len=*),optional :: pfile
   integer                   :: unit,i
+  if(io_bkvec)return
   unit=6
   if(present(pfile))open(free_unit(unit),file=reg(pfile))
   write(unit,"(A)")"Using Reciprocal Lattice vectors:"
@@ -142,6 +145,7 @@ subroutine print_bk(pfile)
   write(unit,"(A,3F8.4,A1)")"bk_y = [",(bk_y(i),i=1,3),"]"
   write(unit,"(A,3F8.4,A1)")"bk_z = [",(bk_z(i),i=1,3),"]"
   if(present(pfile))close(unit)
+  io_bkvec=.true.
 end subroutine print_bk
 
 

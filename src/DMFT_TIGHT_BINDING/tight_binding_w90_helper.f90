@@ -42,10 +42,14 @@ subroutine setup_w90(w90_file,nlat,nspin,norb,verbose)
   allocate(TB_w90%Rgrid(Nrpts,3))
   allocate(TB_w90%Hij(num_wann*TB_w90%Nspin,num_wann*TB_w90%Nspin,Nrpts))
   allocate(TB_w90%Hloc(num_wann*TB_w90%Nspin,num_wann*TB_w90%Nspin))
+  allocate(TB_w90%Zeta(num_wann*TB_w90%Nspin,num_wann*TB_w90%Nspin))
+  allocate(TB_w90%Self(num_wann*TB_w90%Nspin,num_wann*TB_w90%Nspin))
   TB_w90%Ndegen   = 0
   TB_w90%Rvec     = 0
   TB_w90%Hij      = zero
   TB_w90%Hloc     = zero
+  TB_w90%Zeta     = eye(num_wann*TB_w90%Nspin)
+  TB_w90%Self     = 0d0
   TB_w90%Efermi   = 0d0
   TB_w90%verbose  = verbose_
   TB_w90%status   =.true.
@@ -113,6 +117,15 @@ subroutine delete_w90()
 end subroutine delete_w90
 
 
+subroutine Hloc_w90(Hloc)
+  real(8),dimension(:,:) :: Hloc
+  integer                :: Nlso
+  Nlso = TB_w90%Nspin*TB_w90%Num_Wann
+  call assert_shape(Hloc,[Nlso,Nlso],"Hloc_w90","Hloc")
+  Hloc = TB_w90%Hloc
+end subroutine Hloc_w90
+
+
 subroutine FermiLevel_w90(Nkvec,filling,Ef)
   integer,dimension(:),intent(in)          :: Nkvec
   real(8)                                  :: filling,Efermi
@@ -132,11 +145,45 @@ subroutine FermiLevel_w90(Nkvec,filling,Ef)
 end subroutine FermiLevel_w90
 
 
+
+subroutine Zeta_w90_vector(zeta)
+  real(8),dimension(:)          :: zeta
+  real(8),dimension(size(zeta)) :: sq_zeta
+  integer                       :: Nlso
+  Nlso = TB_w90%Nspin*TB_w90%Num_Wann
+  call assert_shape(zeta,[Nlso],"Zeta_w90","zeta")
+  sq_zeta     = sqrt(zeta)
+  TB_w90%zeta = diag(sq_zeta)
+  TB_w90%Irenorm=.true.
+end subroutine Zeta_w90_vector
+!
+subroutine Zeta_w90_matrix(zeta)
+  real(8),dimension(:,:) :: zeta
+  integer                :: Nlso
+  Nlso = TB_w90%Nspin*TB_w90%Num_Wann
+  call assert_shape(zeta,[Nlso,Nlso],"Zeta_w90","zeta")  
+  TB_w90%zeta = sqrt(zeta)
+  TB_w90%Irenorm=.true.
+end subroutine Zeta_w90_matrix
+
+
+
+subroutine Self0_w90(Self0)
+  real(8),dimension(:,:) :: self0
+  integer                :: Nlso
+  Nlso = TB_w90%Nspin*TB_w90%Num_Wann
+  call assert_shape(self0,[Nlso,Nlso],"Self0_w90","Self0")  
+  TB_w90%Self = Self0
+  TB_w90%Irenorm=.true.
+end subroutine Self0_w90
+
+
+
 !< generate an internal function to be called in the building procedure
 function w90_hk_model(kvec,N) result(Hk)
   real(8),dimension(:)      :: kvec
   integer                   :: N
-  complex(8),dimension(N,N) :: Hk
+  complex(8),dimension(N,N) :: Hk,Hk_f
   complex(8),dimension(N,N) :: Htmp
   integer                   :: nDim,Nso
   integer                   :: i,j,ir
@@ -166,6 +213,12 @@ function w90_hk_model(kvec,N) result(Hk)
   endif
   !
   call herm_check(Hk)
+  !
+  if(TB_w90%Irenorm)then
+     Hk   = Hk - TB_w90%Hloc
+     Hk_f = (TB_w90%Zeta .x. Hk) .x. TB_w90%Zeta
+     Hk   = Hk_f + TB_w90%Hloc + TB_w90%Self
+  endif
   !
 end function w90_hk_model
 
