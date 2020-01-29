@@ -13,7 +13,7 @@ subroutine solve_Hk_along_BZpath(hk_model,Nlso,kpath,Nk,colors_name,points_name,
   character(len=*),dimension(size(kpath,1)) :: points_name
   character(len=*),optional                 :: file
   character(len=256)                        :: file_,xtics
-  integer                                   :: Npts,Nrot
+  integer                                   :: Npts,Nrot,Ndim
   integer                                   :: ipts,ik,ic,unit,u1,u2,iorb
   real(8),dimension(size(kpath,2))          :: kstart,kstop,kpoint,kdiff
   real(8)                                   :: eval(Nlso),coeff(Nlso),klen,ktics(size(Kpath,1))
@@ -24,11 +24,23 @@ subroutine solve_Hk_along_BZpath(hk_model,Nlso,kpath,Nk,colors_name,points_name,
   !
   file_="Eigenbands.tb";if(present(file))file_=file
   Npts=size(kpath,1)
+  Ndim=size(kpath,2)
   do iorb=1,Nlso
      corb(iorb) = colors_name(iorb)
   enddo
   unit=free_unit()
   open(unit,file=reg(file_))
+  !
+  if(.not.set_bkvec)stop "solve_w90hk_along_BZpath ERROR: bk vectors not set!"
+  select case(Ndim)
+  case (1)
+     forall(ipts=1:Npts)kpath(ipts,:) = kpath(ipts,1)*bk_x
+  case(2)
+     forall(ipts=1:Npts)kpath(ipts,:) = kpath(ipts,1)*bk_x + kpath(ipts,2)*bk_y
+  case (3)
+     forall(ipts=1:Npts)kpath(ipts,:) = kpath(ipts,1)*bk_x + kpath(ipts,2)*bk_y + kpath(ipts,3)*bk_z
+  end select
+  !
   !
   write(*,*)"Solving model along the path:"
   write(fmt,"(A3,I0,A)")"(A,",size(kpath,2),"F7.4,A1)"
@@ -114,7 +126,7 @@ subroutine solve_w90Hk_along_BZpath(Nlso,kpath,Nk,colors_name,points_name,file)
   character(len=*),dimension(size(kpath,1)) :: points_name
   character(len=*),optional                 :: file
   character(len=256)                        :: file_,xtics
-  integer                                   :: Npts,Nrot
+  integer                                   :: Npts,Nrot,Ndim
   integer                                   :: ipts,ik,ic,unit,u1,u2,iorb
   real(8),dimension(size(kpath,2))          :: kstart,kstop,kpoint,kdiff
   real(8)                                   :: eval(Nlso),coeff(Nlso),klen,ktics(size(Kpath,1))
@@ -127,11 +139,23 @@ subroutine solve_w90Hk_along_BZpath(Nlso,kpath,Nk,colors_name,points_name,file)
   !
   file_="Eigenbands.tb";if(present(file))file_=file
   Npts=size(kpath,1)
+  Ndim=size(kpath,2)
   do iorb=1,Nlso
      corb(iorb) = colors_name(iorb)
   enddo
   unit=free_unit()
   open(unit,file=reg(file_))
+  !
+  if(.not.set_bkvec)stop "solve_w90hk_along_BZpath ERROR: bk vectors not set!"
+  select case(Ndim)
+  case (1)
+     forall(ipts=1:Npts)kpath(ipts,:) = kpath(ipts,1)*bk_x
+  case(2)
+     forall(ipts=1:Npts)kpath(ipts,:) = kpath(ipts,1)*bk_x + kpath(ipts,2)*bk_y
+  case (3)
+     forall(ipts=1:Npts)kpath(ipts,:) = kpath(ipts,1)*bk_x + kpath(ipts,2)*bk_y + kpath(ipts,3)*bk_z
+  end select
+  !
   !
   write(*,*)"Solving model along the path:"
   write(fmt,"(A3,I0,A)")"(A,",size(kpath,2),"F7.4,A1)"
@@ -226,7 +250,7 @@ subroutine solve_HkR_along_BZpath(hkr_model,Nlat,Nso,kpath,Nkpath,colors_name,po
   character(len=*),optional                    :: file
   logical                                      :: pbc
   character(len=256)                           :: file_,xtics
-  integer                                      :: Npts!,units(Nlat*Nso)
+  integer                                      :: Npts,Ndim!,units(Nlat*Nso)
   integer                                      :: ipts,ik,ic,unit,unit_,iorb,ilat,io,nrot,u1,u2
   real(8)                                      :: coeff(Nlat*Nso),klen,ktics(size(Kpath,1))
   type(rgb_color)                              :: corb(Nlat*Nso),c(Nlat*Nso)
@@ -239,6 +263,7 @@ subroutine solve_HkR_along_BZpath(hkr_model,Nlat,Nso,kpath,Nkpath,colors_name,po
   write(fmt,"(A,I0,A)")"(I12,",Nlso,"(F18.12,I18))"
   file_ = "Eigenbands.tb";if(present(file))file_=file
   Npts  = size(kpath,1)
+  Ndim  = size(kpath,2)
   Nktot = (Npts-1)*Nkpath
   !
   do ilat=1,Nlat
@@ -246,6 +271,16 @@ subroutine solve_HkR_along_BZpath(hkr_model,Nlat,Nso,kpath,Nkpath,colors_name,po
         corb(io + (ilat-1)*Nso) = colors_name(ilat,io)
      enddo
   enddo
+  !
+  if(.not.set_bkvec)stop "solve_w90hk_along_BZpath ERROR: bk vectors not set!"
+  select case(Ndim)
+  case (1)
+     forall(ipts=1:Npts)kpath(ipts,:) = kpath(ipts,1)*bk_x
+  case(2)
+     forall(ipts=1:Npts)kpath(ipts,:) = kpath(ipts,1)*bk_x + kpath(ipts,2)*bk_y
+  case (3)
+     forall(ipts=1:Npts)kpath(ipts,:) = kpath(ipts,1)*bk_x + kpath(ipts,2)*bk_y + kpath(ipts,3)*bk_z
+  end select
   !
   write(*,*)"Solving model along the path:"
   do ipts=1,Npts
@@ -257,7 +292,6 @@ subroutine solve_HkR_along_BZpath(hkr_model,Nlat,Nso,kpath,Nkpath,colors_name,po
      rewind(unit_)
      close(unit_)
   enddo
-
   !
   ic=0
   klen = 0d0
