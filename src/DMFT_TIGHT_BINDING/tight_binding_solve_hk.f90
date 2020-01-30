@@ -20,16 +20,16 @@ subroutine solve_Hk_along_BZpath(hk_model,Nlso,kpath,Nk,colors_name,points_name,
   complex(8)                                :: h(Nlso,Nlso),u(Nlso,Nlso)
   type(rgb_color)                           :: corb(Nlso),c(Nlso)
   character(len=10)                         :: chpoint
-  character(len=32) :: fmt
-  !
+  character(len=32)                         :: fmt
+  real(8),allocatable                       :: kseg(:),Ekval(:,:)
+  integer,allocatable                       :: Ekcol(:,:)
+
   file_="Eigenbands.tb";if(present(file))file_=file
   Npts=size(kpath,1)
   Ndim=size(kpath,2)
   do iorb=1,Nlso
      corb(iorb) = colors_name(iorb)
   enddo
-  unit=free_unit()
-  open(unit,file=reg(file_))
   !
   if(.not.set_bkvec)stop "solve_w90hk_along_BZpath ERROR: bk vectors not set!"
   select case(Ndim)
@@ -49,6 +49,11 @@ subroutine solve_Hk_along_BZpath(hk_model,Nlso,kpath,Nk,colors_name,points_name,
   enddo
   !
   ic = 0
+  allocate(kseg(Nk*(Npts-1)))
+  allocate(ekval(Nk*(Npts-1),Nlso))
+  allocate(ekcol(Nk*(Npts-1),Nlso))
+  ! unit=free_unit()
+  ! open(unit,file=reg(file_))
   klen=0d0  
   do ipts=1,Npts-1
      kstart = kpath(ipts,:)
@@ -63,12 +68,25 @@ subroutine solve_Hk_along_BZpath(hk_model,Nlso,kpath,Nk,colors_name,points_name,
         do iorb=1,Nlso
            coeff(:)=h(:,iorb)*conjg(h(:,iorb))
            c(iorb) = coeff.dot.corb
+           Ekval(ic,iorb) = Eval(iorb)
+           Ekcol(ic,iorb) = rgb(c(iorb))
         enddo
-        write(unit,'(F18.12,100(F18.12,I18))')klen,(Eval(iorb),rgb(c(iorb)),iorb=1,Nlso)
+        kseg(ic) = klen
+        ! write(unit,'(F18.12,100(F18.12,I18))')klen,(Eval(iorb),rgb(c(iorb)),iorb=1,Nlso)
         klen = klen + sqrt(dot_product(kdiff,kdiff))
      enddo
   enddo
-  ktics(Npts) = klen
+  ktics(Npts) = kseg(ic-1)
+  ! close(unit)
+  !
+  unit=free_unit()
+  open(unit,file=reg(file_))
+  do iorb=1,Nlso
+     do ic=1,Nk*(Npts-1)
+        write(unit,*)kseg(ic),Ekval(ic,iorb),Ekcol(ic,iorb)
+     enddo
+     write(unit,*)""
+  enddo
   close(unit)
   !
   xtics="'"//reg(points_name(1))//"'"//str(ktics(1))//","
@@ -96,25 +114,29 @@ subroutine solve_Hk_along_BZpath(hk_model,Nlso,kpath,Nk,colors_name,points_name,
         write(unit,"(A)")str("set label 'Orb "//str(iorb)//"' tc rgb "//str(rgb(corb(iorb)))//&
              " at graph 0.9,"//reg(chpoint)//" font 'Times-Italic,11'")
      enddo
+  else
+     do iorb=1,Nlso
+        chpoint=str(0.95d0-(iorb-1)*0.05d0)
+        write(unit,"(A)")str("#set label 'Orb "//str(iorb)//"' tc rgb "//str(rgb(corb(iorb)))//&
+             " at graph 0.9,"//reg(chpoint)//" font 'Times-Italic,11'")
+     enddo
   endif
   !
-  write(unit,*)"plot '"//reg(file_)//"' u 1:2:3 w l lw 3 lc rgb variable,\"
-  do iorb=2,Nlso-1
-     u1=2+(iorb-1)*2
-     u2=3+(iorb-1)*2
-     write(unit,*)"'"//reg(file_)//"' u 1:"&
-          //reg(txtfy(u1))//":"//reg(txtfy(u2))//" w l lw 3 lc rgb variable,\"
-  enddo
-  u1=2+(Nlso-1)*2
-  u2=3+(Nlso-1)*2
-  write(unit,*)"'"//reg(file_)//"' u 1:"&
-       //reg(txtfy(u1))//":"//reg(txtfy(u2))//" w l lw 3 lc rgb variable"
-  !
+  write(unit,*)"plot '"//reg(file_)//"' u 1:2:3 w l lw 3 lc rgb variable" !,\"
+  ! do iorb=2,Nlso-1
+  !    u1=2+(iorb-1)*2
+  !    u2=3+(iorb-1)*2
+  !    write(unit,*)"'"//reg(file_)//"' u 1:"&
+  !         //reg(txtfy(u1))//":"//reg(txtfy(u2))//" w l lw 3 lc rgb variable,\"
+  ! enddo
+  ! u1=2+(Nlso-1)*2
+  ! u2=3+(Nlso-1)*2
+  ! write(unit,*)"'"//reg(file_)//"' u 1:"&
+  !      //reg(txtfy(u1))//":"//reg(txtfy(u2))//" w l lw 3 lc rgb variable"
+  ! !
   close(unit)
   call system("chmod +x "//reg(file_)//".gp")
 end subroutine solve_Hk_along_BZpath
-
-
 
 
 
@@ -133,7 +155,9 @@ subroutine solve_w90Hk_along_BZpath(Nlso,kpath,Nk,colors_name,points_name,file)
   complex(8)                                :: h(Nlso,Nlso),u(Nlso,Nlso)
   type(rgb_color)                           :: corb(Nlso),c(Nlso)
   character(len=10)                         :: chpoint
-  character(len=32) :: fmt
+  character(len=32)                         :: fmt
+  real(8),allocatable                       :: kseg(:),Ekval(:,:)
+  integer,allocatable                       :: Ekcol(:,:)
   !
   if(.not.TB_w90%status)stop "solve_w90hk_along_BZpath: TB_w90 structure not allocated. Call setup_w90 first."
   !
@@ -143,8 +167,6 @@ subroutine solve_w90Hk_along_BZpath(Nlso,kpath,Nk,colors_name,points_name,file)
   do iorb=1,Nlso
      corb(iorb) = colors_name(iorb)
   enddo
-  unit=free_unit()
-  open(unit,file=reg(file_))
   !
   if(.not.set_bkvec)stop "solve_w90hk_along_BZpath ERROR: bk vectors not set!"
   select case(Ndim)
@@ -164,6 +186,11 @@ subroutine solve_w90Hk_along_BZpath(Nlso,kpath,Nk,colors_name,points_name,file)
   enddo
   !
   ic = 0
+  allocate(kseg(Nk*(Npts-1)))
+  allocate(ekval(Nk*(Npts-1),Nlso))
+  allocate(ekcol(Nk*(Npts-1),Nlso))
+  ! unit=free_unit()
+  ! open(unit,file=reg(file_))
   klen=0d0  
   do ipts=1,Npts-1
      kstart = kpath(ipts,:)
@@ -180,13 +207,16 @@ subroutine solve_w90Hk_along_BZpath(Nlso,kpath,Nk,colors_name,points_name,file)
         do iorb=1,Nlso
            coeff(:)=h(:,iorb)*conjg(h(:,iorb))
            c(iorb) = coeff.dot.corb
+           Ekval(ic,iorb) = Eval(iorb)
+           Ekcol(ic,iorb) = rgb(c(iorb))
         enddo
-        write(unit,'(F18.12,100(F18.12,I18))')klen,(Eval(iorb),rgb(c(iorb)),iorb=1,Nlso)
+        kseg(ic) = klen
+        ! write(unit,'(F18.12,100(F18.12,I18))')klen,(Eval(iorb),rgb(c(iorb)),iorb=1,Nlso)
         klen = klen + sqrt(dot_product(kdiff,kdiff))
      enddo
   enddo
-  ktics(Npts) = klen
-  close(unit)
+  ktics(Npts) = kseg(ic-1)
+  ! close(unit)
   !
   xtics="'"//reg(points_name(1))//"'"//str(ktics(1))//","
   do ipts=2,Npts-1
@@ -213,23 +243,31 @@ subroutine solve_w90Hk_along_BZpath(Nlso,kpath,Nk,colors_name,points_name,file)
         write(unit,"(A)")str("set label 'Orb "//str(iorb)//"' tc rgb "//str(rgb(corb(iorb)))//&
              " at graph 0.9,"//reg(chpoint)//" font 'Times-Italic,11'")
      enddo
+  else
+     do iorb=1,Nlso
+        chpoint=str(0.95d0-(iorb-1)*0.05d0)
+        write(unit,"(A)")str("#set label 'Orb "//str(iorb)//"' tc rgb "//str(rgb(corb(iorb)))//&
+             " at graph 0.9,"//reg(chpoint)//" font 'Times-Italic,11'")
+     enddo
   endif
   !
-  write(unit,*)"plot '"//reg(file_)//"' u 1:2:3 w l lw 3 lc rgb variable,\"
-  do iorb=2,Nlso-1
-     u1=2+(iorb-1)*2
-     u2=3+(iorb-1)*2
-     write(unit,*)"'"//reg(file_)//"' u 1:"&
-          //reg(txtfy(u1))//":"//reg(txtfy(u2))//" w l lw 3 lc rgb variable,\"
-  enddo
-  u1=2+(Nlso-1)*2
-  u2=3+(Nlso-1)*2
-  write(unit,*)"'"//reg(file_)//"' u 1:"&
-       //reg(txtfy(u1))//":"//reg(txtfy(u2))//" w l lw 3 lc rgb variable"
+  write(unit,*)"plot '"//reg(file_)//"' u 1:2:3 w l lw 3 lc rgb variable" !,\"
+  ! do iorb=2,Nlso-1
+  !    u1=2+(iorb-1)*2
+  !    u2=3+(iorb-1)*2
+  !    write(unit,*)"'"//reg(file_)//"' u 1:"&
+  !         //reg(txtfy(u1))//":"//reg(txtfy(u2))//" w l lw 3 lc rgb variable,\"
+  ! enddo
+  ! u1=2+(Nlso-1)*2
+  ! u2=3+(Nlso-1)*2
+  ! write(unit,*)"'"//reg(file_)//"' u 1:"&
+  !      //reg(txtfy(u1))//":"//reg(txtfy(u2))//" w l lw 3 lc rgb variable"
   !
   close(unit)
   call system("chmod +x "//reg(file_)//".gp")
 end subroutine solve_w90Hk_along_BZpath
+
+
 
 
 
