@@ -267,9 +267,9 @@ subroutine dmft_get_gloc_matsubara_normal_dos_multiorb_mpi(MpiComm,Ebands,Dbands
    Le    = size(Ebands,2)
    Nso   = Nspin*Norb
    !Testing part:
-   call assert_shape(Ebands,[Nso,Lk],"dmft_get_gloc_matsubara_normal_dos_main_mpi","Ebands")
-   call assert_shape(Smats,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_gloc_matsubara_normal_dos_main_mpi","Smats")
-   call assert_shape(Gmats,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_gloc_matsubara_normal_dos_main_mpi","Gmats")
+   call assert_shape(Ebands,[Nso,Le],"dmft_get_gloc_matsubara_normal_dos_multiorb_mpi","Ebands")
+   call assert_shape(Smats,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_gloc_matsubara_normal_dos_multiorb_mpi","Smats")
+   call assert_shape(Gmats,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_gloc_matsubara_normal_dos_multiorb_mpi","Gmats")
    !
    if(mpi_master)write(*,"(A)")"BEWARE MULTIORBITAL DOS SUMMATION PROVIDES ONLY DIAGONAL GF"
    !
