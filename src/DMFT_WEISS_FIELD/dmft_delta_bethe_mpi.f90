@@ -34,7 +34,7 @@ subroutine dmft_get_delta_normal_bethe_mpi(MpiComm,Gloc,Weiss,Hloc,Wbands)
      !
      allocate(Gtmp(Nso,Nso));Gtmp=zero
      allocate(Dtmp(Nso,Nso));Dtmp=zero
-     allocate(Thop(Nso,Nso));Tsq=zero
+     allocate(Thop(Nso,Nso));Thop=zero
      Thop = 0.5d0 * diag(Wbands)
      !
      !\calG0^{-1}_aa = d**2/4*Gmats

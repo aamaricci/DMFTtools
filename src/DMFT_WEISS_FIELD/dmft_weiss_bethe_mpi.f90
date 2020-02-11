@@ -36,7 +36,7 @@ subroutine dmft_get_weiss_normal_bethe_mpi(MpiComm,Gloc,Weiss,Hloc,Wbands)
      !
      allocate(Gtmp(Nso,Nso));Gtmp=zero
      allocate(Wtmp(Nso,Nso));Wtmp=zero
-     allocate(Thop(Nso,Nso));Tsq=zero
+     allocate(Thop(Nso,Nso));Thop=zero
      allocate(H0(Nso,Nso));H0=zero
      Thop = 0.5d0 * diag(Wbands)
      !
