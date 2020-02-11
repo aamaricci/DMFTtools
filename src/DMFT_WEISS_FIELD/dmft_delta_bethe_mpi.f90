@@ -6,7 +6,9 @@ subroutine dmft_get_delta_normal_bethe_mpi(MpiComm,Gloc,Weiss,Hloc,Wbands)
   real(8),dimension(:),intent(in)               :: Wbands ![Nspin*Norb]
   !aux
   integer                                       :: Nspin,Norb,Nso,Lmats
-  integer                                       :: i,iorb,jorb,ispin,jspin,io,jo
+  integer                                       :: i,iorb,jorb,ispin,jspin,io,jo,iw
+  real(8),dimension(:,:),allocatable            :: Thop
+  complex(8),dimension(:,:),allocatable         :: Gtmp,Dtmp
   !
   !MPI setup:
   mpi_master= get_master_MPI(MpiComm)
@@ -30,13 +32,44 @@ subroutine dmft_get_delta_normal_bethe_mpi(MpiComm,Gloc,Weiss,Hloc,Wbands)
      !
      wm = pi/beta*(2*arange(1,Lmats)-1)
      !
+     allocate(Gtmp(Nso,Nso));Gtmp=zero
+     allocate(Dtmp(Nso,Nso));Dtmp=zero
+     allocate(Thop(Nso,Nso));Tsq=zero
+     Thop = 0.5d0 * diag(Wbands)
+     !
      !\calG0^{-1}_aa = d**2/4*Gmats
      Weiss=zero
-     do ispin=1,Nspin
-        do iorb=1,Norb
-           Weiss(ispin,ispin,iorb,iorb,:) = 0.25d0*Wbands(iorb+(ispin-1)*Norb)**2*Gloc(ispin,ispin,iorb,iorb,:)
+     do iw=1,Lmats
+        do ispin=1,Nspin
+           do jspin=1,Nspin
+              do iorb=1,Norb
+                 do jorb=1,Norb
+                    io = iorb + (ispin-1)*Norb
+                    jo = jorb + (jspin-1)*Norb
+                    Gtmp(io,jo) = Gloc(ispin,jspin,iorb,jorb,iw)
+                 enddo
+              enddo
+           enddo
+        enddo
+        Dtmp = matmul(Thop,matmul(Gtmp,Thop))
+        do ispin=1,Nspin
+           do jspin=1,Nspin
+              do iorb=1,Norb
+                 do jorb=1,Norb
+                    io = iorb + (ispin-1)*Norb
+                    jo = jorb + (jspin-1)*Norb
+                    Weiss(ispin,jspin,iorb,jorb,iw) = Dtmp(io,jo)
+                 enddo
+              enddo
+           enddo
         enddo
      enddo
+     !do ispin=1,Nspin
+     !   do iorb=1,Norb
+     !      Tsq = 0.25d0*Wbands(iorb+(ispin-1)*Norb)**2
+     !      Weiss(ispin,ispin,iorb,iorb,:) = Tsq * Gloc(ispin,ispin,iorb,iorb,:)
+     !   enddo
+     !enddo
      !
      deallocate(wm)
      !

@@ -3,7 +3,7 @@ module DMFT_WEISS_FIELD
   USE SF_CONSTANTS, only: one,xi,zero,pi
   USE SF_IOTOOLS,   only:reg,txtfy
   USE SF_ARRAYS,    only:arange
-  USE SF_LINALG,    only:eye,inv
+  USE SF_LINALG,    only:eye,inv,diag
   USE SF_MISC,      only:assert_shape
   USE DMFT_CTRL_VARS
 #ifdef _MPI
@@ -140,7 +140,7 @@ contains
   ! 2. Sigma/SELF : ([Nlat])[Nspin][Nspin][Norb][Norb][Lmats]
   ! 4. Hloc       : local part of the non-interacting Hamiltonian
   !--------------------------------------------------------------------!
-  include "dmft_self_consistency.f90" 
+  include "dmft_self_consistency.f90"
 #ifdef _MPI
   include "dmft_self_consistency_mpi.f90"
 #endif
@@ -148,7 +148,7 @@ contains
 
 
   !--------------------------------------------------------------------!
-  !PURPOSE: Get the local Weiss Field calG0 or using self-consistency 
+  !PURPOSE: Get the local Weiss Field calG0 or using self-consistency
   ! equations and given G_loc/F_loc and Sigma/Self
   ! INPUT:
   ! 1. GLOC/FLOC  : ([Nlat])[Nspin][Nspin][Norb][Norb][Lmats]
@@ -185,7 +185,7 @@ contains
 
 
   !--------------------------------------------------------------------!
-  !PURPOSE: Get the local Hybridization \Delta functino using 
+  !PURPOSE: Get the local Hybridization \Delta functino using
   ! equations and given G_loc/F_loc and Sigma/Self
   ! INPUT:
   ! 1. GLOC/FLOC  : ([Nlat])[Nspin][Nspin][Norb][Norb][Lmats]
@@ -298,7 +298,7 @@ contains
 
 
   !+-----------------------------------------------------------------------------+!
-  !PURPOSE: 
+  !PURPOSE:
   ! reshape a matrix from the [Nlso][Nlso] shape
   ! from/to the [Nlat][Nlat][Nspin][Nspin][Norb][Norb] shape.
   ! _nlso2nnn : from [Nlso][Nlso] to [Nlat][Nlat][Nspin][Nspin][Norb][Norb]  !
@@ -356,7 +356,7 @@ contains
        enddo
     enddo
   end function c_nlso2nnn
-  
+
   function d_nso2nn(Hso,Nspin,Norb) result(Hnn)
     real(8),dimension(Nspin*Norb,Nspin*Norb) :: Hso
     integer                                  :: Nspin,Norb
@@ -400,7 +400,7 @@ contains
 
 
   !+-----------------------------------------------------------------------------+!
-  !PURPOSE: 
+  !PURPOSE:
   ! reshape a matrix from the [Nlat][Nlat][Nspin][Nspin][Norb][Norb] shape
   ! from/to the [Nlso][Nlso] shape.
   ! _nnn2nlso : from [Nlat][Nlat][Nspin][Nspin][Norb][Norb] to [Nlso][Nlso]
@@ -458,7 +458,7 @@ contains
        enddo
     enddo
   end function c_nnn2nlso
-  
+
   function d_nn2nso(Hnn,Nspin,Norb) result(Hso)
     real(8),dimension(Nspin,Nspin,Norb,Norb) :: Hnn
     integer                                  :: Nspin,Norb

@@ -5,9 +5,11 @@ subroutine dmft_get_weiss_normal_bethe_mpi(MpiComm,Gloc,Weiss,Hloc,Wbands)
   complex(8),dimension(:,:,:,:),intent(in)      :: Hloc  ! [Nspin][Nspin][Norb][Norb]
   real(8),dimension(:),intent(in)               :: Wbands ![Nspin*Norb]
   !aux
-  complex(8),dimension(size(Gloc,5))            :: invWeiss ![Lmats]
+  !complex(8),dimension(size(Gloc,5))            :: invWeiss ![Lmats]
   integer                                       :: Nspin,Norb,Nso,Lmats
-  integer                                       :: i,iorb,jorb,ispin,jspin,io,jo
+  integer                                       :: i,iorb,jorb,ispin,jspin,io,jo,iw
+  real(8),dimension(:,:),allocatable            :: Thop
+  complex(8),dimension(:,:),allocatable         :: Gtmp,Wtmp,H0
   !
   !MPI setup:
   mpi_master= get_master_MPI(MpiComm)
@@ -31,15 +33,49 @@ subroutine dmft_get_weiss_normal_bethe_mpi(MpiComm,Gloc,Weiss,Hloc,Wbands)
      !
      wm = pi/beta*(2*arange(1,Lmats)-1)
      !
+     !
+     allocate(Gtmp(Nso,Nso));Gtmp=zero
+     allocate(Wtmp(Nso,Nso));Wtmp=zero
+     allocate(Thop(Nso,Nso));Tsq=zero
+     allocate(H0(Nso,Nso));H0=zero
+     Thop = 0.5d0 * diag(Wbands)
+     !
      !\calG0^{-1}_aa = iw + mu - H_0 - d**2/4*Gmats
      Weiss=zero
-     do ispin=1,Nspin
-        do iorb=1,Norb
-           invWeiss = (xi*wm(:)+xmu) - Hloc(ispin,ispin,iorb,iorb) - &
-                0.25d0*Wbands(iorb+(ispin-1)*Norb)**2*Gloc(ispin,ispin,iorb,iorb,:)
-           Weiss(ispin,ispin,iorb,iorb,:) = one/invWeiss
+     do iw=1,Lmats
+        do ispin=1,Nspin
+           do jspin=1,Nspin
+              do iorb=1,Norb
+                 do jorb=1,Norb
+                    io = iorb + (ispin-1)*Norb
+                    jo = jorb + (jspin-1)*Norb
+                    Gtmp(io,jo) = Gloc(ispin,jspin,iorb,jorb,iw)
+                    H0(io,jo) = Hloc(ispin,jspin,iorb,jorb)
+                 enddo
+              enddo
+           enddo
+        enddo
+        Wtmp = (xi*wm(iw)+xmu)*eye(Nso) - H0 - matmul(Thop,matmul(Gtmp,Thop))
+        call inv(Wtmp)
+        do ispin=1,Nspin
+           do jspin=1,Nspin
+              do iorb=1,Norb
+                 do jorb=1,Norb
+                    io = iorb + (ispin-1)*Norb
+                    jo = jorb + (jspin-1)*Norb
+                    Weiss(ispin,jspin,iorb,jorb,iw) = Wtmp(io,jo)
+                 enddo
+              enddo
+           enddo
         enddo
      enddo
+     !do ispin=1,Nspin
+     !   do iorb=1,Norb
+     !      invWeiss = (xi*wm(:)+xmu) - Hloc(ispin,ispin,iorb,iorb) - &
+     !           0.25d0*Wbands(iorb+(ispin-1)*Norb)**2*Gloc(ispin,ispin,iorb,iorb,:)
+     !      Weiss(ispin,ispin,iorb,iorb,:) = one/invWeiss
+     !   enddo
+     !enddo
      !
      deallocate(wm)
      !

@@ -4,14 +4,14 @@ subroutine dmft_get_gloc_realaxis_normal_main_mpi(MpiComm,Hk,Wtk,Greal,Sreal,mpi
   real(8),dimension(size(Hk,3)),intent(in)      :: Wtk       ![Nk]
   complex(8),dimension(:,:,:,:,:),intent(in)    :: Sreal     ![Nspin][Nspin][Norb][Norb][Lreal]
   complex(8),dimension(:,:,:,:,:),intent(inout) :: Greal     !as Sreal
-  character(len=*),optional                     :: mpi_split  
-  character(len=1)                              :: mpi_split_ 
+  character(len=*),optional                     :: mpi_split
+  character(len=1)                              :: mpi_split_
   logical,dimension(size(Hk,3)),optional        :: hk_symm   ![Lk]
   logical,dimension(size(Hk,3))                 :: hk_symm_  ![Lk]
   !allocatable arrays
-  complex(8),dimension(:,:,:,:,:),allocatable   :: Gkreal    !as Sreal  
+  complex(8),dimension(:,:,:,:,:),allocatable   :: Gkreal    !as Sreal
   complex(8),dimension(:,:,:,:,:),allocatable   :: Gtmp      !as Sreal
-  complex(8),dimension(:,:,:),allocatable       :: zeta_real ![Nspin*Norb][Nspin*Norb][Lreal] 
+  complex(8),dimension(:,:,:),allocatable       :: zeta_real ![Nspin*Norb][Nspin*Norb][Lreal]
   !MPI setup:
   mpi_size  = MPI_Get_size(MpiComm)
   mpi_rank =  MPI_Get_rank(MpiComm)
@@ -30,7 +30,7 @@ subroutine dmft_get_gloc_realaxis_normal_main_mpi(MpiComm,Hk,Wtk,Greal,Sreal,mpi
   Norb  = size(Sreal,3)
   Lreal = size(Sreal,5)
   Lk    = size(Hk,3)
-  Nso   = Nspin*Norb    
+  Nso   = Nspin*Norb
   !Testing part:
   call assert_shape(Hk,[Nso,Nso,Lk],'dmft_get_gloc_realaxis_normal_main_mpi',"Hk")
   call assert_shape(Sreal,[Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_normal_main_mpi',"Sreal")
@@ -55,7 +55,7 @@ subroutine dmft_get_gloc_realaxis_normal_main_mpi(MpiComm,Hk,Wtk,Greal,Sreal,mpi
      stop "dmft_get_gloc_realaxis_normal_main_mpi: ! mpi_split_ in ['w','k'] "
   case ('w')
      do ik=1,Lk
-        call invert_gk_normal_mpi(MpiComm,zeta_real,Hk(:,:,ik),hk_symm_(ik),Gkreal)      
+        call invert_gk_normal_mpi(MpiComm,zeta_real,Hk(:,:,ik),hk_symm_(ik),Gkreal)
         Greal = Greal + Gkreal*Wtk(ik)
         if(mpi_master)call eta(ik,Lk)
      end do
@@ -105,7 +105,7 @@ subroutine dmft_get_gloc_realaxis_normal_cluster_mpi(MpiComm,Hk,Wtk,Greal,Sreal,
   Norb  = size(Sreal,5)
   Lreal = size(Sreal,7)
   Lk    = size(Hk,3)
-  Nso   = Nspin*Norb    
+  Nso   = Nspin*Norb
   !Testing part:
   call assert_shape(Hk,[Nlso,Nlso,Lk],'dmft_get_gloc_realaxis_normal_main_mpi',"Hk")
   call assert_shape(Sreal,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_normal_main_mpi',"Sreal")
@@ -130,7 +130,7 @@ subroutine dmft_get_gloc_realaxis_normal_cluster_mpi(MpiComm,Hk,Wtk,Greal,Sreal,
      stop "dmft_get_gloc_realaxis_normal_main_mpi: ! mpi_split_ in ['w','k'] "
   case ('w')
      do ik=1,Lk
-        call invert_gk_normal_cluster_mpi(MpiComm,zeta_real,Hk(:,:,ik),hk_symm_(ik),Gkreal)      
+        call invert_gk_normal_cluster_mpi(MpiComm,zeta_real,Hk(:,:,ik),hk_symm_(ik),Gkreal)
         Greal = Greal + Gkreal*Wtk(ik)
         if(mpi_master)call eta(ik,Lk)
      end do
@@ -154,8 +154,8 @@ subroutine dmft_get_gloc_realaxis_normal_dos_mpi(MpiComm,Ebands,Dbands,Hloc,Grea
   real(8),dimension(size(Ebands,1)),intent(in)                :: Hloc      ![Nspin*Norb]
   complex(8),dimension(:,:,:,:,:),intent(in)                  :: Sreal     ![Nspin][Nspin][Norb][Norb][Lreal]
   complex(8),dimension(:,:,:,:,:),intent(inout)               :: Greal     !as Sreal
-  character(len=*),optional                                   :: mpi_split  
-  character(len=1)                                            :: mpi_split_ 
+  character(len=*),optional                                   :: mpi_split
+  character(len=1)                                            :: mpi_split_
   !
   complex(8)                                                  :: gktmp
   complex(8),dimension(:,:,:),allocatable                     :: zeta_real ![Nspin*Norb][Nspin*Norb][Lreal]
@@ -181,7 +181,7 @@ subroutine dmft_get_gloc_realaxis_normal_dos_mpi(MpiComm,Ebands,Dbands,Hloc,Grea
   Norb  = size(Sreal,3)
   Lreal = size(Sreal,5)
   Lk    = size(Ebands,2)
-  Nso   = Nspin*Norb    
+  Nso   = Nspin*Norb
   !Testing part:
   call assert_shape(Ebands,[Nso,Lk],'dmft_get_gloc_realaxis_normal_dos_main_mpi',"Ebands")
   call assert_shape(Sreal,[Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_normal_dos_main_mpi',"Sreal")
@@ -238,6 +238,97 @@ subroutine dmft_get_gloc_realaxis_normal_dos_mpi(MpiComm,Ebands,Dbands,Hloc,Grea
 end subroutine dmft_get_gloc_realaxis_normal_dos_mpi
 
 
+subroutine dmft_get_gloc_realaxis_normal_dos_multiorb_mpi(MpiComm,Ebands,Dbands,Hloc,Greal,Sreal,mpi_split)
+   integer                                                     :: MpiComm
+   real(8),dimension(:,:),intent(in)                           :: Ebands    ![Nspin*Norb][Lk]
+   real(8),dimension(size(Ebands,1),size(Ebands,2)),intent(in) :: Dbands    ![Nspin*Norb][Lk]
+   complex(8),dimension(:,:),intent(in)                        :: Hloc      ![Nspin*Norb][Nspin*Norb]
+   complex(8),dimension(:,:,:,:,:),intent(in)                  :: Sreal     ![Nspin][Nspin][Norb][Norb][Lreal]
+   complex(8),dimension(:,:,:,:,:),intent(inout)               :: Greal     !as Sreal
+   character(len=*),optional                                   :: mpi_split
+   character(len=1)                                            :: mpi_split_
+   !
+   complex(8),dimension(:,:,:,:,:),allocatable                 :: Gereal    !as Sreal
+   complex(8),dimension(:,:,:,:,:),allocatable                 :: Gtmp      !as Sreal
+   complex(8),dimension(:,:,:),allocatable                     :: zeta_real ![Nspin*Norb][Nspin*Norb][Lreal]
+   complex(8),dimension(:,:),allocatable                       :: He        !as Hloc
+   !
+   real(8)                                                     :: beta
+   real(8)                                                     :: xmu,eps
+   real(8)                                                     :: wini,wfin
+   !
+   !MPI setup:
+   mpi_size  = MPI_Get_size(MpiComm)
+   mpi_rank =  MPI_Get_rank(MpiComm)
+   mpi_master= MPI_Get_master(MpiComm)
+   !Retrieve parameters:
+   call get_ctrl_var(beta,"BETA")
+   call get_ctrl_var(xmu,"XMU")
+   !
+   mpi_split_='w'    ;if(present(mpi_split)) mpi_split_=mpi_split
+   !
+   Nspin = size(Sreal,1)
+   Norb  = size(Sreal,3)
+   Lreal = size(Sreal,5)
+   Le    = size(Ebands,2)
+   Nso   = Nspin*Norb
+   !Testing part:
+   call assert_shape(Ebands,[Nso,Lk],"dmft_get_gloc_realaxis_normal_dos_main_mpi","Ebands")
+   call assert_shape(Sreal,[Nspin,Nspin,Norb,Norb,Lreal],"dmft_get_gloc_realaxis_normal_dos_main_mpi","Sreal")
+   call assert_shape(Greal,[Nspin,Nspin,Norb,Norb,Lreal],"dmft_get_gloc_realaxis_normal_dos_main_mpi","Greal")
+   !
+   if(mpi_master)write(*,"(A)")"BEWARE MULTIORBITAL DOS SUMMATION PROVIDES ONLY DIAGONAL GF"
+   !
+   !Allocate and setup the Matsubara freq.
+   allocate(Gereal(Nspin,Nspin,Norb,Norb,Lreal))
+   allocate(zeta_real(Nso,Nso,Lreal))
+   if(allocated(wr))deallocate(wr);allocate(wr(Lreal))
+   wr = linspace(wini,wfin,Lreal)
+   !
+   do i=1,Lreal
+      zeta_real(:,:,i)=(wr(i)+xi*eps+xmu)*eye(Nso) - nn2so_reshape(Sreal(:,:,:,:,i),Nspin,Norb)
+   enddo
+   !
+   !invert (Z-Hloc) for each energy
+   if(mpi_master)write(*,"(A)")"Get local Matsubara Green's function (no print)"
+   if(mpi_master)call start_timer
+   Greal=zero
+   allocate(He(Nso,Nso));He=zero
+   !
+   select case(mpi_split_)
+   case default
+      stop "dmft_get_gloc_realaxis_normal_dos_main_mpi: ! mpi_split_ in ['w','k'] "
+   case ('w')
+      do ie=1,Le
+         He = Hloc + diag(Ebands(:,ie))
+         call invert_gk_normal_mpi(MpiComm,zeta_real,He,.false.,Gereal)
+         do ispin=1,Nspin
+            do iorb=1,Norb
+               io = iorb + (ispin-1)*Norb
+               Greal(ispin,ispin,iorb,iorb,:) = Greal(ispin,ispin,iorb,iorb,:) + Gereal(ispin,ispin,iorb,iorb,:)*Dbands(io,ie)
+            enddo
+         enddo
+         if(mpi_master)call eta(ie,Le)
+      end do
+   case ('k')
+      allocate(Gtmp(Nspin,Nspin,Norb,Norb,Lreal));Gtmp=zero
+      do ie=1+mpi_rank,Le,mpi_size
+         He = Hloc + diag(Ebands(:,ie))
+         call invert_gk_normal(zeta_real,He,.false.,Gereal)
+         do ispin=1,Nspin
+            do iorb=1,Norb
+               io = iorb + (ispin-1)*Norb
+               Gtmp(ispin,ispin,iorb,iorb,:) = Gtmp(ispin,ispin,iorb,iorb,:) + Gereal(ispin,ispin,iorb,iorb,:)*Dbands(io,ie)
+            enddo
+         enddo
+         if(mpi_master)call eta(ie,Le)
+      end do
+      call Mpi_AllReduce(Gtmp,Greal, size(Greal), MPI_Double_Complex, MPI_Sum, MpiComm, MPI_ierr)
+   end select
+   if(mpi_master)call stop_timer
+end subroutine dmft_get_gloc_realaxis_normal_dos_multiorb_mpi
+
+
 subroutine dmft_get_gloc_realaxis_normal_ineq_mpi(MpiComm,Hk,Wtk,Greal,Sreal,tridiag,mpi_split,hk_symm)
   integer                                         :: MpiComm
   complex(8),dimension(:,:,:),intent(in)          :: Hk        ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Nk]
@@ -246,8 +337,8 @@ subroutine dmft_get_gloc_realaxis_normal_ineq_mpi(MpiComm,Hk,Wtk,Greal,Sreal,tri
   complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Greal     !as Sreal
   logical,optional                                :: tridiag
   logical                                         :: tridiag_
-  character(len=*),optional                       :: mpi_split  
-  character(len=1)                                :: mpi_split_ 
+  character(len=*),optional                       :: mpi_split
+  character(len=1)                                :: mpi_split_
   logical,dimension(size(Hk,3)),optional          :: hk_symm
   logical,dimension((size(Hk,3)))                 :: hk_symm_
   !allocatable arrays
@@ -257,7 +348,7 @@ subroutine dmft_get_gloc_realaxis_normal_ineq_mpi(MpiComm,Hk,Wtk,Greal,Sreal,tri
   !
   real(8)                                         :: beta
   real(8)                                         :: xmu,eps
-  real(8)                                         :: wini,wfin  
+  real(8)                                         :: wini,wfin
   !MPI setup:
   mpi_size  = MPI_Get_size(MpiComm)
   mpi_rank =  MPI_Get_rank(MpiComm)
@@ -305,7 +396,7 @@ subroutine dmft_get_gloc_realaxis_normal_ineq_mpi(MpiComm,Hk,Wtk,Greal,Sreal,tri
      enddo
   enddo
   !
-  !pass each Z_site to the routines that invert (Z-Hk) for each k-point 
+  !pass each Z_site to the routines that invert (Z-Hk) for each k-point
   if(mpi_master)call start_timer
   Greal=zero
   select case(mpi_split_)
@@ -356,8 +447,8 @@ subroutine dmft_get_gloc_realaxis_normal_gij_mpi(MpiComm,Hk,Wtk,Greal,Sreal,mpi_
   real(8),dimension(size(Hk,3)),intent(in)          :: Wtk       ![Nk]
   complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Sreal     !      [Nlat][Nspin][Nspin][Norb][Norb][Lreal]
   complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Greal     ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lreal]
-  character(len=*),optional                         :: mpi_split  
-  character(len=1)                                  :: mpi_split_ 
+  character(len=*),optional                         :: mpi_split
+  character(len=1)                                  :: mpi_split_
   logical,dimension(size(Hk,3)),optional            :: hk_symm
   logical,dimension((size(Hk,3)))                   :: hk_symm_
   !allocatable arrays
@@ -406,7 +497,7 @@ subroutine dmft_get_gloc_realaxis_normal_gij_mpi(MpiComm,Hk,Wtk,Greal,Sreal,mpi_
      enddo
   enddo
   !
-  !pass each Z_site to the routines that invert (Z-Hk) for each k-point 
+  !pass each Z_site to the routines that invert (Z-Hk) for each k-point
   if(mpi_master)call start_timer
   Greal=zero
   select case(mpi_split_)
@@ -421,7 +512,7 @@ subroutine dmft_get_gloc_realaxis_normal_gij_mpi(MpiComm,Hk,Wtk,Greal,Sreal,mpi_
      end do
      !
   case ('k')
-     allocate(Gtmp(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal));Gtmp=zero     
+     allocate(Gtmp(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal));Gtmp=zero
      do ik=1+mpi_rank,Lk,mpi_size
         call invert_gk_normal_gij(zeta_real,Hk(:,:,ik),hk_symm_(ik),Gkreal)
         Gtmp = Gtmp + Gkreal*Wtk(ik)
@@ -433,12 +524,3 @@ subroutine dmft_get_gloc_realaxis_normal_gij_mpi(MpiComm,Hk,Wtk,Greal,Sreal,mpi_
   end select
   if(mpi_master)call stop_timer
 end subroutine dmft_get_gloc_realaxis_normal_gij_mpi
-
-
-
-
-
-
-
-
-

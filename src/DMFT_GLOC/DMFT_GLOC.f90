@@ -27,7 +27,7 @@ module DMFT_GLOC
      module procedure :: dmft_get_gloc_matsubara_normal_ineq_mpi
      module procedure :: dmft_get_gloc_matsubara_superc_main_mpi
      module procedure :: dmft_get_gloc_matsubara_superc_dos_mpi
-     module procedure :: dmft_get_gloc_matsubara_superc_ineq_mpi     
+     module procedure :: dmft_get_gloc_matsubara_superc_ineq_mpi
 #endif
   end interface get_gloc_matsubara
 
@@ -54,7 +54,7 @@ module DMFT_GLOC
 #ifdef _MPI
      module procedure :: dmft_get_gloc_matsubara_normal_gij_mpi
      module procedure :: dmft_get_gloc_matsubara_superc_gij_mpi
-#endif     
+#endif
   end interface get_gij_matsubara
 
   interface get_gij_realaxis
@@ -63,7 +63,7 @@ module DMFT_GLOC
 #ifdef _MPI
      module procedure :: dmft_get_gloc_realaxis_normal_gij_mpi
      module procedure :: dmft_get_gloc_realaxis_superc_gij_mpi
-#endif     
+#endif
   end interface get_gij_realaxis
 
 
@@ -81,10 +81,11 @@ module DMFT_GLOC
      module procedure :: dmft_get_gloc_matsubara_normal_main_mpi
      module procedure :: dmft_get_gloc_matsubara_normal_cluster_mpi
      module procedure :: dmft_get_gloc_matsubara_normal_dos_mpi
+     module procedure :: dmft_get_gloc_matsubara_normal_dos_multiorb_mpi
      module procedure :: dmft_get_gloc_matsubara_normal_ineq_mpi
      module procedure :: dmft_get_gloc_matsubara_superc_main_mpi
      module procedure :: dmft_get_gloc_matsubara_superc_dos_mpi
-     module procedure :: dmft_get_gloc_matsubara_superc_ineq_mpi     
+     module procedure :: dmft_get_gloc_matsubara_superc_ineq_mpi
 #endif
   end interface dmft_gloc_matsubara
 
@@ -101,6 +102,7 @@ module DMFT_GLOC
      module procedure :: dmft_get_gloc_realaxis_normal_main_mpi
      module procedure :: dmft_get_gloc_realaxis_normal_cluster_mpi
      module procedure :: dmft_get_gloc_realaxis_normal_dos_mpi
+     module procedure :: dmft_get_gloc_realaxis_normal_dos_multiorb_mpi
      module procedure :: dmft_get_gloc_realaxis_normal_ineq_mpi
      module procedure :: dmft_get_gloc_realaxis_superc_main_mpi
      module procedure :: dmft_get_gloc_realaxis_superc_dos_mpi
@@ -116,7 +118,7 @@ module DMFT_GLOC
 #ifdef _MPI
      module procedure :: dmft_get_gloc_matsubara_normal_gij_mpi
      module procedure :: dmft_get_gloc_matsubara_superc_gij_mpi
-#endif     
+#endif
   end interface dmft_gij_matsubara
 
 
@@ -126,7 +128,7 @@ module DMFT_GLOC
 #ifdef _MPI
      module procedure :: dmft_get_gloc_realaxis_normal_gij_mpi
      module procedure :: dmft_get_gloc_realaxis_superc_gij_mpi
-#endif     
+#endif
   end interface dmft_gij_realaxis
 
 
@@ -185,8 +187,8 @@ module DMFT_GLOC
   complex(8),dimension(:,:,:,:),allocatable :: local_Gamma_mats   ![Nlat][Nspin*Norb][Nspin*Norb][Lmats]
   complex(8),dimension(:,:,:),allocatable   :: lattice_Gamma_real ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lmats]
   complex(8),dimension(:,:,:,:),allocatable :: local_Gamma_real   ![Nlat][Nspin*Norb][Nspin*Norb][Lmats]
-  integer                                   :: Lk,Nlso,Nlat,Nspin,Norb,Nso,Lreal,Lmats
-  integer                                   :: i,j,ik,ilat,jlat,iorb,jorb,ispin,jspin,io,jo,is,js
+  integer                                   :: Lk,Le,Nlso,Nlat,Nspin,Norb,Nso,Lreal,Lmats
+  integer                                   :: i,j,ik,ie,ilat,jlat,iorb,jorb,ispin,jspin,io,jo,is,js
   !
   integer                                   :: mpi_ierr
   integer                                   :: mpi_rank
@@ -195,7 +197,7 @@ module DMFT_GLOC
   !
   real(8)                                   :: beta
   real(8)                                   :: xmu,eps
-  real(8)                                   :: wini,wfin 
+  real(8)                                   :: wini,wfin
 
 
   !PUBLIC IN DMFT:
@@ -253,7 +255,7 @@ contains
   subroutine invert_gk_normal(zeta,Hk,hk_symm,Gkout)
     complex(8),dimension(:,:,:),intent(in)        :: zeta    ![Nspin*Norb][Nspin*Norb][Lfreq]
     complex(8),dimension(:,:),intent(in)          :: Hk      ![Nspin*Norb][Nspin*Norb]
-    logical,intent(in)                            :: hk_symm                
+    logical,intent(in)                            :: hk_symm
     complex(8),dimension(:,:,:,:,:),intent(inout) :: Gkout   ![Nspin][Nspin][Norb][Norb][Lfreq]
     complex(8),dimension(:,:,:,:,:),allocatable   :: Gktmp   ![Nspin][Nspin][Norb][Norb][Lfreq]
     complex(8),dimension(:,:),allocatable         :: Gmatrix ![Nspin*Norb][Nspin*Norb]
@@ -279,7 +281,7 @@ contains
        else
           call inv(Gmatrix)  ! PAY ATTENTION HERE: it is not guaranteed that Gloc is a symmetric matrix
        end if
-       !store the diagonal blocks directly into the tmp output 
+       !store the diagonal blocks directly into the tmp output
        do ispin=1,Nspin
           do jspin=1,Nspin
              do iorb=1,Norb
@@ -301,7 +303,7 @@ contains
     integer                                       :: MpiComm
     complex(8),dimension(:,:,:),intent(in)        :: zeta    ![Nspin*Norb][Nspin*Norb][Lfreq]
     complex(8),dimension(:,:),intent(in)          :: Hk      ![Nspin*Norb][Nspin*Norb]
-    logical,intent(in)                            :: hk_symm                
+    logical,intent(in)                            :: hk_symm
     complex(8),dimension(:,:,:,:,:),intent(inout) :: Gkout   ![Nspin][Nspin][Norb][Norb][Lfreq]
     complex(8),dimension(:,:,:,:,:),allocatable   :: Gktmp   ![Nspin][Nspin][Norb][Norb][Lfreq]
     complex(8),dimension(:,:),allocatable         :: Gmatrix ![Nspin*Norb][Nspin*Norb]
@@ -333,7 +335,7 @@ contains
        else
           call inv(Gmatrix)  ! PAY ATTENTION HERE: it is not guaranteed that Gloc is a symmetric matrix
        end if
-       !store the diagonal blocks directly into the tmp output 
+       !store the diagonal blocks directly into the tmp output
        do ispin=1,Nspin
           do jspin=1,Nspin
              do iorb=1,Norb
@@ -385,7 +387,7 @@ contains
        else
           call inv(Gmatrix)  ! PAY ATTENTION HERE: it is not guaranteed that Gloc is a symmetric matrix
        end if
-       !store the diagonal blocks directly into the tmp output 
+       !store the diagonal blocks directly into the tmp output
        Gktmp(:,:,:,:,:,:,i)=lso2nnn_cluster_reshape(Gmatrix,Nlat,Nspin,Norb)
     enddo
     Gkout = Gktmp
@@ -430,7 +432,7 @@ contains
        else
           call inv(Gmatrix)  ! PAY ATTENTION HERE: it is not guaranteed that Gloc is a symmetric matrix
        end if
-       !store the diagonal blocks directly into the tmp output 
+       !store the diagonal blocks directly into the tmp output
        Gktmp(:,:,:,:,:,:,i)=lso2nnn_cluster_reshape(Gmatrix,Nlat,Nspin,Norb)
     enddo
     Gkout=zero
@@ -491,7 +493,7 @@ contains
        else
           call inv(Gmatrix)  ! PAY ATTENTION HERE: it is not guaranteed that Gloc is a symmetric matrix
        end if
-       !store the diagonal blocks directly into the tmp output 
+       !store the diagonal blocks directly into the tmp output
        do ilat=1,Nlat
           do ispin=1,Nspin
              do jspin=1,Nspin
@@ -561,7 +563,7 @@ contains
        else
           call inv(Gmatrix)  ! PAY ATTENTION HERE: it is not guaranteed that Gloc is a symmetric matrix
        end if
-       !store the diagonal blocks directly into the tmp output 
+       !store the diagonal blocks directly into the tmp output
        do ilat=1,Nlat
           do ispin=1,Nspin
              do jspin=1,Nspin
@@ -644,7 +646,7 @@ contains
        Diag = zeta(:,:,:,i) - Diag
        if(allocated(Gembed))Diag = Diag - Gembed(:,:,:,i)
        call inv_tridiag(Nlat,Nso,-Sub,Diag,-Over,Gmatrix)
-       !store the diagonal blocks directly into the tmp output 
+       !store the diagonal blocks directly into the tmp output
        do ilat=1,Nlat
           do ispin=1,Nspin
              do jspin=1,Nspin
@@ -676,7 +678,7 @@ contains
     complex(8),dimension(:,:,:),allocatable         :: Over
     complex(8),dimension(:,:,:,:,:,:),allocatable   :: Gktmp   ![Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
     complex(8),dimension(:,:,:),allocatable         :: Gmatrix ![Nlat][Nspin*Norb][Nspin*Norb]
-    complex(8),dimension(:,:,:,:),allocatable       :: Gembed  ![Nlat][Nspin*Norb][Nspin*Norb][Lfreq]    
+    complex(8),dimension(:,:,:,:),allocatable       :: Gembed  ![Nlat][Nspin*Norb][Nspin*Norb][Lfreq]
     integer                                         :: Nlat,Nspin,Norb,Nso,Nlso,Lfreq
     integer                                         :: i,is,ilat,jlat,iorb,jorb,ispin,jspin,io,jo
     !
@@ -718,7 +720,7 @@ contains
        Diag = zeta(:,:,:,i) - Diag
        if(allocated(Gembed))Diag = Diag - Gembed(:,:,:,i)
        call inv_tridiag(Nlat,Nso,-Sub,Diag,-Over,Gmatrix)
-       !store the diagonal blocks directly into the tmp output 
+       !store the diagonal blocks directly into the tmp output
        do ilat=1,Nlat
           do ispin=1,Nspin
              do jspin=1,Nspin
@@ -791,7 +793,7 @@ contains
        else
           call inv(Gmatrix)  ! PAY ATTENTION HERE: it is not guaranteed that Gloc is a symmetric matrix
        end if
-       !store the diagonal blocks directly into the tmp output 
+       !store the diagonal blocks directly into the tmp output
        do ilat=1,Nlat
           do jlat=1,Nlat
              do ispin=1,Nspin
@@ -863,7 +865,7 @@ contains
        else
           call inv(Gmatrix)  ! PAY ATTENTION HERE: it is not guaranteed that Gloc is a symmetric matrix
        end if
-       !store the diagonal blocks directly into the tmp output 
+       !store the diagonal blocks directly into the tmp output
        do ilat=1,Nlat
           do jlat=1,Nlat
              do ispin=1,Nspin
@@ -929,7 +931,7 @@ contains
        else
           call inv(Gmatrix)  ! PAY ATTENTION HERE: it is not guaranteed that Gloc is a symmetric matrix
        end if
-       !store the diagonal blocks directly into the tmp output 
+       !store the diagonal blocks directly into the tmp output
        do ispin=1,Nspin
           do jspin=1,Nspin
              do iorb=1,Norb
@@ -988,7 +990,7 @@ contains
        else
           call inv(Gmatrix)  ! PAY ATTENTION HERE: it is not guaranteed that Gloc is a symmetric matrix
        end if
-       !store the diagonal blocks directly into the tmp output 
+       !store the diagonal blocks directly into the tmp output
        do ispin=1,Nspin
           do jspin=1,Nspin
              do iorb=1,Norb
@@ -1047,7 +1049,7 @@ contains
        else
           call inv(Gmatrix)  ! PAY ATTENTION HERE: it is not guaranteed that Gloc is a symmetric matrix
        end if
-       !store the diagonal blocks directly into the tmp output 
+       !store the diagonal blocks directly into the tmp output
        do ilat=1,Nlat
           do ispin=1,Nspin
              do jspin=1,Nspin
@@ -1110,7 +1112,7 @@ contains
        else
           call inv(Gmatrix)  ! PAY ATTENTION HERE: it is not guaranteed that Gloc is a symmetric matrix
        end if
-       !store the diagonal blocks directly into the tmp output 
+       !store the diagonal blocks directly into the tmp output
        do ilat=1,Nlat
           do ispin=1,Nspin
              do jspin=1,Nspin
@@ -1136,8 +1138,8 @@ contains
 
   subroutine invert_gk_superc_gij(zeta,Hk,hk_symm,Gkout,Fkout)
     complex(8)                                        :: zeta(:,:,:,:,:,:)              ![2][2][Nlat][Nspin*Norb][Nspin*Norb][Lfreq]
-    complex(8)                                        :: Hk(2,Nlat*Nspin*Norb,Nlat*Nspin*Norb) 
-    logical                                           :: hk_symm                
+    complex(8)                                        :: Hk(2,Nlat*Nspin*Norb,Nlat*Nspin*Norb)
+    logical                                           :: hk_symm
     !output:
     complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gkout   ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
     complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Fkout   ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
@@ -1175,7 +1177,7 @@ contains
        else
           call inv(Gmatrix)  ! PAY ATTENTION HERE: it is not guaranteed that Gloc is a symmetric matrix
        end if
-       !store the diagonal blocks directly into the tmp output 
+       !store the diagonal blocks directly into the tmp output
        do ilat=1,Nlat
           do jlat=1,Nlat
              do ispin=1,Nspin
@@ -1202,8 +1204,8 @@ contains
   subroutine invert_gk_superc_gij_mpi(MpiComm,zeta,Hk,hk_symm,Gkout,Fkout)
     integer                                           :: MpiComm
     complex(8)                                        :: zeta(:,:,:,:,:,:)              ![2][2][Nlat][Nspin*Norb][Nspin*Norb][Lfreq]
-    complex(8)                                        :: Hk(2,Nlat*Nspin*Norb,Nlat*Nspin*Norb) 
-    logical                                           :: hk_symm                
+    complex(8)                                        :: Hk(2,Nlat*Nspin*Norb,Nlat*Nspin*Norb)
+    logical                                           :: hk_symm
     !output:
     complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gkout   ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
     complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Fkout   ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
@@ -1244,7 +1246,7 @@ contains
        else
           call inv(Gmatrix)  ! PAY ATTENTION HERE: it is not guaranteed that Gloc is a symmetric matrix
        end if
-       !store the diagonal blocks directly into the tmp output 
+       !store the diagonal blocks directly into the tmp output
        do ilat=1,Nlat
           do jlat=1,Nlat
              do ispin=1,Nspin
@@ -1303,7 +1305,7 @@ contains
     Nso   = size(Gamma_mats,2)
     Lmats = size(Gamma_mats,4)
     !Testing part:
-    call assert_shape(Gamma_mats,[Nlat,Nso,Nso,Lmats],"dmft_set_Gamma_matsubara_local","Gamma_mats")         
+    call assert_shape(Gamma_mats,[Nlat,Nso,Nso,Lmats],"dmft_set_Gamma_matsubara_local","Gamma_mats")
     if(allocated(local_Gamma_mats))deallocate(local_Gamma_mats)
     if(allocated(local_Gamma_real))deallocate(local_Gamma_real)
     allocate(local_Gamma_mats(Nlat,Nso,Nso,Lmats))
@@ -1336,7 +1338,7 @@ contains
     Nso   = size(Gamma_real,2)
     Lreal = size(Gamma_real,4)
     !Testing part:
-    call assert_shape(Gamma_real,[Nlat,Nso,Nso,Lreal],"dmft_set_Gamma_realaxis_local","Gamma_real")         
+    call assert_shape(Gamma_real,[Nlat,Nso,Nso,Lreal],"dmft_set_Gamma_realaxis_local","Gamma_real")
     if(allocated(local_Gamma_mats))deallocate(local_Gamma_mats)
     if(allocated(local_Gamma_real))deallocate(local_Gamma_real)
     allocate(local_Gamma_real(Nlat,Nso,Nso,Lreal))
@@ -1467,7 +1469,7 @@ contains
 
 
   !+-----------------------------------------------------------------------------+!
-  !PURPOSE: 
+  !PURPOSE:
   ! reshape a matrix from the [Nlso][Nlso] shape
   ! from/to the [Nlat][Nspin][Nspin][Norb][Norb] shape.
   ! _nlso2nnn : from [Nlso][Nlso] to [Nlat][Nspin][Nspin][Norb][Norb]  !
@@ -1559,7 +1561,7 @@ contains
 
 
   !+-----------------------------------------------------------------------------+!
-  !PURPOSE: 
+  !PURPOSE:
   ! reshape a matrix from the [Nlat][Nspin][Nspin][Norb][Norb] shape
   ! from/to the [Nlso][Nlso] shape.
   ! _nnn2nlso : from [Nlat][Nspin][Nspin][Norb][Norb] to [Nlso][Nlso]
@@ -1648,11 +1650,11 @@ contains
        enddo
     enddo
   end function c_nn2nso
-  
-  
-  
+
+
+
   !+-----------------------------------------------------------------------------+!
-  !PURPOSE: 
+  !PURPOSE:
   ! reshape a matrix from the [Nlso][Nlso] shape
   ! _nlso2nnn : from [Nlso][Nlso] to [Nlat][Nlat][Nspin][Nspin][Norb][Norb]  !
   !+-----------------------------------------------------------------------------+!
@@ -1711,7 +1713,7 @@ contains
 
 
   !+-----------------------------------------------------------------------------+!
-  !PURPOSE: 
+  !PURPOSE:
   ! reshape a matrix from the [Nlat][Nlat][Nspin][Nspin][Norb][Norb] shape
   ! _nnn2nlso : from [Nlat][Nlat][Nspin][Nspin][Norb][Norb] to [Nlso][Nlso]
   !+-----------------------------------------------------------------------------+!
