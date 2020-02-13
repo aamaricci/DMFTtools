@@ -262,8 +262,10 @@ subroutine dmft_get_gloc_realaxis_normal_dos_multiorb_mpi(MpiComm,Ebands,Dbands,
    mpi_rank =  MPI_Get_rank(MpiComm)
    mpi_master= MPI_Get_master(MpiComm)
    !Retrieve parameters:
-   call get_ctrl_var(beta,"BETA")
    call get_ctrl_var(xmu,"XMU")
+   call get_ctrl_var(wini,"WINI")
+   call get_ctrl_var(wfin,"WFIN")
+   call get_ctrl_var(eps,"EPS")
    !
    mpi_split_='w'    ;if(present(mpi_split)) mpi_split_=mpi_split
    !
@@ -309,7 +311,7 @@ subroutine dmft_get_gloc_realaxis_normal_dos_multiorb_mpi(MpiComm,Ebands,Dbands,
             enddo
          enddo
          if(mpi_master)call eta(ie,Le)
-      end do
+      enddo
    case ('k')
       allocate(Gtmp(Nspin,Nspin,Norb,Norb,Lreal));Gtmp=zero
       do ie=1+mpi_rank,Le,mpi_size

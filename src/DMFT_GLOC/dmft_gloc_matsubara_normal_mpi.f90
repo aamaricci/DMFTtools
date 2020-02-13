@@ -303,7 +303,7 @@ subroutine dmft_get_gloc_matsubara_normal_dos_multiorb_mpi(MpiComm,Ebands,Dbands
             enddo
          enddo
          if(mpi_master)call eta(ie,Le)
-      end do
+      enddo
    case ('k')
       allocate(Gtmp(Nspin,Nspin,Norb,Norb,Lmats));Gtmp=zero
       do ie=1+mpi_rank,Le,mpi_size
