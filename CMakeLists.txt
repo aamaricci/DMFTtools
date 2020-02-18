@@ -26,7 +26,7 @@ IF( (${CMAKE_Fortran_COMPILER_ID} MATCHES Intel) OR (${CMAKE_Fortran_COMPILER_ID
   MESSAGE(STATUS "Fortran Compiler id = ${CMAKE_Fortran_COMPILER_ID}")
 ELSEIF()
   MESSAGE(FATAL_ERROR "Unsupported Fortran compiler (use Intel or GNU) ")
-ENDIF()  
+ENDIF()
 
 
 # Set some options the user may choose
@@ -42,7 +42,7 @@ ENDIF(VERBOSE)
 ############################################################
 # Look for MPI if needed
 ############################################################
-# reSet compiler to MPI is required 
+# reSet compiler to MPI is required
 IF(USE_MPI)
   FIND_PACKAGE(MPI REQUIRED)
   IF(MPI_Fortran_FOUND)
@@ -50,7 +50,7 @@ IF(USE_MPI)
     MESSAGE(STATUS "${Yellow}Set Fortran compiler FC to ${ColourReset}${CMAKE_Fortran_COMPILER}, ID=${CMAKE_Fortran_COMPILER_ID}")
     SET(MPI_CPP "MPI")		#pre-processing option
   ELSE()
-    MESSAGE(FATAL_ERROR "MPI Found but No MPI-Fortran compiler can be determined.")    
+    MESSAGE(FATAL_ERROR "MPI Found but No MPI-Fortran compiler can be determined.")
   ENDIF()
 ELSE(USE_MPI)
   SET(MPI_CPP "")
@@ -81,7 +81,7 @@ IF(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git)
       ERROR_QUIET
       OUTPUT_STRIP_TRAILING_WHITESPACE)
     MESSAGE( STATUS "${Yellow}Git branch: ${ColourReset}${GIT_BRANCH}" )
-    
+
     EXECUTE_PROCESS(
       COMMAND ${GIT_EXECUTABLE} describe --tags
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
@@ -106,12 +106,12 @@ SET(VERSION ${GIT_TAG})    	#Update version
 # -mcmodel=large  this is to remove the 2Gb limit of virtual memory allocation
 if(CMAKE_Fortran_COMPILER_ID MATCHES GNU) # this is gfortran
   SET(CMAKE_Fortran_MODDIR_FLAG   "-J")
-  SET(CMAKE_Fortran_FLAGS         "-cpp -ffree-line-length-none") 
+  SET(CMAKE_Fortran_FLAGS         "-cpp -ffree-line-length-none")
   SET(CMAKE_Fortran_FLAGS_TESTING "-O2 -funroll-loops")
   SET(CMAKE_Fortran_FLAGS_DEBUG   "-O0 -p -g -Wsurprising -Waliasing -fwhole-file -fcheck=all -pedantic -fbacktrace -fbounds-check")
-  SET(CMAKE_Fortran_FLAGS_RELEASE "-O3  -ffast-math -march=native -funroll-loops")   
+  SET(CMAKE_Fortran_FLAGS_RELEASE "-O3  -ffast-math -march=native -funroll-loops")
 elseif(CMAKE_Fortran_COMPILER_ID MATCHES Intel)
-  SET(CMAKE_Fortran_MODDIR_FLAG   "-module ") #remember the ending white space here 
+  SET(CMAKE_Fortran_MODDIR_FLAG   "-module ") #remember the ending white space here
   SET(CMAKE_Fortran_FLAGS         "-fpp")
   SET(CMAKE_Fortran_FLAGS_TESTING "-O2 -ftz")
   SET(CMAKE_Fortran_FLAGS_DEBUG   "-p -O0 -g -fpe1 -warn -debug extended -traceback -check all,noarg_temp_created")
@@ -235,6 +235,8 @@ ADD_SUBDIRECTORY(${SRC_DIR_DMFT_CONVERGENCE})
 SET(SRC_DIR_DMFT_MISC ${DT_SRC}/DMFT_MISC)
 ADD_SUBDIRECTORY(${SRC_DIR_DMFT_MISC})
 
+SET(SRC_DIR_DMFT_INTERACTION ${DT_SRC}/DMFT_INTERACTION)
+ADD_SUBDIRECTORY(${SRC_DIR_DMFT_INTERACTION})
 
 ADD_SUBDIRECTORY(${DT_SRC})
 
@@ -251,6 +253,7 @@ ADD_LIBRARY(dmft_tools
   $<TARGET_OBJECTS:DMFT_VECTORSLIB>
   $<TARGET_OBJECTS:DMFT_CONVERGENCELIB>
   $<TARGET_OBJECTS:DMFT_MISCLIB>
+  $<TARGET_OBJECTS:DMFT_INTERACTIONLIB>
   $<TARGET_OBJECTS:DMFT_TOOLSLIB>
   )
 
@@ -272,15 +275,16 @@ ADD_DEPENDENCIES(DMFT_TOOLSLIB
   DMFT_EKINLIB
   DMFT_TIGHT_BINDINGLIB
   DMFT_FFTLIB
-  DMFT_VECTORSLIB  
+  DMFT_VECTORSLIB
   DMFT_CONVERGENCELIB
   DMFT_MISCLIB
+  DMFT_INTERACTIONLIB
   DMFT_TOOLSLIB
   )
 
 
 # Add a distclean target to the Makefile
-ADD_CUSTOM_TARGET(distclean 
+ADD_CUSTOM_TARGET(distclean
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_SOURCE_DIR}/distclean.cmake
 )
 
@@ -330,14 +334,14 @@ INSTALL(FILES ${TMP_CONFIGVARS_USER_FILE} DESTINATION ${DT_TARGET_BIN}/
 INSTALL(FILES ${TMP_CONFIGVARS_GLOBAL_FILE} DESTINATION ${DT_TARGET_BIN}/
   PERMISSIONS ${PERMISSION_777} SETUID)
 
-INSTALL(FILES ${DT_TMP_VER} DESTINATION ${DT_TARGET_DIR} 
+INSTALL(FILES ${DT_TMP_VER} DESTINATION ${DT_TARGET_DIR}
   PERMISSIONS ${PERMISSION_777} SETUID)
 
 
 MESSAGE( STATUS "${Red}Library version:${ColourReset} ${VERSION}")
 MESSAGE( STATUS "${Red}Library will be installed in:${ColourReset} ${CMAKE_INSTALL_PREFIX}")
 
-MESSAGE( STATUS "${Yellow}To conclude installation:${ColourReset} 
+MESSAGE( STATUS "${Yellow}To conclude installation:${ColourReset}
 $ make
 $ make install
 $ make post-install
@@ -352,5 +356,3 @@ ADD_CUSTOM_TARGET(
   WORKING_DIRECTORY
   "${CMAKE_BINARY_DIR}"
 )
-
-
