@@ -101,13 +101,15 @@ contains
     integer                                     :: unit
     !
     call get_ctrl_var(Norb,"NORB")
-    call get_ctrl_var(LOGfile,"LOGfile")
+    !call get_ctrl_var(LOGfile,"LOGFILE") This is not working for some reason
+    LOGfile=6
     !
     call assert_shape(Utensor,[Norb,Norb,Norb,Norb,2],"dmft_interaction_read","Umat")
     allocate(Umat(Norb*Norb,Norb*Norb,2));Umat=0d0
     !
+    write(LOGfile,*)
+    write(LOGfile,"(A)")"Read interaction tensor from file: "//reg(file)
     open(free_unit(unit),file=reg(file))
-    write(LOGfile,"(A)")"Read interaction tensor from file :"//reg(file)
     !
     read(unit,*)
     do io=1,Norb*Norb
@@ -118,6 +120,7 @@ contains
     do io=1,Norb*Norb
       read(unit,"(90F21.12)") (Umat(io,jo,2),jo=1,Norb*Norb)
     enddo
+    close(unit)
     !
     Utensor=matrix2tensor_reshape(Umat,Norb)
     !
@@ -139,7 +142,8 @@ contains
     integer                                     :: unit
     !
     call get_ctrl_var(Norb,"NORB")
-    call get_ctrl_var(LOGfile,"LOGfile")
+    !call get_ctrl_var(LOGfile,"LOGFILE") This is not working for some reason
+    LOGfile=6
     !
     call assert_shape(Utensor,[Norb,Norb,Norb,Norb,2],"dmft_interaction_print","Umat")
     allocate(Umat(Norb*Norb,Norb*Norb,2));Umat=0d0
@@ -149,19 +153,20 @@ contains
     write(LOGfile,"(A)")"Interaction tensor - Block (up,up)(dw,dw):"
     call print_interaction_states(LOGfile,Norb)
     do io=1,Norb*Norb
-       write(LOGfile,"(90F4.3)") (Umat(io,jo,1),jo=1,Norb*Norb)
+       write(LOGfile,"(90F8.3)") (Umat(io,jo,1),jo=1,Norb*Norb)
     enddo
     write(LOGfile,*)
     write(LOGfile,"(A)")"Interaction tensor - Block (up,up)(up,up):"
     call print_interaction_states(LOGfile,Norb)
     do io=1,Norb*Norb
-       write(LOGfile,"(90F4.3)") (Umat(io,jo,2),jo=1,Norb*Norb)
+       write(LOGfile,"(90F8.3)") (Umat(io,jo,2),jo=1,Norb*Norb)
     enddo
+    write(LOGfile,*)
     !
     if(present(file))then
       !
-       open(free_unit(unit),file=reg(file))
-       write(LOGfile,"(A)")"Print interaction tensor on file :"//reg(file)
+       open(free_unit(unit),file=reg(file),action='write')
+       write(LOGfile,"(A)")"Print interaction tensor on file: "//reg(file)
        !
        call print_interaction_states(unit,Norb)
        do io=1,Norb*Norb
@@ -172,6 +177,7 @@ contains
        do io=1,Norb*Norb
           write(unit,"(90F21.12)") (Umat(io,jo,2),jo=1,Norb*Norb)
        enddo
+       close(unit)
        !
     endif
     !
@@ -190,8 +196,12 @@ contains
     integer,intent(in)                         :: unit
     character(len=32)                          :: fmt1,fmt2
     character(len=32)                          :: fmt
+    integer                                    :: LOGfile
     !
-    if(unit==6)then
+    !call get_ctrl_var(LOGfile,"LOGFILE") This is not working for some reason
+    LOGfile=6
+    !
+    if(unit==LOGfile)then
       if(Norb==3) write(unit,"(90a8)") "(11)","(22)","(33)", &
                                        "(12)","(21)",        &
                                        "(23)","(32)",        &
@@ -269,14 +279,14 @@ contains
     integer                                     :: iorb,jorb,korb,lorb
     integer                                     :: io,jo,spin
     tensor = zero
-    do io=1,Norb
-       do jo=1,Norb
+    do io=1,Norb*Norb
+       do jo=1,Norb*Norb
           !
           call getMstride(io,iorb,jorb,Norb)
           call getMstride(jo,korb,lorb,Norb)
           !
           do spin=1,2
-             matrix(io,jo,spin) = tensor(iorb,jorb,korb,lorb,spin)
+             tensor(iorb,jorb,korb,lorb,spin) = matrix(io,jo,spin)
           enddo
           !
        enddo
@@ -291,14 +301,14 @@ contains
     integer                                     :: iorb,jorb,korb,lorb
     integer                                     :: io,jo,spin
     tensor = 0d0
-    do io=1,Norb
-       do jo=1,Norb
+    do io=1,Norb*Norb
+       do jo=1,Norb*Norb
           !
           call getMstride(io,iorb,jorb,Norb)
           call getMstride(jo,korb,lorb,Norb)
           !
           do spin=1,2
-             matrix(io,jo,spin) = tensor(iorb,jorb,korb,lorb,spin)
+             tensor(iorb,jorb,korb,lorb,spin) = matrix(io,jo,spin)
           enddo
           !
        enddo
