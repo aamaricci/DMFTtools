@@ -3,7 +3,7 @@ module DMFT_INTERACTION
   USE SF_CONSTANTS, only:one,xi,zero,pi
   USE SF_IOTOOLS,   only:reg,txtfy
   USE SF_ARRAYS,    only:arange
-  USE SF_LINALG,    only:eye,inv,diag
+  USE SF_LINALG,    only:eye,inv,diag,kronecker_product
   USE SF_MISC,      only:assert_shape
   USE SF_IOTOOLS,   only:free_unit,reg,txtfy
   USE DMFT_CTRL_VARS
@@ -23,16 +23,16 @@ module DMFT_INTERACTION
   end interface dmft_interaction_setKanamori
 
 
-!  interface dmft_interaction_rotate
-!     module procedure :: dmft_interaction_rotate_serial
-!#ifdef _MPI
-!     module procedure :: dmft_interaction_rotate_mpi
-!#endif
-!  end interface dmft_interaction_rotate
+  interface dmft_interaction_rotate
+     module procedure :: dmft_interaction_rotate_serial
+#ifdef _MPI
+     module procedure :: dmft_interaction_rotate_mpi
+#endif
+  end interface dmft_interaction_rotate
 
 
   public :: dmft_interaction_setKanamori
-  !public :: dmft_interaction_rotate
+  public :: dmft_interaction_rotate
 
   public :: dmft_interaction_print
   public :: dmft_interaction_read
@@ -68,22 +68,14 @@ contains
 
 
   !--------------------------------------------------------------------!
-  !PURPOSE: Set the rank-4 tensor to the standard Kanamori interaction
+  !PURPOSE: Set/rotate the rank-4 tensor to the standard Kanamori interaction
   !--------------------------------------------------------------------!
 
-  include "dmft_interaction_setKanamori_serial.f90"
+  include "dmft_interaction_serial.f90"
 #ifdef _MPI
-  include "dmft_interaction_setKanamori_mpi.f90"
+  include "dmft_interaction_mpi.f90"
 #endif
 
-
-  !--------------------------------------------------------------------!
-  !PURPOSE: Rotate the rank-4 tensor to a given basis
-  !--------------------------------------------------------------------!
-!  include "dmft_interaction_rotate.f90"
-!#ifdef _MPI
-!  include "dmft_interaction_rotate_mpi.f90"
-!#endif
 
 
   !--------------------------------------------------------------------!
@@ -94,7 +86,7 @@ contains
     real(8),dimension(:,:,:,:,:),intent(inout)  :: Utensor
     character(len=*),intent(in)                 :: file
     !aux
-    real(8),dimension(:,:,:),allocatable        :: Umat
+    real(8),dimension(:,:,:),allocatable        :: Umatrix
     integer                                     :: Norb
     integer                                     :: LOGfile
     integer                                     :: io,jo
@@ -104,8 +96,8 @@ contains
     !call get_ctrl_var(LOGfile,"LOGFILE") This is not working for some reason
     LOGfile=6
     !
-    call assert_shape(Utensor,[Norb,Norb,Norb,Norb,2],"dmft_interaction_read","Umat")
-    allocate(Umat(Norb*Norb,Norb*Norb,2));Umat=0d0
+    call assert_shape(Utensor,[Norb,Norb,Norb,Norb,2],"dmft_interaction_read","Utensor")
+    allocate(Umatrix(Norb*Norb,Norb*Norb,2));Umatrix=0d0
     !
     write(LOGfile,*)
     write(LOGfile,"(A)")"Read interaction tensor from file: "//reg(file)
@@ -113,18 +105,18 @@ contains
     !
     read(unit,*)
     do io=1,Norb*Norb
-      read(unit,"(90F21.12)") (Umat(io,jo,1),jo=1,Norb*Norb)
+      read(unit,"(90F21.12)") (Umatrix(io,jo,1),jo=1,Norb*Norb)
     enddo
     read(unit,*)
     read(unit,*)
     do io=1,Norb*Norb
-      read(unit,"(90F21.12)") (Umat(io,jo,2),jo=1,Norb*Norb)
+      read(unit,"(90F21.12)") (Umatrix(io,jo,2),jo=1,Norb*Norb)
     enddo
     close(unit)
     !
-    Utensor=matrix2tensor_reshape(Umat,Norb)
+    Utensor=matrix2tensor_reshape(Umatrix,Norb)
     !
-    deallocate(Umat)
+    deallocate(Umatrix)
     !
   end subroutine dmft_interaction_read
 
@@ -135,7 +127,7 @@ contains
     real(8),dimension(:,:,:,:,:),intent(in)     :: Utensor
     character(len=*),optional                   :: file
     !aux
-    real(8),dimension(:,:,:),allocatable        :: Umat
+    real(8),dimension(:,:,:),allocatable        :: Umatrix
     integer                                     :: Norb
     integer                                     :: LOGfile
     integer                                     :: io,jo
@@ -145,21 +137,21 @@ contains
     !call get_ctrl_var(LOGfile,"LOGFILE") This is not working for some reason
     LOGfile=6
     !
-    call assert_shape(Utensor,[Norb,Norb,Norb,Norb,2],"dmft_interaction_print","Umat")
-    allocate(Umat(Norb*Norb,Norb*Norb,2));Umat=0d0
-    Umat=tensor2matrix_reshape(Utensor,Norb)
+    call assert_shape(Utensor,[Norb,Norb,Norb,Norb,2],"dmft_interaction_print","Utensor")
+    allocate(Umatrix(Norb*Norb,Norb*Norb,2));Umatrix=0d0
+    Umatrix=tensor2matrix_reshape(Utensor,Norb)
     !
     write(LOGfile,*)
     write(LOGfile,"(A)")"Interaction tensor - Block (up,up)(dw,dw):"
     call print_interaction_states(LOGfile,Norb)
     do io=1,Norb*Norb
-       write(LOGfile,"(90F8.3)") (Umat(io,jo,1),jo=1,Norb*Norb)
+       write(LOGfile,"(90F8.3)") (Umatrix(io,jo,1),jo=1,Norb*Norb)
     enddo
     write(LOGfile,*)
     write(LOGfile,"(A)")"Interaction tensor - Block (up,up)(up,up):"
     call print_interaction_states(LOGfile,Norb)
     do io=1,Norb*Norb
-       write(LOGfile,"(90F8.3)") (Umat(io,jo,2),jo=1,Norb*Norb)
+       write(LOGfile,"(90F8.3)") (Umatrix(io,jo,2),jo=1,Norb*Norb)
     enddo
     write(LOGfile,*)
     !
@@ -170,18 +162,18 @@ contains
        !
        call print_interaction_states(unit,Norb)
        do io=1,Norb*Norb
-          write(unit,"(90F21.12)") (Umat(io,jo,1),jo=1,Norb*Norb)
+          write(unit,"(90F21.12)") (Umatrix(io,jo,1),jo=1,Norb*Norb)
        enddo
        write(unit,*)
        call print_interaction_states(unit,Norb)
        do io=1,Norb*Norb
-          write(unit,"(90F21.12)") (Umat(io,jo,2),jo=1,Norb*Norb)
+          write(unit,"(90F21.12)") (Umatrix(io,jo,2),jo=1,Norb*Norb)
        enddo
        close(unit)
        !
     endif
     !
-    deallocate(Umat)
+    deallocate(Umatrix)
     !
   end subroutine dmft_interaction_print
 
@@ -204,15 +196,15 @@ contains
     if(unit==LOGfile)then
       if(Norb==3) write(unit,"(90a8)") "(11)","(22)","(33)", &
                                        "(12)","(21)",        &
-                                       "(23)","(32)",        &
-                                       "(31)","(13)"
+                                       "(13)","(31)",        &
+                                       "(23)","(32)"
       if(Norb==2) write(unit,"(90a8)") "(11)","(22)", &
                                        "(12)","(21)"
     else
       if(Norb==3) write(unit,"(90a21)")"(11)","(22)","(33)", &
                                        "(12)","(21)",        &
-                                       "(23)","(32)",        &
-                                       "(31)","(13)"
+                                       "(13)","(31)",        &
+                                       "(23)","(32)"
       if(Norb==2) write(unit,"(90a21)")"(11)","(22)", &
                                        "(12)","(21)"
     endif
@@ -370,7 +362,7 @@ contains
        enddo
     enddo strideloop
     !
-end subroutine getMstride
+  end subroutine getMstride
 
 
 
