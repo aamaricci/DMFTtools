@@ -167,7 +167,7 @@ contains
      do io=1,Norb
         do jo=1,Norb
            count=count+1
-           stride(jo,io)=count
+           stride(io,jo)=count
         enddo
      enddo
      !
@@ -187,7 +187,7 @@ contains
      do io=1,Norb
         do jo=1,Norb
            count=count+1
-           stride(jo,io)=count
+           stride(io,jo)=count
         enddo
      enddo
      !
