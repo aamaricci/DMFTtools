@@ -5,7 +5,7 @@ subroutine setup_w90(w90_file,nlat,nspin,norb,verbose)
   integer,optional            :: Norb
   integer,optional            :: Nspin
   logical,optional            :: verbose
-  logical                     :: verbose_
+  logical                     :: verbose_,master=.true.
   integer                     :: unitIO
   integer                     :: Num_wann
   integer                     :: Nrpts
@@ -54,12 +54,6 @@ subroutine setup_w90(w90_file,nlat,nspin,norb,verbose)
   TB_w90%verbose  = verbose_
   TB_w90%status   =.true.
   !
-  write(*,*)
-  write(*,'(1A)')         "-------------- H_LDA --------------"
-  write(*,'(A,I6)')      "  Number of Wannier functions:   ",TB_w90%num_wann
-  write(*,'(A,I6)')      "  Number of Wigner-Seitz vectors:",TB_w90%nrpts
-  write(*,'(A,I6,A,I6)') "  Deg rows:",TB_w90%qst," N last row   :",TB_w90%rst
-  !
   !Read Ndegen from file:
   do i=1,TB_w90%Qst
      read(unitIO,*)(TB_w90%Ndegen(j+(i-1)*TB_w90%N15),j=1,TB_w90%N15)
@@ -91,6 +85,15 @@ subroutine setup_w90(w90_file,nlat,nspin,norb,verbose)
   close(unitIO)
   !
   TB_w90%Hloc=slo2lso(TB_w90%Hloc,TB_w90%Nlat,TB_w90%Nspin,TB_w90%Norb)
+  !
+  if(Check_MPI())master = get_master_MPI()
+  if(master)then
+     write(*,*)
+     write(*,'(1A)')         "-------------- H_LDA --------------"
+     write(*,'(A,I6)')      "  Number of Wannier functions:   ",TB_w90%num_wann
+     write(*,'(A,I6)')      "  Number of Wigner-Seitz vectors:",TB_w90%nrpts
+     write(*,'(A,I6,A,I6)') "  Deg rows:",TB_w90%qst," N last row   :",TB_w90%rst
+  endif
   !
 end subroutine setup_w90
 

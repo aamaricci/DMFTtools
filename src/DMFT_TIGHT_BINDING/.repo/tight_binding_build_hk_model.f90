@@ -1,37 +1,4 @@
-subroutine build_hk_model_kgrid_d(Hk,hk_model,Norb,kgrid,wdos)
-  integer                                    :: Norb
-  integer                                    :: Nktot
-  real(8),dimension(:,:)                     :: kgrid ![Nktot][Ndim]
-  real(8)                                    :: kvec(size(kgrid,2))
-  integer                                    :: ik
-  real(8),dimension(Norb,Norb,size(kgrid,1)) :: hk
-  interface 
-     function hk_model(kpoint,N)
-       real(8),dimension(:)                  :: kpoint
-       integer                               :: N
-       real(8),dimension(N,N)                :: hk_model
-     end function hk_model
-  end interface
-  logical,optional                           :: wdos
-  logical                                    :: wdos_
-  wdos_=.false.;if(present(wdos))wdos_=wdos
-  !
-  Nktot  = size(kgrid,1)
-  !
-  do ik=1,Nktot
-     Hk(:,:,ik) = hk_model(kgrid(ik,:),Norb)
-  enddo
-  !
-  if(wdos_)then
-     allocate(dos_Greal(1,1,1,Norb,Norb,dos_Lreal))
-     allocate(dos_wtk(Nktot))
-     dos_wtk=1d0/Nktot
-     call dmft_gloc_realaxis(one*Hk,dos_wtk,dos_Greal,zeros(1,1,1,Norb,Norb,dos_Lreal))
-     call dmft_print_gf_realaxis(dos_Greal(1,:,:,:,:,:),trim(dos_file),iprint=1)
-  endif
-end subroutine build_hk_model_kgrid_d
-
-subroutine build_hk_model_kgrid_c(Hk,hk_model,Norb,kgrid,wdos) 
+subroutine build_hk_model_kgrid(Hk,hk_model,Norb,kgrid,wdos) 
   integer                                       :: Norb
   integer                                       :: Nktot
   real(8),dimension(:,:)                        :: kgrid ![Nktot][Ndim]
@@ -62,7 +29,7 @@ subroutine build_hk_model_kgrid_c(Hk,hk_model,Norb,kgrid,wdos)
      call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(1,1,1,Norb,Norb,dos_Lreal))
      call dmft_print_gf_realaxis(dos_Greal(1,:,:,:,:,:),trim(dos_file),iprint=1)
   endif
-end subroutine build_hk_model_kgrid_c
+end subroutine build_hk_model_kgrid
 
 
 
@@ -73,42 +40,7 @@ end subroutine build_hk_model_kgrid_c
 
 
 
-
-subroutine build_hk_model_nkvec_d(Hk,hk_model,Norb,Nkvec,wdos)
-  integer,dimension(:),intent(in)               :: Nkvec
-  integer                                       :: Norb
-  real(8),dimension(product(Nkvec),size(Nkvec)) :: kgrid ![Nk][Ndim]
-  integer                                       :: Nktot
-  integer                                       :: ik
-  real(8),dimension(Norb,Norb,product(Nkvec))   :: hk
-  interface 
-     function hk_model(kpoint,N)
-       real(8),dimension(:)    :: kpoint
-       integer                 :: N
-       real(8),dimension(N,N)  :: hk_model
-     end function hk_model
-  end interface
-  logical,optional                           :: wdos
-  logical                                    :: wdos_
-  wdos_=.false.;if(present(wdos))wdos_=wdos
-  !
-  call TB_build_kgrid(Nkvec,kgrid,.true.)
-  !
-  Nktot  = product(Nkvec)
-  do ik=1,Nktot
-     Hk(:,:,ik) = hk_model(kgrid(ik,:),Norb)
-  enddo
-  !
-  if(wdos_)then
-     allocate(dos_Greal(1,1,1,Norb,Norb,dos_Lreal))
-     allocate(dos_wtk(Nktot))
-     dos_wtk=1d0/Nktot
-     call dmft_gloc_realaxis(one*Hk,dos_wtk,dos_Greal,zeros(1,1,1,Norb,Norb,dos_Lreal))
-     call dmft_print_gf_realaxis(dos_Greal(1,:,:,:,:,:),trim(dos_file),iprint=1)
-  endif
-end subroutine build_hk_model_nkvec_d
-
-subroutine build_hk_model_Nkvec_c(Hk,hk_model,Norb,Nkvec,wdos) 
+subroutine build_hk_model_Nkvec(Hk,hk_model,Norb,Nkvec,wdos) 
   integer,dimension(:),intent(in)               :: Nkvec
   integer                                        :: Norb
   real(8),dimension(product(Nkvec),size(Nkvec))  :: kgrid ![Nk][Ndim]
@@ -140,7 +72,7 @@ subroutine build_hk_model_Nkvec_c(Hk,hk_model,Norb,Nkvec,wdos)
      call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(1,1,1,Norb,Norb,dos_Lreal))
      call dmft_print_gf_realaxis(dos_Greal(1,:,:,:,:,:),trim(dos_file),iprint=1)
   endif
-end subroutine build_hk_model_Nkvec_c
+end subroutine build_hk_model_Nkvec
 
 
 
@@ -154,41 +86,7 @@ end subroutine build_hk_model_Nkvec_c
 
 
 
-subroutine build_hkr_model_kgrid_d(hk,hkr_model,Nlat,Norb,kgrid,pbc,wdos)
-  integer                                              :: Nlat,Norb
-  logical                                              :: pbc
-  real(8),dimension(:,:)                               :: kgrid ![Nktot][Ndim]
-  integer                                              :: Nktot
-  integer                                              :: ik
-  real(8),dimension(Nlat*Norb,Nlat*Norb,size(kgrid,1)) :: hk
-  interface 
-     function hkr_model(kpoint,Nlat,Norb,pbc)
-       real(8),dimension(:)                            :: kpoint
-       integer                                         :: Nlat,Norb
-       logical                                         :: pbc
-       real(8),dimension(Nlat*Norb,Nlat*Norb)          :: hkr_model
-     end function hkr_model
-  end interface
-  logical,optional                           :: wdos
-  logical                                    :: wdos_
-  wdos_=.false.;if(present(wdos))wdos_=wdos
-  !
-  Nktot  = size(kgrid,1)
-  !
-  do ik=1,Nktot
-     Hk(:,:,ik) = hkr_model(kgrid(ik,:),Nlat,Norb,pbc)
-  enddo
-  !
-  if(wdos_)then
-     allocate(dos_Greal(Nlat,1,1,Norb,Norb,dos_Lreal))
-     allocate(dos_wtk(Nktot))
-     dos_wtk=1d0/Nktot
-     call dmft_gloc_realaxis(one*Hk,dos_wtk,dos_Greal,zeros(Nlat,1,1,Norb,Norb,dos_Lreal))
-     call dmft_print_gf_realaxis(dos_Greal(:,:,:,:,:,:),trim(dos_file),iprint=1)
-  endif
-end subroutine build_hkr_model_kgrid_d
-
-subroutine build_hkr_model_kgrid_c(hk,hkr_model,Nlat,Norb,kgrid,pbc,wdos)
+subroutine build_hkr_model_kgrid(hk,hkr_model,Nlat,Norb,kgrid,pbc,wdos)
   integer                                                 :: Nlat,Norb
   logical                                                 :: pbc
   real(8),dimension(:,:)                                  :: kgrid ![Nktot][Ndim]
@@ -220,7 +118,7 @@ subroutine build_hkr_model_kgrid_c(hk,hkr_model,Nlat,Norb,kgrid,pbc,wdos)
      call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(Nlat,1,1,Norb,Norb,dos_Lreal))
      call dmft_print_gf_realaxis(dos_Greal(:,:,:,:,:,:),trim(dos_file),iprint=1)
   endif
-end subroutine build_hkr_model_kgrid_c
+end subroutine build_hkr_model_kgrid
 
 
 
@@ -235,44 +133,7 @@ end subroutine build_hkr_model_kgrid_c
 
 
 
-subroutine build_hkr_model_nkvec_d(hk,hkr_model,Nlat,Norb,Nkvec,pbc,wdos)
-  integer                                               :: Nlat,Norb
-  logical                                               :: pbc
-  integer,dimension(:),intent(in)                       :: Nkvec
-  real(8),dimension(product(Nkvec),size(Nkvec))         :: kgrid ![Nk][Ndim]
-  integer                                               :: Nktot
-  integer                                               :: ik
-  real(8),dimension(Nlat*Norb,Nlat*Norb,product(Nkvec)) :: hk
-  interface 
-     function hkr_model(kpoint,Nlat,Norb,pbc)
-       real(8),dimension(:)                             :: kpoint
-       integer                                          :: Nlat,Norb
-       logical                                          :: pbc
-       real(8),dimension(Nlat*Norb,Nlat*Norb)           :: hkr_model
-     end function hkr_model
-  end interface
-  logical,optional                           :: wdos
-  logical                                    :: wdos_
-  wdos_=.false.;if(present(wdos))wdos_=wdos
-  !
-  call TB_build_kgrid(Nkvec,kgrid,.true.)
-  !
-  Nktot  = product(Nkvec)
-  !
-  do ik=1,Nktot
-     Hk(:,:,ik) = hkr_model(kgrid(ik,:),Nlat,Norb,pbc)
-  enddo
-  !
-  if(wdos_)then
-     allocate(dos_Greal(Nlat,1,1,Norb,Norb,dos_Lreal))
-     allocate(dos_wtk(Nktot))
-     dos_wtk=1d0/Nktot
-     call dmft_gloc_realaxis(one*Hk,dos_wtk,dos_Greal,zeros(Nlat,1,1,Norb,Norb,dos_Lreal))
-     call dmft_print_gf_realaxis(dos_Greal(:,:,:,:,:,:),trim(dos_file),iprint=1)
-  endif
-end subroutine build_hkr_model_nkvec_d
-
-subroutine build_hkr_model_nkvec_c(hk,hkr_model,Nlat,Norb,Nkvec,pbc,wdos)
+subroutine build_hkr_model_nkvec(hk,hkr_model,Nlat,Norb,Nkvec,pbc,wdos)
   integer                                                  :: Nlat,Norb
   logical                                                  :: pbc
   integer,dimension(:),intent(in)                          :: Nkvec
@@ -307,7 +168,7 @@ subroutine build_hkr_model_nkvec_c(hk,hkr_model,Nlat,Norb,Nkvec,pbc,wdos)
      call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(Nlat,1,1,Norb,Norb,dos_Lreal))
      call dmft_print_gf_realaxis(dos_Greal(:,:,:,:,:,:),trim(dos_file),iprint=1)
   endif
-end subroutine build_hkr_model_nkvec_c
+end subroutine build_hkr_model_nkvec
 
 
 
@@ -320,34 +181,7 @@ end subroutine build_hkr_model_nkvec_c
 
 
 
-subroutine build_hk_path_d(hk,hk_model,Norb,kpath,Nkpath)
-  integer                                                   :: Norb
-  real(8),dimension(:,:)                                    :: kpath ![Npts][Ndim]
-  integer                                                   :: Nkpath
-  integer                                                   :: Npts,Nktot
-  integer                                                   :: ik,i
-  real(8),dimension((size(kpath,1)-1)*Nkpath,size(kpath,2)) :: kgrid
-  real(8),dimension(Norb,Norb,(size(kpath,1)-1)*Nkpath)     :: hk
-  interface 
-     function hk_model(kpoint,N)
-       real(8),dimension(:)   :: kpoint
-       integer                :: N
-       real(8),dimension(N,N) :: hk_model
-     end function hk_model
-  end interface
-  !
-  Npts  =  size(kpath,1)          !# of k-points along the path
-  Nktot = (Npts-1)*Nkpath
-  !
-  call TB_build_kgrid(kpath,Nkpath,kgrid)
-  !
-  do ik=1,Nktot
-     Hk(:,:,ik) = hk_model(kgrid(ik,:) , Norb)
-  enddo
-  !
-end subroutine build_hk_path_d
-
-subroutine build_hk_path_c(hk,hk_model,Norb,kpath,Nkpath) 
+subroutine build_hk_path(hk,hk_model,Norb,kpath,Nkpath) 
   integer                                                   :: Norb
   real(8),dimension(:,:)                                    :: kpath ![Npts][Ndim]
   integer                                                   :: Nkpath
@@ -372,7 +206,7 @@ subroutine build_hk_path_c(hk,hk_model,Norb,kpath,Nkpath)
      Hk(:,:,ik) = hk_model(kgrid(ik,:) , Norb)
   enddo
   !
-end subroutine build_hk_path_c
+end subroutine build_hk_path
 
 
 
@@ -391,36 +225,7 @@ end subroutine build_hk_path_c
 
 
 
-subroutine build_hkR_path_d(hk,hkr_model,Nlat,Norb,kpath,Nkpath,pbc)
-  integer                                                          :: Nlat,Norb
-  logical                                                          :: pbc
-  real(8),dimension(:,:)                                           :: kpath ![Npts][Ndim]
-  integer                                                          :: Nkpath
-  integer                                                          :: Npts,Nktot
-  integer                                                          :: ik,i
-  real(8),dimension((size(kpath,1)-1)*Nkpath,size(kpath,2))        :: kgrid
-  real(8),dimension(Nlat*Norb,Nlat*Norb,(size(kpath,1)-1)*Nkpath) :: hk
-  interface 
-     function hkr_model(kpoint,Nlat,Norb,pbc)
-       real(8),dimension(:)                   :: kpoint
-       integer                                :: Nlat,Norb
-       logical                                :: pbc
-       real(8),dimension(Nlat*Norb,Nlat*Norb) :: hkr_model
-     end function hkr_model
-  end interface
-  !
-  Npts  =  size(kpath,1)          !# of k-points along the path
-  Nktot = (Npts-1)*Nkpath
-  !
-  call TB_build_kgrid(kpath,Nkpath,kgrid)
-  !
-  do ik=1,Nktot
-     Hk(:,:,ik) = hkr_model(kgrid(ik,:),Nlat,Norb,pbc)
-  enddo
-  !
-end subroutine build_hkR_path_d
-
-subroutine build_hkR_path_c(hk,hkr_model,Nlat,Norb,kpath,Nkpath,pbc)
+subroutine build_hkR_path(hk,hkr_model,Nlat,Norb,kpath,Nkpath,pbc)
   integer                                                             :: Nlat,Norb
   logical                                                             :: pbc
   real(8),dimension(:,:)                                              :: kpath ![Npts][Ndim]
@@ -447,7 +252,7 @@ subroutine build_hkR_path_c(hk,hkr_model,Nlat,Norb,kpath,Nkpath,pbc)
      Hk(:,:,ik) = hkr_model(kgrid(ik,:),Nlat,Norb,pbc)
   enddo
   !
-end subroutine build_hkR_path_c
+end subroutine build_hkR_path
 
 
 
@@ -613,3 +418,209 @@ end subroutine build_hk_w90_path
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+! subroutine build_hk_model_kgrid_d(Hk,hk_model,Norb,kgrid,wdos)
+!   integer                                    :: Norb
+!   integer                                    :: Nktot
+!   real(8),dimension(:,:)                     :: kgrid ![Nktot][Ndim]
+!   real(8)                                    :: kvec(size(kgrid,2))
+!   integer                                    :: ik
+!   real(8),dimension(Norb,Norb,size(kgrid,1)) :: hk
+!   interface 
+!      function hk_model(kpoint,N)
+!        real(8),dimension(:)                  :: kpoint
+!        integer                               :: N
+!        real(8),dimension(N,N)                :: hk_model
+!      end function hk_model
+!   end interface
+!   logical,optional                           :: wdos
+!   logical                                    :: wdos_
+!   wdos_=.false.;if(present(wdos))wdos_=wdos
+!   !
+!   Nktot  = size(kgrid,1)
+!   !
+!   do ik=1,Nktot
+!      Hk(:,:,ik) = hk_model(kgrid(ik,:),Norb)
+!   enddo
+!   !
+!   if(wdos_)then
+!      allocate(dos_Greal(1,1,1,Norb,Norb,dos_Lreal))
+!      allocate(dos_wtk(Nktot))
+!      dos_wtk=1d0/Nktot
+!      call dmft_gloc_realaxis(one*Hk,dos_wtk,dos_Greal,zeros(1,1,1,Norb,Norb,dos_Lreal))
+!      call dmft_print_gf_realaxis(dos_Greal(1,:,:,:,:,:),trim(dos_file),iprint=1)
+!   endif
+! end subroutine build_hk_model_kgrid_d
+
+! subroutine build_hk_model_nkvec_d(Hk,hk_model,Norb,Nkvec,wdos)
+!   integer,dimension(:),intent(in)               :: Nkvec
+!   integer                                       :: Norb
+!   real(8),dimension(product(Nkvec),size(Nkvec)) :: kgrid ![Nk][Ndim]
+!   integer                                       :: Nktot
+!   integer                                       :: ik
+!   real(8),dimension(Norb,Norb,product(Nkvec))   :: hk
+!   interface 
+!      function hk_model(kpoint,N)
+!        real(8),dimension(:)    :: kpoint
+!        integer                 :: N
+!        real(8),dimension(N,N)  :: hk_model
+!      end function hk_model
+!   end interface
+!   logical,optional                           :: wdos
+!   logical                                    :: wdos_
+!   wdos_=.false.;if(present(wdos))wdos_=wdos
+!   !
+!   call TB_build_kgrid(Nkvec,kgrid,.true.)
+!   !
+!   Nktot  = product(Nkvec)
+!   do ik=1,Nktot
+!      Hk(:,:,ik) = hk_model(kgrid(ik,:),Norb)
+!   enddo
+!   !
+!   if(wdos_)then
+!      allocate(dos_Greal(1,1,1,Norb,Norb,dos_Lreal))
+!      allocate(dos_wtk(Nktot))
+!      dos_wtk=1d0/Nktot
+!      call dmft_gloc_realaxis(one*Hk,dos_wtk,dos_Greal,zeros(1,1,1,Norb,Norb,dos_Lreal))
+!      call dmft_print_gf_realaxis(dos_Greal(1,:,:,:,:,:),trim(dos_file),iprint=1)
+!   endif
+! end subroutine build_hk_model_nkvec_d
+
+! subroutine build_hkr_model_kgrid_d(hk,hkr_model,Nlat,Norb,kgrid,pbc,wdos)
+!   integer                                              :: Nlat,Norb
+!   logical                                              :: pbc
+!   real(8),dimension(:,:)                               :: kgrid ![Nktot][Ndim]
+!   integer                                              :: Nktot
+!   integer                                              :: ik
+!   real(8),dimension(Nlat*Norb,Nlat*Norb,size(kgrid,1)) :: hk
+!   interface 
+!      function hkr_model(kpoint,Nlat,Norb,pbc)
+!        real(8),dimension(:)                            :: kpoint
+!        integer                                         :: Nlat,Norb
+!        logical                                         :: pbc
+!        real(8),dimension(Nlat*Norb,Nlat*Norb)          :: hkr_model
+!      end function hkr_model
+!   end interface
+!   logical,optional                           :: wdos
+!   logical                                    :: wdos_
+!   wdos_=.false.;if(present(wdos))wdos_=wdos
+!   !
+!   Nktot  = size(kgrid,1)
+!   !
+!   do ik=1,Nktot
+!      Hk(:,:,ik) = hkr_model(kgrid(ik,:),Nlat,Norb,pbc)
+!   enddo
+!   !
+!   if(wdos_)then
+!      allocate(dos_Greal(Nlat,1,1,Norb,Norb,dos_Lreal))
+!      allocate(dos_wtk(Nktot))
+!      dos_wtk=1d0/Nktot
+!      call dmft_gloc_realaxis(one*Hk,dos_wtk,dos_Greal,zeros(Nlat,1,1,Norb,Norb,dos_Lreal))
+!      call dmft_print_gf_realaxis(dos_Greal(:,:,:,:,:,:),trim(dos_file),iprint=1)
+!   endif
+! end subroutine build_hkr_model_kgrid_d
+
+! subroutine build_hkr_model_nkvec_d(hk,hkr_model,Nlat,Norb,Nkvec,pbc,wdos)
+!   integer                                               :: Nlat,Norb
+!   logical                                               :: pbc
+!   integer,dimension(:),intent(in)                       :: Nkvec
+!   real(8),dimension(product(Nkvec),size(Nkvec))         :: kgrid ![Nk][Ndim]
+!   integer                                               :: Nktot
+!   integer                                               :: ik
+!   real(8),dimension(Nlat*Norb,Nlat*Norb,product(Nkvec)) :: hk
+!   interface 
+!      function hkr_model(kpoint,Nlat,Norb,pbc)
+!        real(8),dimension(:)                             :: kpoint
+!        integer                                          :: Nlat,Norb
+!        logical                                          :: pbc
+!        real(8),dimension(Nlat*Norb,Nlat*Norb)           :: hkr_model
+!      end function hkr_model
+!   end interface
+!   logical,optional                           :: wdos
+!   logical                                    :: wdos_
+!   wdos_=.false.;if(present(wdos))wdos_=wdos
+!   !
+!   call TB_build_kgrid(Nkvec,kgrid,.true.)
+!   !
+!   Nktot  = product(Nkvec)
+!   !
+!   do ik=1,Nktot
+!      Hk(:,:,ik) = hkr_model(kgrid(ik,:),Nlat,Norb,pbc)
+!   enddo
+!   !
+!   if(wdos_)then
+!      allocate(dos_Greal(Nlat,1,1,Norb,Norb,dos_Lreal))
+!      allocate(dos_wtk(Nktot))
+!      dos_wtk=1d0/Nktot
+!      call dmft_gloc_realaxis(one*Hk,dos_wtk,dos_Greal,zeros(Nlat,1,1,Norb,Norb,dos_Lreal))
+!      call dmft_print_gf_realaxis(dos_Greal(:,:,:,:,:,:),trim(dos_file),iprint=1)
+!   endif
+! end subroutine build_hkr_model_nkvec_d
+
+! subroutine build_hk_path_d(hk,hk_model,Norb,kpath,Nkpath)
+!   integer                                                   :: Norb
+!   real(8),dimension(:,:)                                    :: kpath ![Npts][Ndim]
+!   integer                                                   :: Nkpath
+!   integer                                                   :: Npts,Nktot
+!   integer                                                   :: ik,i
+!   real(8),dimension((size(kpath,1)-1)*Nkpath,size(kpath,2)) :: kgrid
+!   real(8),dimension(Norb,Norb,(size(kpath,1)-1)*Nkpath)     :: hk
+!   interface 
+!      function hk_model(kpoint,N)
+!        real(8),dimension(:)   :: kpoint
+!        integer                :: N
+!        real(8),dimension(N,N) :: hk_model
+!      end function hk_model
+!   end interface
+!   !
+!   Npts  =  size(kpath,1)          !# of k-points along the path
+!   Nktot = (Npts-1)*Nkpath
+!   !
+!   call TB_build_kgrid(kpath,Nkpath,kgrid)
+!   !
+!   do ik=1,Nktot
+!      Hk(:,:,ik) = hk_model(kgrid(ik,:) , Norb)
+!   enddo
+!   !
+! end subroutine build_hk_path_d
+
+! subroutine build_hkR_path_d(hk,hkr_model,Nlat,Norb,kpath,Nkpath,pbc)
+!   integer                                                          :: Nlat,Norb
+!   logical                                                          :: pbc
+!   real(8),dimension(:,:)                                           :: kpath ![Npts][Ndim]
+!   integer                                                          :: Nkpath
+!   integer                                                          :: Npts,Nktot
+!   integer                                                          :: ik,i
+!   real(8),dimension((size(kpath,1)-1)*Nkpath,size(kpath,2))        :: kgrid
+!   real(8),dimension(Nlat*Norb,Nlat*Norb,(size(kpath,1)-1)*Nkpath) :: hk
+!   interface 
+!      function hkr_model(kpoint,Nlat,Norb,pbc)
+!        real(8),dimension(:)                   :: kpoint
+!        integer                                :: Nlat,Norb
+!        logical                                :: pbc
+!        real(8),dimension(Nlat*Norb,Nlat*Norb) :: hkr_model
+!      end function hkr_model
+!   end interface
+!   !
+!   Npts  =  size(kpath,1)          !# of k-points along the path
+!   Nktot = (Npts-1)*Nkpath
+!   !
+!   call TB_build_kgrid(kpath,Nkpath,kgrid)
+!   !
+!   do ik=1,Nktot
+!      Hk(:,:,ik) = hkr_model(kgrid(ik,:),Nlat,Norb,pbc)
+!   enddo
+!   !
+! end subroutine build_hkR_path_d
