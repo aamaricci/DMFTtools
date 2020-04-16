@@ -235,7 +235,7 @@ contains
   end subroutine Self0_w90
 
 
-  
+
 
   !< generate an internal function to be called in the building procedure
   function w90_hk_model(kvec,N) result(Hk)
@@ -264,11 +264,11 @@ contains
     enddo
     if(TB_w90%Ifermi)Htmp = Htmp - TB_w90%Efermi*eye(N)
     !
-    if(TB_w90%Nspin==1)then
-       Hk = Htmp
-    else
-       Hk =slo2lso(Htmp,TB_w90%Nlat,TB_w90%Nspin,TB_w90%Norb)
-    endif
+    ! if(TB_w90%Nspin==1)then
+    !    Hk = Htmp
+    ! else
+    Hk =slo2lso(Htmp,TB_w90%Nlat,TB_w90%Nspin,TB_w90%Norb)
+    ! endif
     !
     call herm_check(Hk)
     !
@@ -281,6 +281,62 @@ contains
   end function w90_hk_model
 
 
+
+
+
+
+  subroutine herm_check(A)
+    complex(8),intent(in) ::   A(:,:)
+    integer               ::   row,col,i,j
+    row=size(A,1)
+    col=size(A,2)
+    do i=1,col
+       do j=1,row
+          if(abs(A(i,j))-abs(A(j,i)) .gt. 1d-12)then
+             write(*,'(1A)') "--> NON HERMITIAN MATRIX <--"
+             write(*,'(2(1A7,I3))') " row: ",i," col: ",j
+             write(*,'(1A)') "  A(i,j)"
+             write(*,'(2F22.18)') real(A(i,j)),aimag(A(i,j))
+             write(*,'(1A)') "  A(j,i)"
+             write(*,'(2F22.18)') real(A(j,i)),aimag(A(j,i))
+             stop
+          endif
+       enddo
+    enddo
+  end subroutine herm_check
+
+
+  function slo2lso(Hslo,Nlat,Nspin,Norb) result(Hlso)
+    implicit none
+    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hslo
+    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hlso
+    integer                                               :: Nlat,Nspin,Norb
+    integer                                               :: iorb,ispin,ilat
+    integer                                               :: jorb,jspin,jlat
+    integer                                               :: iI,jI,iO,jO
+    Hlso=zero
+    do ilat=1,Nlat
+       do jlat=1,Nlat
+          do ispin=1,Nspin
+             do jspin=1,Nspin
+                do iorb=1,Norb
+                   do jorb=1,Norb
+                      !
+                      iI = iorb + (ilat-1)*Norb + (ispin-1)*Norb*Nlat
+                      jI = jorb + (jlat-1)*Norb + (jspin-1)*Norb*Nlat
+                      !
+                      iO = iorb + (ispin-1)*Norb + (ilat-1)*Norb*Nspin
+                      jO = jorb + (jspin-1)*Norb + (jlat-1)*Norb*Nspin
+                      !
+                      Hlso(iO,jO) = Hslo(iI,jI)
+                      !
+                   enddo
+                enddo
+             enddo
+          enddo
+       enddo
+    enddo
+  end function slo2lso
 
 END MODULE TB_WANNIER90
 

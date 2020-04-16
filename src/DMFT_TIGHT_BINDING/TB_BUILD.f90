@@ -698,6 +698,28 @@ contains
   include "w90hr/dipole_w90hr_mpi.f90"
 #endif
 
+#ifdef _MPI
+  function MPI_Get_size(comm) result(size)
+    integer :: comm
+    integer :: size,ierr
+    call MPI_Comm_size(comm,size,ierr)
+  end function MPI_Get_size
+
+  function MPI_Get_rank(comm) result(rank)
+    integer :: comm
+    integer :: rank,ierr
+    call MPI_Comm_rank(comm,rank,ierr)
+  end function MPI_Get_rank
+
+  function MPI_Get_master(comm) result(master)
+    integer :: comm
+    logical :: master
+    integer :: rank,ierr
+    call MPI_Comm_rank(comm,rank,ierr)
+    master=.false.
+    if(rank==0)master=.true.
+  end function MPI_Get_master
+#endif
 
 
 

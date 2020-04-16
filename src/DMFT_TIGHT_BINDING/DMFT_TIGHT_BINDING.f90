@@ -64,6 +64,14 @@ module DMFT_TIGHT_BINDING
   public :: TB_set_dos_eps
   public :: TB_set_dos_file
 
+  public :: kpoint_gamma
+  public :: kpoint_x1
+  public :: kpoint_x2
+  public :: kpoint_x3
+  public :: kpoint_m1
+  public :: kpoint_m2
+  public :: kpoint_m3
+  public :: kpoint_r
 
 END MODULE DMFT_TIGHT_BINDING
 
