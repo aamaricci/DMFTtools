@@ -1,5 +1,6 @@
 module TB_COMMON
   USE SF_CONSTANTS, only: pi,pi2,xi,one,zero
+  USE SF_ARRAYS, only: linspace
   USE SF_IOTOOLS
   USE SF_LINALG, only: eigh,det,eye,zeros,eig,diag,operator(.x.)
   USE SF_COLORS
@@ -141,7 +142,31 @@ contains
 
 
 
+  function indices2i(ivec,Nvec) result(istate)
+    integer,dimension(:)          :: ivec
+    integer,dimension(size(ivec)) :: Nvec
+    integer                       :: istate,i
+    istate=ivec(1)
+    do i=2,size(ivec)
+       istate = istate + (ivec(i)-1)*product(Nvec(1:i-1))
+    enddo
+  end function indices2i
 
+
+  function i2indices(istate,Nvec) result(ivec)
+    integer                       :: istate
+    integer,dimension(:)          :: Nvec
+    integer,dimension(size(Nvec)) :: Ivec
+    integer                       :: i,count,N
+    count = istate-1
+    N     = size(Nvec)
+    do i=1,N
+       Ivec(i) = mod(count,Nvec(i))+1
+       count   = count/Nvec(i)
+    enddo
+  end function i2indices
+
+  
 END MODULE TB_COMMON
 
 

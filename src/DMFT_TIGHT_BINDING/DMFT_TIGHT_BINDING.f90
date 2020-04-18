@@ -5,6 +5,7 @@ module DMFT_TIGHT_BINDING
   USE TB_WANNIER90
   USE TB_BUILD
   USE TB_SOLVE
+  USE TB_FSURF
   implicit none
   private
 
@@ -31,6 +32,10 @@ module DMFT_TIGHT_BINDING
   !
   public :: TB_build_kgrid
   public :: TB_build_Rgrid
+  public :: TB_refine_kgrid
+  !
+  public :: TB_bk_length
+  public :: TB_ei_length
   !
   public :: TB_write_grid
   !
@@ -38,6 +43,8 @@ module DMFT_TIGHT_BINDING
   public :: TB_solve_model
   !
   public :: TB_get_FermiLevel
+  !
+  public :: TB_fsurface
   !
   public :: TB_w90_setup
   public :: TB_w90_delete

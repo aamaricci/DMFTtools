@@ -173,7 +173,8 @@ contains
     iproject_= TB_w90%status
     if(TB_w90%status)write(*,*)"Using iproject=.TRUE. in W90 interface. Disable it explicitly using iproject=.false. "
     if(present(iproject))iproject_=iproject
-    !
+    !    character(len=256)                        :: xtics
+
     call solve_Hk_along_BZpath(w90_hk_model,Nlso,kpath,Nkpath,colors_name,points_name,file_,iproject_)
     !
   end subroutine solve_w90Hk_along_BZpath
