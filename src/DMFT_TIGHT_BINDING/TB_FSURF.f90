@@ -5,8 +5,16 @@ module TB_FSURF
   USE TB_WANNIER90
   USE TB_BUILD
   implicit none
+  private
 
+  
+  interface add_to
+     module procedure :: add_to_A1
+     module procedure :: add_to_A2
+     module procedure :: add_to_A3
+  end interface add_to
 
+  
   interface TB_fsurface
      module procedure :: TB_fsurf_nkvec
      module procedure :: TB_fsurf_w90_nkvec
@@ -255,6 +263,91 @@ contains
     !
     call TB_fsurf_nkvec(w90_hk_model,Nlso,Ef,Nkvec,colors_name_,file_,cutoff_,pi_shift_)
   end subroutine TB_fsurf_w90_nkvec
+
+
+
+
+
+
+
+  subroutine add_to_A1(vec,val)
+    real(8),dimension(:),allocatable,intent(inout) :: vec
+    real(8),intent(in)                             :: val  
+    real(8),dimension(:),allocatable               :: tmp
+    integer                                        :: n
+    !
+    if (allocated(vec)) then
+       n = size(vec)
+       allocate(tmp(n+1))
+       tmp(:n) = vec
+       call move_alloc(tmp,vec)
+       n = n + 1
+    else
+       n = 1
+       allocate(vec(n))
+    end if
+    !
+    !Put val as last entry:
+    vec(n) = val
+    !
+    if(allocated(tmp))deallocate(tmp)
+  end subroutine add_to_A1
+
+
+
+  subroutine add_to_A2(vec,val)
+    real(8),dimension(:,:),allocatable,intent(inout) :: vec
+    real(8),intent(in),dimension(size(vec,2))        :: val  
+    real(8),dimension(:,:),allocatable               :: tmp
+    integer                                          :: n,ndim
+    !
+    ndim = size(vec,2)
+    !
+    if (allocated(vec)) then
+       n = size(vec,1)
+       allocate(tmp(n+1,ndim))
+       tmp(1:n,:) = vec
+       call move_alloc(tmp,vec)
+       n = n + 1
+    else
+       n = 1
+       allocate(vec(n,ndim))
+    end if
+    !
+    !Put val as last entry:
+    vec(n,:) = val
+    !
+    if(allocated(tmp))deallocate(tmp)
+  end subroutine add_to_A2
+
+
+  subroutine add_to_A3(vec,val)
+    real(8),dimension(:,:,:),allocatable,intent(inout)    :: vec
+    real(8),dimension(size(vec,2),size(vec,3)),intent(in) :: val  
+    real(8),dimension(:,:,:),allocatable                  :: tmp
+    integer                                               :: n,n2,n3
+    !
+    n2 = size(vec,2)
+    n3 = size(vec,3)
+    !
+    if (allocated(vec)) then
+       n = size(vec,1)
+       allocate(tmp(n+1,n2,n3))
+       tmp(1:n,:,:) = vec
+       call move_alloc(tmp,vec)
+       n = n + 1
+    else
+       n = 1
+       allocate(vec(n,n2,n3))
+    end if
+    !
+    !Put val as last entry:
+    vec(n,:,:) = val
+    !
+    if(allocated(tmp))deallocate(tmp)
+  end subroutine add_to_A3
+
+
 
 
 END MODULE TB_FSURF
