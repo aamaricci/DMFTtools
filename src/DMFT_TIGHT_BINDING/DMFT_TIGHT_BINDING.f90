@@ -32,7 +32,6 @@ module DMFT_TIGHT_BINDING
   !
   public :: TB_build_kgrid
   public :: TB_build_Rgrid
-  public :: TB_refine_kgrid
   !
   public :: TB_bk_length
   public :: TB_ei_length

@@ -9,10 +9,6 @@ module TB_BASIS
      module procedure :: kgrid_from_path_dim
   end interface TB_build_kgrid
 
-  interface TB_refine_kgrid
-     module procedure :: refine_kgrid
-  end interface TB_refine_kgrid
-
   interface TB_build_Rgrid
      module procedure ::   build_Rgrid
   end interface TB_build_Rgrid
@@ -311,107 +307,6 @@ contains
   end subroutine build_kgrid
 
 
-  function refine_kgrid(Nkvec,kgrid,kcenter) result(kgrid_refine)
-    integer,dimension(:)                               :: Nkvec
-    real(8),dimension(:,:),intent(in)                  :: kgrid    ![Nk][Ndim]
-    real(8),dimension(size(Nkvec)),intent(in),optional :: kcenter  ![Ndim]
-    !
-    real(8),dimension(size(kgrid,1),size(kgrid,2))     :: kgrid_refine ![Nk][Ndim]
-    !
-    real(8),dimension(size(Nkvec))                     :: kvec  ![Ndim]
-    real(8),dimension(:),allocatable                   :: grid_x,grid_y,grid_z
-    integer                                            :: i,ik,ix,iy,iz,Nk(3),ndim,Nktot
-    real(8)                                            :: kx,ky,kz,Lb(3),Dk(3)
-    real(8),dimension(3)                               :: kstart_
-    !
-    Nktot = product(Nkvec)
-    Ndim  = size(Nkvec)          !dimension of the grid to be built
-    !
-    call assert_shape(kgrid,[Nktot,Ndim],"build_kgrid","kgrid")
-    !
-    Nk=1
-    do ik=1,Ndim
-       Nk(ik)=Nkvec(ik)
-    enddo
-    if(product(Nk)/=product(Nkvec))stop "TB_build_grid ERROR: product(Nkvec) != product(Nk)"
-    !
-    Lb(1) = sqrt(dot_product(bk_x,bk_x))
-    Lb(2) = sqrt(dot_product(bk_y,bk_y))
-    Lb(3) = sqrt(dot_product(bk_z,bk_z))
-    Dk    = 0d0
-    ik = 2
-    do i=1,ndim
-       ik = ik + (i-1)*product(Nk(1:i-1))
-       Dk(i) = kgrid(ik,i)-kgrid(1,i)
-    enddo
-    !
-    kstart_ = 0d0 ; if(present(kcenter))kstart_(:Ndim) = kcenter - 2*Dk(:Ndim)
-    ! do i=1,ndim       
-    !    if(kstart_(i)< minval(kgrid(:,i)) )kstart_(i)=minval(kgrid(:,i))
-    !    if(kstart_(i)> maxval(kgrid(:,i)) )kstart_(i)=maxval(kgrid(:,i))
-    ! enddo
-    kstart_ = kstart_/Lb
-    Dk      = Dk/Lb
-    !    
-    allocate(grid_x(Nk(1)))
-    allocate(grid_y(Nk(2)))   
-    allocate(grid_z(Nk(3)))
-    !
-    grid_x = linspace(0d0,1d0,Nk(1),iend=.false.)*4*Dk(1) + kstart_(1)
-    grid_y = linspace(0d0,1d0,Nk(2),iend=.false.)*4*Dk(2) + kstart_(2)
-    grid_z = linspace(0d0,1d0,Nk(3),iend=.false.)*4*Dk(3) + kstart_(3)
-    !
-    do iz=1,Nk(3)
-       do iy=1,Nk(2)
-          do ix=1,Nk(1)
-             kx   = grid_x(ix)
-             ky   = grid_y(iy)
-             kz   = grid_z(iz)
-             ik   = indices2i([ix,iy,iz],Nk)
-             kvec = kx*bk_x(:ndim) + ky*bk_y(:ndim) + kz*bk_z(:ndim)
-             kgrid_refine(ik,:)=kvec
-          end do
-       end do
-    end do
-  end function refine_kgrid
-
-  ! subroutine build_kgrid(Nkvec,kgrid,check_bk)
-  !   integer,dimension(:)                          :: Nkvec ! Nk=product(Nkvec);Ndim=size(Nkvec)
-  !   real(8),dimension(product(Nkvec),size(Nkvec)) :: kgrid ![Nk][Ndim]
-  !   logical,intent(in),optional                   :: check_bk
-  !   logical                                       :: check_bk_
-  !   real(8),dimension(size(Nkvec))                :: kvec  ![Ndim]
-  !   integer                                       :: ik,ix,iy,iz,Nk(3),ndim
-  !   real(8)                                       :: kx,ky,kz
-  !   !
-  !   check_bk_=.false.;if(present(check_bk))check_bk_=check_bk
-  !   !
-  !   ndim = size(Nkvec)          !dimension of the grid to be built
-  !   !
-  !   Nk=1
-  !   do ik=1,size(Nkvec)
-  !      Nk(ik)=Nkvec(ik)
-  !   enddo
-  !   if(product(Nk)/=product(Nkvec))stop "TB_build_grid ERROR: product(Nkvec) != product(Nk)"
-  !   !
-  !   call print_bk()
-  !   if(check_bk_.AND..not.set_bkvec)stop "TB_build_grid ERROR: bk vectors not set"
-  !   !
-  !   ik=0
-  !   do iz=1,Nk(3)
-  !      kz = dble(iz-1)/Nk(3)
-  !      do iy=1,Nk(2)
-  !         ky = dble(iy-1)/Nk(2)
-  !         do ix=1,Nk(1)
-  !            kx = dble(ix-1)/Nk(1)
-  !            kvec = kx*bk_x(:ndim) + ky*bk_y(:ndim) + kz*bk_z(:ndim)
-  !            ik=ik+1
-  !            kgrid(ik,:)=kvec
-  !         enddo
-  !      enddo
-  !   enddo
-  ! end subroutine build_kgrid
-
   subroutine build_kgrid_generic(Nkvec,kgrid_x,kgrid_y,kgrid_z,check_bk)
     integer,dimension(:)                          :: Nkvec   ! Nk=product(Nkvec);Ndim=size(Nkvec)
     real(8),dimension(product(Nkvec),size(Nkvec)) :: kgrid_x ![Nk][Ndim]
@@ -611,3 +506,104 @@ END MODULE TB_BASIS
 
 
 
+
+! function refine_kgrid(Nkvec,kgrid,kcenter) result(kgrid_refine)
+!   integer,dimension(:)                               :: Nkvec
+!   real(8),dimension(:,:),intent(in)                  :: kgrid    ![Nk][Ndim]
+!   real(8),dimension(size(Nkvec)),intent(in),optional :: kcenter  ![Ndim]
+!   !
+!   real(8),dimension(size(kgrid,1),size(kgrid,2))     :: kgrid_refine ![Nk][Ndim]
+!   !
+!   real(8),dimension(size(Nkvec))                     :: kvec  ![Ndim]
+!   real(8),dimension(:),allocatable                   :: grid_x,grid_y,grid_z
+!   integer                                            :: i,ik,ix,iy,iz,Nk(3),ndim,Nktot
+!   real(8)                                            :: kx,ky,kz,Lb(3),Dk(3)
+!   real(8),dimension(3)                               :: kstart_
+!   !
+!   Nktot = product(Nkvec)
+!   Ndim  = size(Nkvec)          !dimension of the grid to be built
+!   !
+!   call assert_shape(kgrid,[Nktot,Ndim],"build_kgrid","kgrid")
+!   !
+!   Nk=1
+!   do ik=1,Ndim
+!      Nk(ik)=Nkvec(ik)
+!   enddo
+!   if(product(Nk)/=product(Nkvec))stop "TB_build_grid ERROR: product(Nkvec) != product(Nk)"
+!   !
+!   Lb(1) = sqrt(dot_product(bk_x,bk_x))
+!   Lb(2) = sqrt(dot_product(bk_y,bk_y))
+!   Lb(3) = sqrt(dot_product(bk_z,bk_z))
+!   Dk    = 0d0
+!   ik = 2
+!   do i=1,ndim
+!      ik = ik + (i-1)*product(Nk(1:i-1))
+!      Dk(i) = kgrid(ik,i)-kgrid(1,i)
+!   enddo
+!   !
+!   kstart_ = 0d0 ; if(present(kcenter))kstart_(:Ndim) = kcenter - 2*Dk(:Ndim)
+!   ! do i=1,ndim       
+!   !    if(kstart_(i)< minval(kgrid(:,i)) )kstart_(i)=minval(kgrid(:,i))
+!   !    if(kstart_(i)> maxval(kgrid(:,i)) )kstart_(i)=maxval(kgrid(:,i))
+!   ! enddo
+!   kstart_ = kstart_/Lb
+!   Dk      = Dk/Lb
+!   !    
+!   allocate(grid_x(Nk(1)))
+!   allocate(grid_y(Nk(2)))   
+!   allocate(grid_z(Nk(3)))
+!   !
+!   grid_x = linspace(0d0,1d0,Nk(1),iend=.false.)*4*Dk(1) + kstart_(1)
+!   grid_y = linspace(0d0,1d0,Nk(2),iend=.false.)*4*Dk(2) + kstart_(2)
+!   grid_z = linspace(0d0,1d0,Nk(3),iend=.false.)*4*Dk(3) + kstart_(3)
+!   !
+!   do iz=1,Nk(3)
+!      do iy=1,Nk(2)
+!         do ix=1,Nk(1)
+!            kx   = grid_x(ix)
+!            ky   = grid_y(iy)
+!            kz   = grid_z(iz)
+!            ik   = indices2i([ix,iy,iz],Nk)
+!            kvec = kx*bk_x(:ndim) + ky*bk_y(:ndim) + kz*bk_z(:ndim)
+!            kgrid_refine(ik,:)=kvec
+!         end do
+!      end do
+!   end do
+! end function refine_kgrid
+
+! subroutine build_kgrid(Nkvec,kgrid,check_bk)
+!   integer,dimension(:)                          :: Nkvec ! Nk=product(Nkvec);Ndim=size(Nkvec)
+!   real(8),dimension(product(Nkvec),size(Nkvec)) :: kgrid ![Nk][Ndim]
+!   logical,intent(in),optional                   :: check_bk
+!   logical                                       :: check_bk_
+!   real(8),dimension(size(Nkvec))                :: kvec  ![Ndim]
+!   integer                                       :: ik,ix,iy,iz,Nk(3),ndim
+!   real(8)                                       :: kx,ky,kz
+!   !
+!   check_bk_=.false.;if(present(check_bk))check_bk_=check_bk
+!   !
+!   ndim = size(Nkvec)          !dimension of the grid to be built
+!   !
+!   Nk=1
+!   do ik=1,size(Nkvec)
+!      Nk(ik)=Nkvec(ik)
+!   enddo
+!   if(product(Nk)/=product(Nkvec))stop "TB_build_grid ERROR: product(Nkvec) != product(Nk)"
+!   !
+!   call print_bk()
+!   if(check_bk_.AND..not.set_bkvec)stop "TB_build_grid ERROR: bk vectors not set"
+!   !
+!   ik=0
+!   do iz=1,Nk(3)
+!      kz = dble(iz-1)/Nk(3)
+!      do iy=1,Nk(2)
+!         ky = dble(iy-1)/Nk(2)
+!         do ix=1,Nk(1)
+!            kx = dble(ix-1)/Nk(1)
+!            kvec = kx*bk_x(:ndim) + ky*bk_y(:ndim) + kz*bk_z(:ndim)
+!            ik=ik+1
+!            kgrid(ik,:)=kvec
+!         enddo
+!      enddo
+!   enddo
+! end subroutine build_kgrid
