@@ -257,24 +257,32 @@ contains
 
 
 
-  subroutine build_kgrid(Nkvec,kgrid,check_bk,kstart)
+
+
+
+
+
+
+  subroutine build_kgrid(Nkvec,kgrid,check_bk,BZorigin)
     integer,dimension(:)                    :: Nkvec
     real(8),dimension(:,:)                  :: kgrid ![Nk][Ndim]
     logical,intent(in),optional             :: check_bk
-    real(8),dimension(size(Nkvec)),optional :: kstart
+    real(8),dimension(size(Nkvec)),optional :: BZorigin
     !
     logical                                 :: check_bk_    
-    real(8),dimension(size(Nkvec))          :: kvec  ![Ndim]
+    real(8),dimension(size(Nkvec))          :: kvec
     real(8),dimension(:),allocatable        :: grid_x,grid_y,grid_z
-    integer                                 :: ik,ix,iy,iz,Nk(3),ndim,Nktot
-    real(8)                                 :: kx,ky,kz,Lb(3)
-    real(8),dimension(3)                    :: kstart_
+    integer                                 :: ik,Ivec(3),Nk(3),ndim,Nktot,i
+    real(8)                                 :: Lb(3)
+    real(8),dimension(3,3)                  :: bk_grid
+    real(8),dimension(3)                    :: ktmp
     !
     Nktot = product(Nkvec)
     Ndim  = size(Nkvec)          !dimension of the grid to be built
     call assert_shape(kgrid,[Nktot,Ndim],"build_kgrid","kgrid")
     !
-    kstart_ = 0d0 ; if(present(kstart))kstart_=kstart
+    if(present(BZorigin))BZ_origin(:Ndim)=BZorigin
+    !
     Nk=1
     do ik=1,Ndim
        Nk(ik)=Nkvec(ik)
@@ -283,26 +291,22 @@ contains
     !
     call print_bk()
     if(check_bk_.AND..not.set_bkvec)stop "TB_build_grid ERROR: bk vectors not set"
+    !
+    call TB_get_bk(bk_grid(1,:),bk_grid(2,:),bk_grid(3,:))
     !    
     allocate(grid_x(Nk(1)))
     allocate(grid_y(Nk(2)))   
     allocate(grid_z(Nk(3)))
     !
-    grid_x = linspace(0d0,1d0,Nk(1),iend=.false.) + kstart_(1)
-    grid_y = linspace(0d0,1d0,Nk(2),iend=.false.) + kstart_(2)
-    grid_z = linspace(0d0,1d0,Nk(3),iend=.false.) + kstart_(3)
+    grid_x = linspace(0d0,1d0,Nk(1),iend=.false.) + BZ_origin(1)
+    grid_y = linspace(0d0,1d0,Nk(2),iend=.false.) + BZ_origin(2)
+    grid_z = linspace(0d0,1d0,Nk(3),iend=.false.) + BZ_origin(3)
     !
-    do iz=1,Nk(3)
-       do iy=1,Nk(2)
-          do ix=1,Nk(1)
-             kx   = grid_x(ix)
-             ky   = grid_y(iy)
-             kz   = grid_z(iz)
-             ik   = indices2i([ix,iy,iz],Nk)
-             kvec = kx*bk_x(:ndim) + ky*bk_y(:ndim) + kz*bk_z(:ndim)
-             kgrid(ik,:)=kvec
-          end do
-       end do
+    do ik=1,Nktot
+       ivec = i2indices(ik,Nk)       
+       ktmp = [grid_x(ivec(1)), grid_y(ivec(2)), grid_z(ivec(3))]
+       forall(i=1:Ndim)kvec(i) = dot_product(ktmp,bk_grid(:,i))
+       kgrid(ik,:)=kvec
     end do
   end subroutine build_kgrid
 
@@ -378,6 +382,107 @@ contains
        enddo
     enddo
   end subroutine build_rgrid
+
+
+
+
+
+
+  subroutine TB_refine_kgrid(Nkvec,kgrid_refine,kcenters,DeltaK)
+    integer,dimension(:)                    :: Nkvec
+    real(8),dimension(:,:),allocatable      :: kgrid_refine
+    real(8),dimension(:,:),intent(in)       :: kcenters
+    real(8)                                 :: DeltaK
+    !
+    real(8),dimension(size(Nkvec))          :: kvec
+    real(8),dimension(:),allocatable        :: grid_x,grid_y,grid_z
+    integer                                 :: Ndim,Nktot,Ncntr
+    integer                                 :: i,ik,Ivec(3),Nk(3),icntr,jcntr,ic
+    real(8),dimension(3,3)                  :: bk_grid
+    real(8),dimension(size(kcenters,1),3)   :: kstart
+    real(8),dimension(3)                    :: Lb,Dk,Kpt
+    real(8),dimension(3)                    :: Kshift_
+    logical                                 :: boolBZ,boolOlap
+    logical,dimension(size(kcenters,1)-1)   :: cond_Lvec
+    !
+    !
+    Ncntr = size(kcenters,1)
+    Nktot = product(Nkvec)
+    Ndim  = size(Nkvec)          !dimension of the grid to be built
+    call assert_shape(kcenters,[Ncntr,Ndim])
+    !
+    !
+    Nk=1
+    do ik=1,Ndim
+       Nk(ik)=Nkvec(ik)
+    enddo
+    if(product(Nk)/=product(Nkvec))stop "TB_build_grid ERROR: product(Nkvec) != product(Nk)"
+    !
+    allocate(grid_x(Nk(1)))
+    allocate(grid_y(Nk(2)))   
+    allocate(grid_z(Nk(3)))
+    !
+    !< get a local copy of the basis vectors:
+    call TB_get_bk(bk_grid(1,:),bk_grid(2,:),bk_grid(3,:))
+    !
+    do i=1,3
+       Lb(i) = sqrt(dot_product(bk_grid(i,:),bk_grid(i,:)))
+    enddo
+    !
+    Dk        = 0d0
+    Dk(:Ndim) = DeltaK  !half way back in each direction
+    !
+    kstart = 0d0
+    do icntr=1,Ncntr
+       kstart(icntr,:Ndim) = kcenters(icntr,:Ndim)/Lb(:Ndim) - Dk(:Ndim)/2
+    enddo
+    !
+    !
+    call start_timer()
+    do icntr=1,Ncntr
+       call eta(icntr,Ncntr)
+       !
+       grid_x = linspace(0d0,Dk(1),Nk(1),iend=.false.) + kstart(icntr,1)
+       grid_y = linspace(0d0,Dk(2),Nk(2),iend=.false.) + kstart(icntr,2)
+       grid_z = linspace(0d0,Dk(3),Nk(3),iend=.false.) + kstart(icntr,3)
+       !
+       do ik=1,Nktot
+          ivec = i2indices(ik,Nk)
+          Kpt  = [grid_x(ivec(1)), grid_y(ivec(2)), grid_z(ivec(3))]
+          !
+          !if the point is not in the BZ cycle
+          boolBZ = in_rectangle(BZ_origin(:Ndim), dble(ones(Ndim)), Kpt(:Ndim))
+          if(.not.boolBZ)cycle
+          !
+          !if the point is in any other patch: cycle
+          if(icntr>1)then
+             forall(jcntr=icntr-1:1:-1)&
+                  cond_Lvec(jcntr) = in_rectangle(kstart(jcntr,:Ndim),Dk(:Ndim),Kpt(:Ndim))
+             if(any(cond_Lvec(icntr-1:1:-1)))cycle
+          endif
+          !
+          forall(i=1:Ndim)kvec(i) = dot_product(Kpt,bk_grid(:,i))
+          call add_to(kgrid_refine,kvec)
+       end do
+    enddo
+    call stop_timer("TB_refine_kgrid")
+  end subroutine TB_refine_kgrid
+
+  pure function in_rectangle(origin,side,point) result(bool)
+    real(8),dimension(:),intent(in)            :: origin
+    real(8),dimension(size(origin)),intent(in) :: side
+    real(8),dimension(size(origin)),intent(in) :: point
+    logical                                    :: bool
+    integer                                    :: idim
+    bool = point(1)>=origin(1) .AND. point(1)<=origin(1)+side(1)
+    do idim=2,size(origin)
+       bool = bool .AND. point(idim)>=origin(idim) .AND. point(idim)<=origin(idim)+side(idim)
+    enddo
+  end function in_rectangle
+
+
+
+
 
 
 

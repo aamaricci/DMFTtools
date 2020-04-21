@@ -55,6 +55,7 @@ module TB_WANNIER90
      real(8)                                    :: Efermi
      complex(8),allocatable,dimension(:,:)      :: Zeta
      real(8),allocatable,dimension(:,:)         :: Self
+     real(8),dimension(3)                       :: BZorigin
      logical                                    :: iRenorm=.false.
      logical                                    :: iFermi=.false.
      logical                                    :: verbose=.false.       
@@ -70,11 +71,12 @@ contains
 
 
   !< Setup the default_w90 structure with information coming from specified w90_file
-  subroutine setup_w90(w90_file,nlat,nspin,norb,verbose)
+  subroutine setup_w90(w90_file,nlat,nspin,norb,origin,verbose)
     character(len=*),intent(in) :: w90_file
     integer,optional            :: Nlat
     integer,optional            :: Norb
     integer,optional            :: Nspin
+    real(8),optional            :: origin(:)
     logical,optional            :: verbose
     logical                     :: verbose_,master=.true.
     integer                     :: unitIO
@@ -82,9 +84,10 @@ contains
     integer                     :: Nrpts
     integer                     :: i,j,ir,a,b
     integer                     :: rx,ry,rz
-    real(8)                     :: re,im
+    real(8)                     :: re,im,origin_(3)
     !
-    verbose_ = .false. ;if(present(verbose))verbose_=verbose
+    origin_  = 0d0     ;if(present(origin))origin_(:size(origin))=origin
+    verbose_ = .false. ;if(present(verbose))verbose_=verbose    
     !
     TB_w90%w90_file = str(w90_file)
     open(free_unit(unitIO),&
@@ -123,6 +126,7 @@ contains
     TB_w90%Self     = 0d0
     TB_w90%Efermi   = 0d0
     TB_w90%verbose  = verbose_
+    TB_w90%BZorigin = origin_
     TB_w90%status   =.true.
     !
     !Read Ndegen from file:

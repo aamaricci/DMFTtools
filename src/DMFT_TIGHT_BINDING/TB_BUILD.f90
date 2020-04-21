@@ -674,7 +674,7 @@ contains
     Nk   = product(Nkvec)
     allocate(Hk(Nlso,Nlso,Nk))
     call TB_build_model(Hk,Nlso,Nkvec)
-    call TB_get_FermiLevel(Hk,filling,Efermi)
+    call TB_get_FermiLevel(Hk,filling,Efermi,TB_w90%Nspin,TB_w90%verbose)
     if(TB_w90%verbose)write(*,*)"w90 Fermi Level: ",Efermi
     TB_w90%Efermi = Efermi
     if(present(Ef))Ef=Efermi
