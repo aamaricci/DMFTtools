@@ -392,7 +392,7 @@ contains
     integer,dimension(:)                    :: Nkvec
     real(8),dimension(:,:),allocatable      :: kgrid_refine
     real(8),dimension(:,:),intent(in)       :: kcenters
-    real(8)                                 :: DeltaK
+    real(8),dimension(size(Nkvec))          :: DeltaK
     !
     real(8),dimension(size(Nkvec))          :: kvec
     real(8),dimension(:),allocatable        :: grid_x,grid_y,grid_z
@@ -430,7 +430,7 @@ contains
     enddo
     !
     Dk        = 0d0
-    Dk(:Ndim) = DeltaK  !half way back in each direction
+    Dk(:Ndim) = DeltaK(:Ndim)
     !
     kstart = 0d0
     do icntr=1,Ncntr
@@ -451,13 +451,13 @@ contains
           Kpt  = [grid_x(ivec(1)), grid_y(ivec(2)), grid_z(ivec(3))]
           !
           !if the point is not in the BZ cycle
-          boolBZ = in_rectangle(BZ_origin(:Ndim), dble(ones(Ndim)), Kpt(:Ndim))
+          boolBZ = in_rectangle(BZ_origin(:Ndim),dble(ones(Ndim)),Kpt(:Ndim),.true.)
           if(.not.boolBZ)cycle
           !
           !if the point is in any other patch: cycle
           if(icntr>1)then
              forall(jcntr=icntr-1:1:-1)&
-                  cond_Lvec(jcntr) = in_rectangle(kstart(jcntr,:Ndim),Dk(:Ndim),Kpt(:Ndim))
+                  cond_Lvec(jcntr) = in_rectangle(kstart(jcntr,:Ndim),Dk(:Ndim),Kpt(:Ndim),.false.)
              if(any(cond_Lvec(icntr-1:1:-1)))cycle
           endif
           !
@@ -466,26 +466,43 @@ contains
        end do
     enddo
     call stop_timer("TB_refine_kgrid")
+    !
+  contains
+    !
+    pure function in_rectangle(o,L,p,equal) result(bool)
+      real(8),dimension(:),intent(in)       :: o
+      real(8),dimension(size(o)),intent(in) :: L
+      real(8),dimension(size(o)),intent(in) :: p
+      logical,intent(in)                    :: equal
+      logical                               :: bool
+      integer                               :: idim
+      if(equal)then
+         bool = p(1)>=o(1) .AND. p(1)<=o(1)+L(1)
+         do idim=2,size(o)
+            bool = bool .AND. p(idim)>=o(idim) .AND. p(idim)<=o(idim)+L(idim)
+         enddo
+      else
+         bool = p(1)>o(1) .AND. p(1)<o(1)+L(1)
+         do idim=2,size(o)
+            bool = bool .AND. p(idim)>o(idim) .AND. p(idim)<o(idim)+L(idim)
+         enddo
+      endif
+    end function in_rectangle
+    !
+    pure function in_circle(c,r,x) result(bool)
+      real(8),dimension(:),intent(in)       :: c
+      real(8),intent(in)                    :: r
+      real(8),dimension(size(c)),intent(in) :: x
+      logical                               :: bool
+      bool = sum((x(:)-c(:))**2) < r**2
+    end function in_circle
+    !
   end subroutine TB_refine_kgrid
 
-  pure function in_rectangle(origin,side,point) result(bool)
-    real(8),dimension(:),intent(in)            :: origin
-    real(8),dimension(size(origin)),intent(in) :: side
-    real(8),dimension(size(origin)),intent(in) :: point
-    logical                                    :: bool
-    integer                                    :: idim
-    bool = point(1)>=origin(1) .AND. point(1)<=origin(1)+side(1)
-    do idim=2,size(origin)
-       bool = bool .AND. point(idim)>=origin(idim) .AND. point(idim)<=origin(idim)+side(idim)
-    enddo
-  end function in_rectangle
 
 
 
-
-
-
-
+  
   subroutine TB_write_grid(Grid,file_grid)
     real(8),dimension(:,:) :: Grid ![Nk/Nr,Ndim]
     character(len=*)       :: file_grid

@@ -20,7 +20,7 @@ contains
 
 
 
-  subroutine TB_fsurf_nkvec(hk_model,Nlso,Ef,Nkvec,colors_name,file,cutoff,max_order,deltak,origin,iwrite)
+  subroutine TB_fsurf_nkvec(hk_model,Nlso,Ef,Nkvec,colors_name,file,cutoff,Niter,Nsize,origin,verbose)
     interface 
        function hk_model(kpoint,N)
          real(8),dimension(:)      :: kpoint
@@ -35,17 +35,16 @@ contains
     type(rgb_color),dimension(Nlso),optional      :: colors_name
     real(8),optional                              :: cutoff
     character(len=*),optional                     :: file
-    logical,optional                              :: iwrite
-    integer,optional                              :: max_order
-    real(8),optional                              :: deltak
+    logical,optional                              :: verbose
+    integer,optional                              :: Niter
+    integer,optional                              :: Nsize
     real(8),dimension(size(Nkvec)),optional       :: origin
     !
-    real(8)                                       :: cutoff_,deltak_
-    logical                                       :: iwrite_
-    integer                                       :: max_order_
-    !
+    real(8)                                       :: cutoff_
+    integer                                       :: Niter_,Nsize_
     character(len=256)                            :: file_
     type(rgb_color),dimension(Nlso)               :: colors_name_
+    logical                                       :: iwrite_
     !
     real(8),dimension(product(Nkvec),size(Nkvec)) :: kgrid
     real(8),dimension(:,:),allocatable            :: rfd_kgrid
@@ -59,18 +58,19 @@ contains
     real(8),dimension(size(Nkvec))                :: bk_len
     real(8)                                       :: min_range(2)
     real(8)                                       :: max_range(2)
-    integer                                       :: ik,io,jo,Nktot,Ndim,unit,ipt,ic,Ncntr,iorder
+    real(8)                                       :: DeltaK(3)
+    integer                                       :: ik,io,jo,Nktot,Ndim,unit,ipt,ic,Ncntr,iter
     real(8),dimension(2)                          :: Gp=[0d0,0d0]
     real(8),dimension(2)                          :: Xp=[0.5d0,0d0]
     real(8),dimension(2)                          :: Yp=[0d0,0.5d0]
     real(8),dimension(2)                          :: Mp=[0.5d0,0.5d0]
     !
-    file_       = "FSurf"  ;if(present(file))file_=file
-    cutoff_     = 1d-1     ;if(present(cutoff))cutoff_=cutoff
-    colors_name_=black     ;if(present(colors_name))colors_name_=colors_name
-    max_order_  = 4        ;if(present(max_order))max_order_=max_order
-    deltak_     = 0.13d0    ;if(present(deltak))deltak_=deltak
-    iwrite_     = .false.  ;if(present(iwrite))iwrite_=iwrite
+    file_        = "FSurf"  ;if(present(file))file_=file
+    cutoff_      = 1d-1     ;if(present(cutoff))cutoff_=cutoff
+    colors_name_ = black    ;if(present(colors_name))colors_name_=colors_name
+    Niter_       = 3        ;if(present(Niter))Niter_=Niter
+    Nsize_       = 2        ;if(present(Nsize))Nsize_=Nsize
+    iwrite_      = .false.  ;if(present(verbose))iwrite_=verbose
     !
     !< Get colors
     do io=1,Nlso
@@ -112,19 +112,19 @@ contains
     Yp = Yp*bk_len
     Mp = Mp*bk_len
     write(unit,*)"set label '{/Symbol G}' at "&
-         //str(Gp(1)-0.03*bk_len(1))//","//str(Gp(2)-0.03*bk_len(2))//&
+         //str(Gp(1)-0.04*bk_len(1))//","//str(Gp(2)-0.04*bk_len(2))//&
          " right font ',24'"
     !
     write(unit,*)"set label 'X' at "&
-         //str(Xp(1)-0.03*bk_len(1))//","//str(Xp(2)-0.03*bk_len(2))//&
+         //str(Xp(1)-0.04*bk_len(1))//","//str(Xp(2)-0.04*bk_len(2))//&
          " center font ',24'"
     !
     write(unit,*)"set label 'Y' at "&
-         //str(Yp(1)-0.03*bk_len(1))//","//str(Yp(2)-0.03*bk_len(1))//&
+         //str(Yp(1)-0.04*bk_len(1))//","//str(Yp(2)-0.04*bk_len(1))//&
          " center font ',24'"
     !
     write(unit,*)"set label 'M' at "&
-         //str(Mp(1)-0.03*bk_len(1))//","//str(Mp(2)-0.03*bk_len(2))//&
+         //str(Mp(1)-0.04*bk_len(1))//","//str(Mp(2)-0.04*bk_len(2))//&
          " center font ',24'"
     !
     write(unit,*)"set label '' at "//str(Gp(1))//","//str(Gp(2))//" point pt 4"
@@ -142,6 +142,7 @@ contains
     close(unit)
     call system("chmod +x "//reg(file_)//".gp")
     !
+    write(*,*)"TB_FSurface: get FS"
     !
     call TB_build_kgrid(Nkvec,kgrid,.true.,BZ_origin)
     if(iwrite_)call TB_write_grid(kgrid,"rfd_kgrid_1")
@@ -169,20 +170,24 @@ contains
     cutoff_=cutoff_/3d0
     call stop_timer("TB_FSurface: 1st-order - kpts: "//str(Ncntr))
     !
+    DeltaK=0d0 ; Deltak(:Ndim) = dble(Nsize_)/Nkvec    
     !
-    do iorder=2,max_order_
+    do iter=2,Niter_
        if(Ncntr==0)exit
        !
        open(free_unit(unit),file=reg(file_)//".1")
        rewind(unit)
        !
        allocate(rfd_kgrid(0,Ndim))
-       call TB_refine_kgrid(Nkvec,rfd_kgrid,kpts,deltak_)
-       if(iwrite_)call TB_write_grid(rfd_kgrid,"rfd_kgrid_"//str(iorder))
+       write(*,*)"TB_FSurface: refine grid"
+       call TB_refine_kgrid(Nkvec,rfd_kgrid,kpts,DeltaK(:Ndim))
+       if(iwrite_)call TB_write_grid(rfd_kgrid,"rfd_kgrid_"//str(iter))
        !
+       write(*,*)"TB_FSurface: Get points"
        call start_timer()
        deallocate(kpts) ; allocate(kpts(0,Ndim))
        do ik=1,size(rfd_kgrid,1)
+          call eta(ik,size(rfd_kgrid,1))
           kpoint = rfd_kgrid(ik,:)
           Evec = hk_model(kpoint,Nlso)
           call eigh(Evec,Eval)
@@ -197,13 +202,14 @@ contains
           enddo
        enddo
        Ncntr = size(kpts,1)
-       call stop_timer("TB_FSurface "//str(iorder)//"th-order - kpts: "//str(Ncntr))
+       call stop_timer("TB_FSurface "//str(iter)//"th-order - kpts: "//str(Ncntr))
+       write(*,*)""
        close(unit)
        call system("mv -f "//reg(file_)//".1 "//reg(file_))
        deallocate(rfd_kgrid)
        !
-       cutoff_=cutoff_/3d0
-       deltak_=deltak_/2d0
+       cutoff_=max(1d-4,cutoff_/3d0)
+       DeltaK =max(1d-4,deltaK/2d0)
     enddo
     !
   end subroutine TB_fsurf_nkvec
@@ -213,7 +219,7 @@ contains
 
 
 
-  subroutine TB_fsurf_w90_nkvec(Nlso,Ef,Nkvec,colors_name,file,cutoff,max_order,deltak)
+  subroutine TB_fsurf_w90_nkvec(Nlso,Ef,Nkvec,colors_name,file,cutoff,Niter,Nsize,origin)
     integer                                  :: Nlso
     real(8)                                  :: Ef
     integer,dimension(:),intent(in)          :: Nkvec
@@ -221,32 +227,26 @@ contains
     type(rgb_color),dimension(Nlso),optional :: colors_name
     real(8),optional                         :: cutoff
     character(len=*),optional                :: file
-    integer,optional                         :: max_order
-    real(8),optional                         :: deltak
+    integer,optional                         :: Niter,Nsize
+    real(8),dimension(size(Nkvec)),optional  :: origin
     !
-    real(8)                                  :: cutoff_,deltak_
-    integer                                  :: max_order_
-    !
+    real(8)                                  :: cutoff_
+    integer                                  :: Niter_,Nsize_
     character(len=256)                       :: file_
     type(rgb_color),dimension(Nlso)          :: colors_name_
+    real(8),dimension(size(Nkvec))           :: origin_
     !
     !
     if(.not.TB_w90%status)stop "TB_fsurf_w90_nkvec: TB_w90 structure not allocated. Call setup_w90 first."
     !
-    file_       = "w90FSurf"  ;if(present(file))file_=file
-    cutoff_     = 1d-1        ;if(present(cutoff))cutoff_=cutoff
-    colors_name_=black        ;if(present(colors_name))colors_name_=colors_name
-    max_order_  = 3           ;if(present(max_order))max_order_=max_order
-    deltak_     = 0.13d0      ;if(present(deltak))deltak_=deltak
+    file_       = "FSurf"  ;if(present(file))file_=file
+    cutoff_     = 1d-1     ;if(present(cutoff))cutoff_=cutoff
+    colors_name_=black     ;if(present(colors_name))colors_name_=colors_name
+    Niter_  = 3            ;if(present(Niter))Niter_=Niter
+    Nsize_  = 2            ;if(present(Nsize))Nsize_=Nsize
+    origin_ = TB_w90%BZorigin;if(present(origin))origin_=origin
     !
-    call TB_fsurf_nkvec(w90_hk_model,Nlso,Ef,Nkvec,&
-         colors_name_,&
-         file_,&
-         cutoff_,&
-         max_order_,&
-         deltak_,&
-         origin=TB_w90%BZorigin,&
-         iwrite=TB_w90%verbose)
+    call TB_fsurf_nkvec(w90_hk_model,Nlso,Ef,Nkvec,colors_name_,file_,cutoff_,Niter_,Nsize_,origin=origin_,verbose=TB_w90%verbose)
   end subroutine TB_fsurf_w90_nkvec
 
 
