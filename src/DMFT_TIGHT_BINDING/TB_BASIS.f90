@@ -263,11 +263,11 @@ contains
 
 
 
-  subroutine build_kgrid(Nkvec,kgrid,check_bk,BZorigin)
+  subroutine build_kgrid(Nkvec,kgrid,check_bk,origin)
     integer,dimension(:)                    :: Nkvec
     real(8),dimension(:,:)                  :: kgrid ![Nk][Ndim]
     logical,intent(in),optional             :: check_bk
-    real(8),dimension(size(Nkvec)),optional :: BZorigin
+    real(8),dimension(size(Nkvec)),optional :: origin
     !
     logical                                 :: check_bk_    
     real(8),dimension(size(Nkvec))          :: kvec
@@ -281,7 +281,7 @@ contains
     Ndim  = size(Nkvec)          !dimension of the grid to be built
     call assert_shape(kgrid,[Nktot,Ndim],"build_kgrid","kgrid")
     !
-    if(present(BZorigin))BZ_origin(:Ndim)=BZorigin
+    if(present(origin))BZ_origin(:Ndim)=origin
     !
     Nk=1
     do ik=1,Ndim

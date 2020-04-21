@@ -20,7 +20,7 @@ contains
 
 
 
-  subroutine TB_fsurf_nkvec(hk_model,Nlso,Ef,Nkvec,colors_name,file,cutoff,max_order,deltak,BZorigin,iwrite)
+  subroutine TB_fsurf_nkvec(hk_model,Nlso,Ef,Nkvec,colors_name,file,cutoff,max_order,deltak,origin,iwrite)
     interface 
        function hk_model(kpoint,N)
          real(8),dimension(:)      :: kpoint
@@ -38,7 +38,7 @@ contains
     logical,optional                              :: iwrite
     integer,optional                              :: max_order
     real(8),optional                              :: deltak
-    real(8),dimension(size(Nkvec)),optional       :: BZorigin
+    real(8),dimension(size(Nkvec)),optional       :: origin
     !
     real(8)                                       :: cutoff_,deltak_
     logical                                       :: iwrite_
@@ -83,7 +83,7 @@ contains
     !< Count points in the actual grid:
     Nktot  = product(Nkvec)
     Ndim   = size(Nkvec)
-    if(present(BZorigin))BZ_origin(:Ndim)=BZorigin
+    if(present(origin))BZ_origin(:Ndim)=origin
     !
     open(unit,file=reg(file_)//".gp")
     write(unit,*)"#set terminal pngcairo size 350,262 enhanced font 'Verdana,10'"
@@ -245,7 +245,7 @@ contains
          cutoff_,&
          max_order_,&
          deltak_,&
-         BZorigin=TB_w90%BZorigin,&
+         origin=TB_w90%BZorigin,&
          iwrite=TB_w90%verbose)
   end subroutine TB_fsurf_w90_nkvec
 
