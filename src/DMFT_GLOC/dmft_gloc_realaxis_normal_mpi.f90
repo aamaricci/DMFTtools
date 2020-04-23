@@ -105,11 +105,11 @@ subroutine dmft_get_gloc_realaxis_normal_cluster_mpi(MpiComm,Hk,Wtk,Greal,Sreal,
   Norb  = size(Sreal,5)
   Lreal = size(Sreal,7)
   Lk    = size(Hk,3)
-  Nso   = Nspin*Norb    
+  Nlso   = Nlat*Nspin*Norb    
   !Testing part:
-  call assert_shape(Hk,[Nlso,Nlso,Lk],'dmft_get_gloc_realaxis_normal_main_mpi',"Hk")
-  call assert_shape(Sreal,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_normal_main_mpi',"Sreal")
-  call assert_shape(Greal,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_normal_main_mpi',"Greal")
+  call assert_shape(Hk,[Nlso,Nlso,Lk],'dmft_get_gloc_realaxis_normal_cluster_mpi',"Hk")
+  call assert_shape(Sreal,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_normal_cluster_mpi',"Sreal")
+  call assert_shape(Greal,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_normal_cluster_mpi',"Greal")
   !
   !Allocate and setup the Realaxis freq.
   allocate(Gkreal(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
