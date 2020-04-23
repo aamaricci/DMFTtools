@@ -73,118 +73,111 @@ contains
 
 
   subroutine TB_get_FermiLevel(Hk,filling,Ef,Nspin,verbose)
-    complex(8),dimension(:,:,:)                            :: Hk
-    real(8)                                                :: filling
-    real(8)                                                :: Ef,Dmin,Dmax
-    integer,optional                                       :: Nspin
-    logical,optional                                       :: verbose
-    complex(8),dimension(size(Hk,1),size(Hk,2),size(Hk,3)) :: Rk
-    real(8),dimension(size(Hk,1),size(Hk,3))               :: Ek
-    complex(8),dimension(:,:,:),allocatable                :: Rk_tmp
-    real(8),dimension(:,:),allocatable                     :: Ek_tmp
-    complex(8),dimension(size(Hk,1),size(Hk,2))            :: Rho,diagRho
-    integer                                                :: Nk,Nso,ik,info,Nspin_
-    logical                                                :: verbose_
+    complex(8),dimension(:,:,:)                 :: Hk
+    real(8)                                     :: filling
+    real(8)                                     :: Ef,Dmin,Dmax
+    integer,optional                            :: Nspin
+    logical,optional                            :: verbose
+    complex(8),dimension(:,:),allocatable       :: Uvec
+    real(8),dimension(:),allocatable            :: Eval
+    complex(8),dimension(:,:,:),allocatable     :: Rk,Rk_tmp
+    real(8),dimension(:,:),allocatable          :: Ek,Ek_tmp
+    complex(8),dimension(size(Hk,1),size(Hk,1)) :: Rho,diagRho
+    integer                                     :: Nk,Nso,ik,info,Nspin_
+    logical                                     :: verbose_
     !
     verbose_ = .true. ;if(present(verbose))verbose_=verbose
     Nspin_   = 1      ;if(present(Nspin))Nspin_=Nspin
     !
-    Nk = size(Hk,3)
     Nso = size(Hk,1)
+    Nk = size(Hk,3)
     call assert_shape(Hk,[Nso,Nso,Nk],"TB_FermiLevel","Hk")
     !
     !MPI setup:
-#ifdef _MPI    
+    mpi_size=1
+    mpi_rank=0
+    mpi_master=.true.
+#ifdef _MPI 
     if(check_MPI())then
        mpi_size  = get_size_MPI()
        mpi_rank =  get_rank_MPI()
        mpi_master= get_master_MPI()
-    else
-       mpi_size=1
-       mpi_rank=0
-       mpi_master=.true.
     endif
-#else
-    mpi_size=1
-    mpi_rank=0
-    mpi_master=.true.
 #endif
     !
+    allocate(Uvec(Nso,Nso))
+    allocate(Eval(Nso))
+    allocate(Rk_tmp(Nso,Nso,Nk),Rk(Nso,Nso,Nk))
+    allocate(Ek_tmp(Nso,Nk),Ek(Nso,Nk))
+    Rk_tmp = zero
+    Ek_tmp = 0d0
+    do ik=1+mpi_rank,Nk,mpi_size
+       Uvec = Hk(:,:,ik)
+       call eigh(Uvec,Eval)
+       Rk_tmp(:,:,ik) = Uvec
+       Ek_tmp(:,ik)   = Eval
+    enddo
 #ifdef _MPI
     if(check_MPI())then
-       allocate(Rk_tmp(Nso,Nso,Nk))
-       allocate(Ek_tmp(Nso,Nk))
-       Rk_tmp = Hk
-       Ek_tmp = 0d0
-       do ik=1+mpi_rank,Nk,mpi_size
-          call eigh(Rk_tmp(:,:,ik),Ek_tmp(:,ik))
-       enddo
+       Rk = zero
+       Ek = 0d0
        call AllReduce_MPI(MPI_COMM_WORLD,Ek_tmp,Ek)
        call AllReduce_MPI(MPI_COMM_WORLD,Rk_tmp,Rk)
        deallocate(Ek_tmp,Rk_tmp)
     else
-       Rk = Hk
-       Ek = 0d0
-       do ik=1,Nk
-          call eigh(Rk(:,:,ik),Ek(:,ik))
-       enddo
+       Rk = Rk_tmp
+       Ek = Ek_tmp
     endif
 #else
-    Rk = Hk
-    Ek = 0d0
-    do ik=1,Nk
-       call eigh(Rk(:,:,ik),Ek(:,ik))
-    enddo
+    Rk = Rk_tmp
+    Ek = Ek_tmp
 #endif
+    !
     !
     Dmin = minval(Ek)
     Dmax = maxval(Ek)
     Ef   = Dmin
     call fzero(get_dens,Ef,Dmax,info,rguess=Dmin+0.5d0*(Dmax-Dmin))
     if(info/=1)then
-       write(*,*)"ERROR TB_get_Fermi: fzero returned info>1 ",info
+       if(mpi_master)write(*,*)"ERROR TB_get_Fermi: fzero returned info>1 ",info
        stop
     endif
-    write(*,*)"w90 Fermi Level: ",Ef    
+    if(mpi_master)write(*,*)"w90 Fermi Level: ",Ef    
   contains
     function get_dens(ef) result(ndens)
       real(8),intent(in)            :: ef
       real(8)                       :: dens,dens_tmp
       real(8)                       :: ndens
-      dens     = 0d0
       dens_tmp = 0d0
+      do ik=1+mpi_rank,Nk,mpi_size
+         diagRho = diag(fermi(Ek(:,ik)-ef,1000d0))
+         Uvec    = Rk(:,:,ik)
+         Rho     = (Uvec .x. diagRho) .x. (conjg(transpose(Uvec)))
+         dens_tmp= dens_tmp + sum(diagonal(Rho))/Nk
+      enddo
 #ifdef _MPI
       if(check_MPI())then
-         do ik=1+mpi_rank,Nk,mpi_size
-            diagRho = diag(fermi(Ek(:,ik)-ef,1000d0))
-            Rho     = (Rk(:,:,ik) .x. diagRho) .x. (conjg(transpose(Rk(:,:,ik))))
-            dens_tmp= dens_tmp + sum(diagonal(Rho))/Nk
-         enddo
+         dens = 0d0
          call AllReduce_MPI(MPI_COMM_WORLD,dens_tmp,dens)
       else
-         do ik=1,Nk
-            diagRho = diag(fermi(Ek(:,ik)-ef,1000d0))
-            Rho     = (Rk(:,:,ik) .x. diagRho) .x. (conjg(transpose(Rk(:,:,ik))))
-            dens    = dens + sum(diagonal(Rho))/Nk
-         enddo
+         dens = dens_tmp
       endif
 #else
-      do ik=1,Nk
-         diagRho = diag(fermi(Ek(:,ik)-ef,1000d0))
-         Rho     = (Rk(:,:,ik) .x. diagRho) .x. (conjg(transpose(Rk(:,:,ik))))
-         dens    = dens + sum(diagonal(Rho))/Nk
-      enddo
+      dens = dens_tmp
 #endif
-      ndens = (3-Nspin_)*dens-filling
-      if(verbose_)write(*,"(A9,3G18.9)")"Ef,N0   =",ef,dens,filling
+      dens  = (3-Nspin_)*dens
+      ndens = dens-filling
+      if(mpi_master.AND.verbose_)write(*,"(A9,3G18.9)")"Ef,N0   =",ef,dens,filling
     end function get_dens
   end subroutine TB_Get_FermiLevel
 
 
-  !   subroutine TB_get_FermiLevel(Hk,filling,Ef)
+  !   subroutine TB_get_FermiLevel(Hk,filling,Ef,nspin,verbose)
   !     complex(8),dimension(:,:,:)           :: Hk
   !     real(8)                               :: filling
   !     real(8)                               :: Ef
+  !     integer,optional                            :: Nspin
+  !     logical,optional                            :: verbose
   !     complex(8),dimension(:,:),allocatable :: Uk
   !     real(8),dimension(:),allocatable      :: Ek
   !     real(8),dimension(:),allocatable      :: Ek_all,Ek_tmp

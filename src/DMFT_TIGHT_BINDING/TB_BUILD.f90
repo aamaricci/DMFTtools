@@ -669,13 +669,17 @@ contains
     real(8),optional                         :: Ef
     complex(8),dimension(:,:,:),allocatable  :: Hk
     integer                                  :: Nlso,Nk
+    mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
     if(TB_w90%Ifermi)return
     Nlso = TB_w90%Nspin*TB_w90%Num_Wann
     Nk   = product(Nkvec)
     allocate(Hk(Nlso,Nlso,Nk))
     call TB_build_model(Hk,Nlso,Nkvec)
     call TB_get_FermiLevel(Hk,filling,Efermi,TB_w90%Nspin,TB_w90%verbose)
-    if(TB_w90%verbose)write(*,*)"w90 Fermi Level: ",Efermi
+    if(mpi_master.AND.TB_w90%verbose)write(*,*)"w90 Fermi Level: ",Efermi
     TB_w90%Efermi = Efermi
     if(present(Ef))Ef=Efermi
     TB_w90%Ifermi=.true.
