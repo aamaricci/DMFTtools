@@ -37,15 +37,20 @@ contains
     call assert_shape(Hk,[Nso,Nso,Nk],"TB_FermiLevel","Hk")
     !
     !MPI setup:
-    mpi_size=1
-    mpi_rank=0
-    mpi_master=.true.
 #ifdef _MPI 
     if(check_MPI())then
        mpi_size  = get_size_MPI()
        mpi_rank =  get_rank_MPI()
        mpi_master= get_master_MPI()
+    else
+       mpi_size=1
+       mpi_rank=0
+       mpi_master=.true.
     endif
+#else
+    mpi_size=1
+    mpi_rank=0
+    mpi_master=.true.
 #endif
     !
     allocate(Uvec(Nso,Nso))
@@ -80,12 +85,13 @@ contains
     Dmin = minval(Ek)
     Dmax = maxval(Ek)
     Ef   = Dmin
+    if(mpi_master.AND.verbose_)write(*,*)"D_min,D_max:",Dmin,Dmax
     call fzero(get_dens,Ef,Dmax,info,rguess=Dmin+0.5d0*(Dmax-Dmin))
     if(info/=1)then
        if(mpi_master)write(*,*)"ERROR TB_get_Fermi: fzero returned info>1 ",info
        stop
     endif
-    if(mpi_master)write(*,*)"w90 Fermi Level: ",Ef    
+    if(mpi_master)write(*,*)"Fermi Level: ",Ef    
   contains
     function get_dens(ef) result(ndens)
       real(8),intent(in)            :: ef
@@ -115,7 +121,7 @@ contains
   end subroutine TB_FermiLevel
 
 
-  !   subroutine TB_get_FermiLevel(Hk,filling,Ef,nspin,verbose)
+  !   subroutine TB_FermiLevel(Hk,filling,Ef,nspin,verbose)
   !     complex(8),dimension(:,:,:)           :: Hk
   !     real(8)                               :: filling
   !     real(8)                               :: Ef
@@ -168,7 +174,7 @@ contains
   !     if(filling==0d0)filling=Nso
   !     indx  = ceiling(filling*Nk/2d0)
   !     Ef    = Ek_all(indx)
-  !   end subroutine TB_Get_FermiLevel
+  !   end subroutine TB_FermiLevel
 
 
 

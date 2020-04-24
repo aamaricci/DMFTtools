@@ -125,6 +125,7 @@ contains
     call build_kgrid(Nkvec,kgrid,.true.)
     !
     Nktot  = product(Nkvec)
+    Haux   = zero
     do ik=1+mpi_rank,Nktot,mpi_size
        haux(:,:,ik) = hk_model(kgrid(ik,:),Norb)
     enddo
@@ -203,7 +204,7 @@ contains
     wdos_=.false.;if(present(wdos))wdos_=wdos
     !
     Nktot  = size(kgrid,1)
-    !
+    Haux   = zero
     do ik=1+mpi_rank,Nktot,mpi_size
        haux(:,:,ik) = hkr_model(kgrid(ik,:),Nlat,Norb,pbc)
     enddo
@@ -279,7 +280,7 @@ contains
     call build_kgrid(Nkvec,kgrid,.true.)
     !
     Nktot  = product(Nkvec)
-    !
+    Haux   = zero
     do ik=1+mpi_rank,Nktot,mpi_size
        haux(:,:,ik) = hkr_model(kgrid(ik,:),Nlat,Norb,pbc)
     enddo
@@ -350,9 +351,9 @@ contains
     !
     Npts  =  size(kpath,1)          !# of k-points along the path
     Nktot = (Npts-1)*Nkpath
-    !
     call kgrid_from_path_grid(kpath,Nkpath,kgrid)
     !
+    Haux  = zero
     do ik=1+mpi_rank,Nktot,mpi_size
        haux(:,:,ik) = hk_model(kgrid(ik,:) , Norb)
     enddo
@@ -423,6 +424,7 @@ contains
     !
     call kgrid_from_path_grid(kpath,Nkpath,kgrid)
     !
+    Haux  = zero
     do ik=1+mpi_rank,Nktot,mpi_size
        haux(:,:,ik) = hkr_model(kgrid(ik,:),Nlat,Norb,pbc)
     enddo

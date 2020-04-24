@@ -182,9 +182,15 @@ contains
     real(8),optional                         :: Ef
     complex(8),dimension(:,:,:),allocatable  :: Hk
     integer                                  :: Nlso,Nk
-    mpi_master=.true.
+    mpi_master=.false.
 #ifdef _MPI    
-    if(check_MPI())mpi_master= get_master_MPI()
+    if(check_MPI())then
+       mpi_master= get_master_MPI()
+    else
+       mpi_master=.true.
+    endif
+#else
+    mpi_master=.true.
 #endif
     if(TB_w90%Ifermi)return
     Nlso = TB_w90%Nspin*TB_w90%Num_Wann
@@ -192,7 +198,6 @@ contains
     allocate(Hk(Nlso,Nlso,Nk))
     call build_hk_w90(Hk,Nlso,Nkvec)
     call TB_FermiLevel(Hk,filling,Efermi,TB_w90%Nspin,TB_w90%verbose)
-    if(mpi_master.AND.TB_w90%verbose)write(*,*)"w90 Fermi Level: ",Efermi
     TB_w90%Efermi = Efermi
     if(present(Ef))Ef=Efermi
     TB_w90%Ifermi=.true.
@@ -320,6 +325,7 @@ contains
     call build_kgrid(Nkvec,Kgrid,.true.) !check bk_1,2,3 vectors have been set
     if(present(Kpts_grid))Kpts_grid=Kgrid
     !
+    Haux=zero
     do ik=1+mpi_rank,Nk,mpi_size
        haux(:,:,ik) = w90_hk_model(Kgrid(ik,:),Nlso)
     enddo
@@ -333,14 +339,21 @@ contains
 #else
     Hk = Haux
 #endif
-
     !
     if(wdos_)then
        allocate(dos_Greal(TB_w90%Nlat,TB_w90%Nspin,TB_w90%Nspin,TB_w90%Norb,TB_w90%Norb,dos_Lreal))
        allocate(dos_wtk(Nk))
        dos_wtk=1d0/Nk
+#ifdef _MPI
+       if(check_MPI())then
+          call dmft_gloc_realaxis(MPI_COMM_WORLD,Hk,dos_wtk,dos_Greal,zeros(TB_w90%Nlat,TB_w90%Nspin,TB_w90%Nspin,TB_w90%Norb,TB_w90%Norb,dos_Lreal))
+       else
+          call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(TB_w90%Nlat,TB_w90%Nspin,TB_w90%Nspin,TB_w90%Norb,TB_w90%Norb,dos_Lreal))
+       endif
+#else
        call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(TB_w90%Nlat,TB_w90%Nspin,TB_w90%Nspin,TB_w90%Norb,TB_w90%Norb,dos_Lreal))
-       call dmft_print_gf_realaxis(dos_Greal,trim(dos_file),iprint=1)
+#endif
+       if(mpi_master)call dmft_print_gf_realaxis(dos_Greal,trim(dos_file),iprint=1)
     endif
   end subroutine build_hk_w90
 
@@ -383,6 +396,7 @@ contains
     !
     call kgrid_from_path_grid(kpath,Nkpath,kgrid)
     !
+    Haux=zero
     do ik=1+mpi_rank,Nktot,mpi_size
        haux(:,:,ik) = w90_hk_model(Kgrid(ik,:),Nlso)
     enddo
