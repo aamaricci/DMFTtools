@@ -7,14 +7,6 @@ module TB_SOLVE
   implicit none
 
 
-  interface TB_solve_model
-     module procedure :: solve_Hk_along_BZpath
-     module procedure :: solve_w90Hk_along_BZpath !this is redundant
-     module procedure :: solve_HkR_along_BZpath
-     !< obsolete
-     module procedure :: read_Hr_w90_solve_Hk_along_BZpath
-  end interface TB_solve_model
-
 
 contains
 

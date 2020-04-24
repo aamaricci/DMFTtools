@@ -5,14 +5,7 @@ module TB_FSURF
   USE TB_WANNIER90
   USE TB_BUILD
   implicit none
-  private
 
-
-  interface TB_fsurface
-     module procedure :: TB_fsurf_nkvec
-     module procedure :: TB_fsurf_w90_nkvec
-  end interface TB_fsurface
-  public :: TB_fsurface
 
 
 contains

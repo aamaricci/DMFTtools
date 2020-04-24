@@ -136,7 +136,7 @@ subroutine read_Hr_w90_solve_Hk_along_BZpath(       w90_file           &      !o
   endif
   !
   if(present(Hkpathfile))then
-     call TB_write_hk(ham_k,Hkpathfile,Nspin*Norb*Nlat,1,1,Nlat,Nk,kpath)
+     call write_hk_w90_path(ham_k,Hkpathfile,Nspin*Norb*Nlat,1,1,Nlat,Nk,kpath)
      write(*,'(2A)')"  H(k) on path written on: ",Hkpathfile
   endif
   !

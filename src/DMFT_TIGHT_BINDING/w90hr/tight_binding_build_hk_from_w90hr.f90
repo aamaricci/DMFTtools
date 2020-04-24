@@ -58,7 +58,7 @@
    call TB_set_ei(R1,R2,R3)
    call TB_get_bk(bk1,bk2,bk3)
    call TB_set_bk(bk1,bk2,bk3)
-   call TB_build_kgrid(Nkvec,kpt1,kpt2,kpt3,.true.)
+   call build_kgrid_generic(Nkvec,kpt1,kpt2,kpt3,.true.)
    if(present(kpt_latt))kpt_latt=kpt1+kpt2+kpt3
    !
    !2) read WS degeneracies
@@ -122,7 +122,7 @@
    !
    write(*,'(1A)')"  H(k) produced"
    if(present(Hkfile))then
-      call TB_write_hk(ham_k,Hkfile,Nspin*Norb*Nlat,1,1,Nlat,[Nkx,Nky,Nkz])
+      call write_hk_w90_array(ham_k,Hkfile,Nspin*Norb*Nlat,1,1,Nlat,[Nkx,Nky,Nkz])
       write(*,'(2A)')"  H(k) written on: ",Hkfile
    endif
    !
@@ -223,7 +223,7 @@
    call TB_set_ei(R1,R2,R3)
    call TB_get_bk(bk1,bk2,bk3)
    call TB_set_bk(bk1,bk2,bk3)
-   call TB_build_kgrid(Nkvec,kpt1,kpt2,kpt3,.true.)
+   call build_kgrid_generic(Nkvec,kpt1,kpt2,kpt3,.true.)
    !
    !2) read WS degeneracies
    do i=1,qst

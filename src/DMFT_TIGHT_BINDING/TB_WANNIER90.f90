@@ -2,42 +2,12 @@ module TB_WANNIER90
   USE TB_COMMON
   USE TB_BASIS
   USE TB_IO
+  USE TB_EFERMI
   implicit none
 
-  interface TB_w90_setup
-     module procedure :: setup_w90
-  end interface TB_w90_setup
-
-  interface TB_w90_delete
-     module procedure :: delete_w90
-  end interface TB_w90_delete
-
-  interface TB_w90_Hloc
-     module procedure :: Hloc_w90
-  end interface TB_w90_Hloc
-
-  interface TB_w90_Zeta
-     module procedure :: Zeta_w90_matrix
-     module procedure :: Zeta_w90_vector
-  end interface TB_w90_Zeta
-
-  interface TB_w90_Self
-     module procedure :: Self0_w90
-  end interface TB_w90_Self
 
 
-
-  abstract interface
-     function w90_hk(kpoint,N)
-       real(8),dimension(:)      :: kpoint
-       integer                   :: N
-       complex(8),dimension(N,N) :: w90_hk
-     end function w90_hk
-  end interface
-
-
-
-  type,public :: w90_structure
+  type :: w90_structure
      character(len=:),allocatable               :: w90_file
      integer                                    :: Num_wann=0
      integer                                    :: Nrpts=0
@@ -206,6 +176,29 @@ contains
 
 
 
+  subroutine FermiLevel_w90(Nkvec,filling,Ef)
+    integer,dimension(:),intent(in)          :: Nkvec
+    real(8)                                  :: filling,Efermi
+    real(8),optional                         :: Ef
+    complex(8),dimension(:,:,:),allocatable  :: Hk
+    integer                                  :: Nlso,Nk
+    mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
+    if(TB_w90%Ifermi)return
+    Nlso = TB_w90%Nspin*TB_w90%Num_Wann
+    Nk   = product(Nkvec)
+    allocate(Hk(Nlso,Nlso,Nk))
+    call build_hk_w90(Hk,Nlso,Nkvec)
+    call TB_FermiLevel(Hk,filling,Efermi,TB_w90%Nspin,TB_w90%verbose)
+    if(mpi_master.AND.TB_w90%verbose)write(*,*)"w90 Fermi Level: ",Efermi
+    TB_w90%Efermi = Efermi
+    if(present(Ef))Ef=Efermi
+    TB_w90%Ifermi=.true.
+  end subroutine FermiLevel_w90
+
+
 
   subroutine Zeta_w90_vector(zeta)
     real(8),dimension(:)          :: zeta
@@ -285,6 +278,169 @@ contains
   end function w90_hk_model
 
 
+
+
+  subroutine build_hk_w90(Hk,Nlso,Nkvec,Kpts_grid,wdos)
+    integer                                                :: Nlso
+    integer,dimension(:),intent(in)                        :: Nkvec
+    complex(8),dimension(Nlso,Nlso,product(Nkvec))         :: Hk,haux
+    !
+    real(8),dimension(product(Nkvec),size(Nkvec)),optional :: Kpts_grid ![Nk][Ndim]
+    logical,optional                                       :: wdos
+    logical                                                :: wdos_
+    !
+    real(8),dimension(product(Nkvec),size(Nkvec))          :: kgrid ![Nk][Ndim]
+    integer                                                :: Nk
+    logical                                                :: IOfile
+    integer                                                :: i,j,ik
+    !
+    !MPI setup:
+#ifdef _MPI    
+    if(check_MPI())then
+       mpi_size  = get_size_MPI()
+       mpi_rank =  get_rank_MPI()
+       mpi_master= get_master_MPI()
+    else
+       mpi_size=1
+       mpi_rank=0
+       mpi_master=.true.
+    endif
+#else
+    mpi_size=1
+    mpi_rank=0
+    mpi_master=.true.
+#endif
+    !
+    wdos_=.false.;if(present(wdos))wdos_=wdos
+    !
+    Nk =product(Nkvec)
+    !
+    if(.not.TB_w90%status)stop "build_hk_w90: TB_w90 structure not allocated. Call setup_w90 first."
+    !
+    call build_kgrid(Nkvec,Kgrid,.true.) !check bk_1,2,3 vectors have been set
+    if(present(Kpts_grid))Kpts_grid=Kgrid
+    !
+    do ik=1+mpi_rank,Nk,mpi_size
+       haux(:,:,ik) = w90_hk_model(Kgrid(ik,:),Nlso)
+    enddo
+#ifdef _MPI
+    if(check_MPI())then
+       Hk = zero
+       call AllReduce_MPI(MPI_COMM_WORLD,Haux,Hk)
+    else
+       Hk = Haux
+    endif
+#else
+    Hk = Haux
+#endif
+
+    !
+    if(wdos_)then
+       allocate(dos_Greal(TB_w90%Nlat,TB_w90%Nspin,TB_w90%Nspin,TB_w90%Norb,TB_w90%Norb,dos_Lreal))
+       allocate(dos_wtk(Nk))
+       dos_wtk=1d0/Nk
+       call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(TB_w90%Nlat,TB_w90%Nspin,TB_w90%Nspin,TB_w90%Norb,TB_w90%Norb,dos_Lreal))
+       call dmft_print_gf_realaxis(dos_Greal,trim(dos_file),iprint=1)
+    endif
+  end subroutine build_hk_w90
+
+
+
+
+  subroutine build_hk_w90_path(Hk,Nlso,Kpath,Nkpath)
+    integer                                                   :: Nlso
+    real(8),dimension(:,:)                                    :: kpath ![Npts][Ndim]
+    integer                                                   :: Nkpath
+    integer                                                   :: Npts,Nktot
+    complex(8),dimension(Nlso,Nlso,(size(kpath,1)-1)*Nkpath)  :: Hk,haux
+    !
+    real(8),dimension((size(kpath,1)-1)*Nkpath,size(kpath,2)) :: kgrid
+    integer                                                   :: Nk
+    logical                                                   :: IOfile
+    integer                                                   :: i,j,ik
+    !
+    !MPI setup:
+#ifdef _MPI    
+    if(check_MPI())then
+       mpi_size  = get_size_MPI()
+       mpi_rank =  get_rank_MPI()
+       mpi_master= get_master_MPI()
+    else
+       mpi_size=1
+       mpi_rank=0
+       mpi_master=.true.
+    endif
+#else
+    mpi_size=1
+    mpi_rank=0
+    mpi_master=.true.
+#endif
+    !
+    if(.not.TB_w90%status)stop "build_hk_w90_path: TB_w90 structure not allocated. Call setup_w90 first."
+    !
+    Npts  =  size(kpath,1)          !# of k-points along the path
+    Nktot = (Npts-1)*Nkpath
+    !
+    call kgrid_from_path_grid(kpath,Nkpath,kgrid)
+    !
+    do ik=1+mpi_rank,Nktot,mpi_size
+       haux(:,:,ik) = w90_hk_model(Kgrid(ik,:),Nlso)
+    enddo
+#ifdef _MPI
+    if(check_MPI())then
+       Hk = zero
+       call AllReduce_MPI(MPI_COMM_WORLD,Haux,Hk)
+    else
+       Hk = Haux
+    endif
+#else
+    Hk = Haux
+#endif
+    !
+  end subroutine build_hk_w90_path
+
+
+
+
+
+
+
+
+  !OLD STUFF:
+  !< read the real space hopping matrix from Wannier90 output and create H(k)
+  include "w90hr/tight_binding_build_hk_from_w90hr.f90"
+#ifdef _MPI
+  include "w90hr/tight_binding_build_hk_from_w90hr_mpi.f90"
+#endif
+  !< read the real space lattice position and compute the space integrals
+  !          <t2g| [x,y,z] |t2g> using atomic orbital as a subset.
+  include "w90hr/dipole_w90hr.f90"
+#ifdef _MPI
+  include "w90hr/dipole_w90hr_mpi.f90"
+#endif
+
+#ifdef _MPI
+  function MPI_Get_size(comm) result(size)
+    integer :: comm
+    integer :: size,ierr
+    call MPI_Comm_size(comm,size,ierr)
+  end function MPI_Get_size
+
+  function MPI_Get_rank(comm) result(rank)
+    integer :: comm
+    integer :: rank,ierr
+    call MPI_Comm_rank(comm,rank,ierr)
+  end function MPI_Get_rank
+
+  function MPI_Get_master(comm) result(master)
+    integer :: comm
+    logical :: master
+    integer :: rank,ierr
+    call MPI_Comm_rank(comm,rank,ierr)
+    master=.false.
+    if(rank==0)master=.true.
+  end function MPI_Get_master
+#endif
 
 
 

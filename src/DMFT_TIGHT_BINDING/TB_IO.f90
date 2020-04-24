@@ -5,30 +5,6 @@ module TB_IO
 
 
 
-  interface TB_write_hk
-     module procedure :: write_hk_w90_func
-     module procedure :: write_hk_w90_array
-     module procedure :: write_hk_w90_path
-  end interface TB_write_hk
-
-
-  interface TB_read_hk
-     module procedure :: read_hk_w90_array
-     module procedure :: read_hk_w90_path
-  end interface TB_read_hk
-
-
-  interface TB_write_Hloc
-     module procedure :: write_Hloc_1
-     module procedure :: write_Hloc_2
-  end interface TB_write_Hloc
-
-
-  interface TB_read_Hloc
-     module procedure :: read_Hloc_1
-     module procedure :: read_Hloc_2
-  end interface TB_read_Hloc
-
 contains
 
 
@@ -52,7 +28,7 @@ contains
        end function hk_model
     end interface
     !
-    call TB_build_kgrid(Nkvec,kgrid,.true.)
+    call build_kgrid(Nkvec,kgrid,.true.)
     !
     Nktot  = product(Nkvec)
     !
@@ -87,7 +63,7 @@ contains
     complex(8),dimension(No,No,product(Nkvec))    :: Hk
     !
     !
-    call TB_build_kgrid(Nkvec,kgrid,.true.)
+    call build_kgrid(Nkvec,kgrid,.true.)
     !
     Nktot  = product(Nkvec)!==size(Hk,3)
     !
@@ -120,7 +96,7 @@ contains
     complex(8),dimension(No,No,(size(kpath,1)-1)*Nkpath)           :: Hk
     !
     !
-    call TB_build_kgrid(kpath,Nkpath,kgrid)
+    call kgrid_from_path_grid(kpath,Nkpath,kgrid)
     !
     Npts   = size(kpath,1)
     Nktot  = (Npts-1)*Nkpath

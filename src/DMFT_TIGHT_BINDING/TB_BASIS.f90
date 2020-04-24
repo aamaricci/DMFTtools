@@ -2,25 +2,6 @@ module TB_BASIS
   USE TB_COMMON
   implicit none
 
-  interface TB_build_kgrid
-     module procedure :: build_kgrid
-     module procedure :: build_kgrid_generic
-     module procedure :: kgrid_from_path_grid
-     module procedure :: kgrid_from_path_dim
-  end interface TB_build_kgrid
-
-  interface TB_build_Rgrid
-     module procedure ::   build_Rgrid
-  end interface TB_build_Rgrid
-
-
-  interface TB_print_bk
-     module procedure :: print_bk
-  end interface TB_print_bk
-
-  interface TB_print_ei
-     module procedure :: print_ei
-  end interface TB_print_ei
 
 
 contains
