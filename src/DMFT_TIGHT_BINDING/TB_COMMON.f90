@@ -55,9 +55,9 @@ module TB_COMMON
   logical,save                                  :: set_bkvec=.false.
 
   type(ctrl_list)                               :: dos_ctrl_list
-  real(8),dimension(2),save                     :: dos_range=[-10d0,10d0]
+  ! real(8),dimension(2),save                     :: dos_range=[-10d0,10d0]
   integer,save                                  :: dos_Lreal=2048
-  real(8),save                                  :: dos_eps=0.01d0
+  ! real(8),save                                  :: dos_eps=0.02d0
   character(len=128)                            :: dos_file="dos_Hk"
   real(8),dimension(:),allocatable              :: dos_wtk
   complex(8),dimension(:,:,:,:,:,:),allocatable :: dos_Greal ![Nlat,Nspin,Nspin,Norb,Norb,dos_Lreal]
@@ -74,20 +74,20 @@ contains
 
 
   !< Set properties for non=interacting DOS calculation 
-  subroutine TB_set_dos_range(range)
-    real(8),dimension(2) :: range
-    dos_range = range
-  end subroutine TB_set_dos_range
+  ! subroutine TB_set_dos_range(range)
+  !   real(8),dimension(2) :: range
+  !   dos_range = range
+  ! end subroutine TB_set_dos_range
 
   subroutine TB_set_dos_lreal(lreal)
     integer :: lreal
     dos_lreal = lreal
   end subroutine TB_set_dos_lreal
 
-  subroutine TB_set_dos_eps(eps)
-    real(8) :: eps
-    dos_eps = eps
-  end subroutine TB_set_dos_eps
+  ! subroutine TB_set_dos_eps(eps)
+  !   real(8) :: eps
+  !   dos_eps = eps
+  ! end subroutine TB_set_dos_eps
 
   subroutine TB_set_dos_file(file)
     character(len=*) :: file

@@ -137,7 +137,7 @@ contains
     !
     write(*,*)"TB_FSurface: get FS"
     !
-    call TB_build_kgrid(Nkvec,kgrid,.true.,BZ_origin)
+    call build_kgrid(Nkvec,kgrid,.true.,BZ_origin)
     if(iwrite_)call TB_write_grid(kgrid,"rfd_kgrid_1")
     !
     allocate(kpts(0,Ndim))
