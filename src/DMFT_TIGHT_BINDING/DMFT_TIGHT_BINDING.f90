@@ -112,7 +112,12 @@ module DMFT_TIGHT_BINDING
   !TB_WANNIER
   interface TB_w90_setup
      module procedure :: setup_w90
+     module procedure :: setup_w90_Hij
   end interface TB_w90_setup
+
+  interface TB_fix_w90file
+     module procedure :: fix_w90file
+  end interface TB_fix_w90file
 
   interface TB_w90_delete
      module procedure :: delete_w90
@@ -195,6 +200,7 @@ module DMFT_TIGHT_BINDING
   !
   public :: TB_w90_setup
   public :: TB_w90_delete
+  public :: TB_fix_w90file
   public :: TB_w90_Hloc
   public :: TB_w90_FermiLevel
   public :: TB_w90_Zeta
@@ -213,11 +219,11 @@ module DMFT_TIGHT_BINDING
   public :: TB_dipole
   public :: TB_hr_to_hk
 
-  public :: TB_set_dos_range
   public :: TB_set_dos_lreal
-  public :: TB_set_dos_eps
   public :: TB_set_dos_file
 
+  public :: TB_slo2lso_model
+  !
   public :: kpoint_gamma
   public :: kpoint_x1
   public :: kpoint_x2

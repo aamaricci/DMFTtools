@@ -54,11 +54,8 @@ module TB_COMMON
   logical,save                                  :: set_eivec=.false.
   logical,save                                  :: set_bkvec=.false.
 
-  type(ctrl_list)                               :: dos_ctrl_list
-  real(8),dimension(2),save                     :: dos_range=[-10d0,10d0]
   integer,save                                  :: dos_Lreal=2048
-  real(8),save                                  :: dos_eps=0.01d0
-  character(len=128)                            :: dos_file="dos_Hk"
+  character(len=128)                            :: dos_file="g0_Hk"
   real(8),dimension(:),allocatable              :: dos_wtk
   complex(8),dimension(:,:,:,:,:,:),allocatable :: dos_Greal ![Nlat,Nspin,Nspin,Norb,Norb,dos_Lreal]
 
@@ -74,20 +71,10 @@ contains
 
 
   !< Set properties for non=interacting DOS calculation 
-  subroutine TB_set_dos_range(range)
-    real(8),dimension(2) :: range
-    dos_range = range
-  end subroutine TB_set_dos_range
-
   subroutine TB_set_dos_lreal(lreal)
     integer :: lreal
     dos_lreal = lreal
   end subroutine TB_set_dos_lreal
-
-  subroutine TB_set_dos_eps(eps)
-    real(8) :: eps
-    dos_eps = eps
-  end subroutine TB_set_dos_eps
 
   subroutine TB_set_dos_file(file)
     character(len=*) :: file
@@ -204,6 +191,85 @@ contains
     enddo
   end function i2indices
 
+
+
+  subroutine TB_slo2lso_model(Hk,Nlat,Nspin,Norb)
+    complex(8),dimension(:,:,:),intent(inout)             :: Hk
+    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Htmp
+    integer                                               :: Nlat,Nspin,Norb,Nlso,Nk,ik
+    Nlso = size(Hk,1)
+    Nk   = size(Hk,3)
+    call assert_shape(Hk,[Nlat*Nspin*Norb,Nlat*Nspin*Norb,Nk],"TB_slo2lso","Hk")
+    do ik=1,Nk
+       Htmp = slo2lso(Hk(:,:,ik),Nlat,Nspin,Norb)
+       Hk(:,:,ik) = Htmp
+    enddo
+  end subroutine TB_slo2lso_model
+
+
+  function slo2lso(Hslo,Nlat,Nspin,Norb) result(Hlso)
+    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb),intent(in) :: Hslo
+    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)            :: Hlso
+    integer                                                          :: Nlat,Nspin,Norb
+    integer                                                          :: iorb,ispin,ilat
+    integer                                                          :: jorb,jspin,jlat
+    integer                                                          :: Islo,Jslo
+    integer                                                          :: Ilso,Jlso
+    Hlso=zero
+    do ilat=1,Nlat
+       do jlat=1,Nlat
+          do ispin=1,Nspin
+             do jspin=1,Nspin
+                do iorb=1,Norb
+                   do jorb=1,Norb
+                      !
+                      Islo = iorb + (ilat-1)*Norb + (ispin-1)*Norb*Nlat
+                      jslo = jorb + (jlat-1)*Norb + (jspin-1)*Norb*Nlat
+                      !
+                      Ilso = iorb + (ispin-1)*Norb + (ilat-1)*Norb*Nspin
+                      Jlso = jorb + (jspin-1)*Norb + (jlat-1)*Norb*Nspin
+                      !
+                      Hlso(Ilso,Jlso) = Hslo(Islo,Jslo)
+                      !
+                   enddo
+                enddo
+             enddo
+          enddo
+       enddo
+    enddo
+  end function slo2lso
+
+  function lso2slo(Hlso,Nlat,Nspin,Norb) result(Hslo)
+    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb),intent(in) :: Hlso
+    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)            :: Hslo
+    integer                                                          :: Nlat,Nspin,Norb
+    integer                                                          :: iorb,ispin,ilat
+    integer                                                          :: jorb,jspin,jlat
+    integer                                                          :: Islo,Jslo
+    integer                                                          :: Ilso,Jlso
+    Hslo=zero
+    do ilat=1,Nlat
+       do jlat=1,Nlat
+          do ispin=1,Nspin
+             do jspin=1,Nspin
+                do iorb=1,Norb
+                   do jorb=1,Norb
+                      !
+                      Islo = iorb + (ilat-1)*Norb + (ispin-1)*Norb*Nlat
+                      jslo = jorb + (jlat-1)*Norb + (jspin-1)*Norb*Nlat
+                      !
+                      Ilso = iorb + (ispin-1)*Norb + (ilat-1)*Norb*Nspin
+                      Jlso = jorb + (jspin-1)*Norb + (jlat-1)*Norb*Nspin
+                      !
+                      Hslo(Islo,Jslo) = Hlso(Ilso,Jlso)
+                      !
+                   enddo
+                enddo
+             enddo
+          enddo
+       enddo
+    enddo
+  end function lso2slo
 
 END MODULE TB_COMMON
 

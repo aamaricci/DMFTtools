@@ -25,8 +25,7 @@ contains
     real(8),dimension(:),allocatable            :: Eval
     complex(8),dimension(:,:,:),allocatable     :: Rk,Rk_tmp
     real(8),dimension(:,:),allocatable          :: Ek,Ek_tmp
-    complex(8),dimension(size(Hk,1),size(Hk,1)) :: Rho,diagRho
-    integer                                     :: Nk,Nso,ik,info,Nspin_
+    integer                                     :: Nk,Nso,ik,io,info,Nspin_
     logical                                     :: verbose_
     !
     verbose_ = .true. ;if(present(verbose))verbose_=verbose
@@ -65,10 +64,11 @@ contains
        Rk_tmp(:,:,ik) = Uvec
        Ek_tmp(:,ik)   = Eval
     enddo
+    !
+    !
 #ifdef _MPI
     if(check_MPI())then
-       Rk = zero
-       Ek = 0d0
+       Rk = zero ; Ek = 0d0
        call AllReduce_MPI(MPI_COMM_WORLD,Ek_tmp,Ek)
        call AllReduce_MPI(MPI_COMM_WORLD,Rk_tmp,Rk)
        deallocate(Ek_tmp,Rk_tmp)
@@ -91,18 +91,22 @@ contains
        if(mpi_master)write(*,*)"ERROR TB_get_Fermi: fzero returned info>1 ",info
        stop
     endif
-    if(mpi_master)write(*,*)"Fermi Level: ",Ef    
+    !
+    if(mpi_master)write(*,*)"Fermi Level: ",Ef
+    !
   contains
+    !
     function get_dens(ef) result(ndens)
-      real(8),intent(in)            :: ef
-      real(8)                       :: dens,dens_tmp
-      real(8)                       :: ndens
+      real(8),intent(in)      :: ef
+      real(8)                 :: dens,dens_tmp
+      real(8)                 :: ndens
+      real(8),dimension(Nso)  :: rtmp,wt
       dens_tmp = 0d0
       do ik=1+mpi_rank,Nk,mpi_size
-         diagRho = diag(fermi(Ek(:,ik)-ef,1000d0))
-         Uvec    = Rk(:,:,ik)
-         Rho     = (Uvec .x. diagRho) .x. (conjg(transpose(Uvec)))
-         dens_tmp= dens_tmp + sum(diagonal(Rho))/Nk
+         do io=1,Nso
+            Rtmp(io) = sum( abs(Rk(io,:,ik))**2*fermi(Ek(:,ik)-ef,1000d0))
+         enddo
+         dens_tmp= dens_tmp + sum(Rtmp)/Nk
       enddo
 #ifdef _MPI
       if(check_MPI())then
@@ -118,7 +122,17 @@ contains
       ndens = dens-filling
       if(mpi_master.AND.verbose_)write(*,"(A9,3G18.9)")"Ef,N0   =",ef,dens,filling
     end function get_dens
+    !
   end subroutine TB_FermiLevel
+
+
+END MODULE TB_EFERMI
+
+
+
+
+
+
 
 
   !   subroutine TB_FermiLevel(Hk,filling,Ef,nspin,verbose)
@@ -175,10 +189,6 @@ contains
   !     indx  = ceiling(filling*Nk/2d0)
   !     Ef    = Ek_all(indx)
   !   end subroutine TB_FermiLevel
-
-
-
-END MODULE TB_EFERMI
 
 
 
