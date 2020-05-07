@@ -125,7 +125,9 @@ contains
     !
     TB_w90%Hloc=slo2lso(TB_w90%Hloc,TB_w90%Nlat,TB_w90%Nspin,TB_w90%Norb)
     !
+#ifdef _MPI    
     if(Check_MPI())master = get_master_MPI()
+#endif
     if(master)then
        write(*,*)
        write(*,'(1A)')         "-------------- H_LDA --------------"
@@ -219,7 +221,9 @@ contains
     !
     TB_w90%Hloc=slo2lso(TB_w90%Hloc,TB_w90%Nlat,TB_w90%Nspin,TB_w90%Norb)
     !
+#ifdef _MPI    
     if(Check_MPI())master = get_master_MPI()
+#endif
     if(master)then
        write(*,*)
        write(*,'(1A)')         "-------------- H_LDA --------------"
