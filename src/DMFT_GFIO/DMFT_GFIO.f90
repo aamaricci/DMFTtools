@@ -959,7 +959,9 @@ contains
           !
        end select
     endif
+#ifdef _MPI    
     call Bcast_MPI(MPI_COMM_WORLD,Gmats)
+#endif
   end subroutine dmft_gf_read_matsubara_main
 
 
@@ -1151,7 +1153,9 @@ contains
           !
        end select
     endif
+#ifdef _MPI    
     call Bcast_MPI(MPI_COMM_WORLD,Gmats)
+#endif
   end subroutine dmft_gf_read_matsubara_ineq
 
 
@@ -1295,7 +1299,9 @@ contains
           enddo
        end select
     endif
+#ifdef _MPI    
     call Bcast_MPI(MPI_COMM_WORLD,Gmats)
+#endif
   end subroutine dmft_gij_read_matsubara
 
 
@@ -1393,7 +1399,9 @@ contains
           !
        end select
     endif
+#ifdef _MPI    
     call Bcast_MPI(MPI_COMM_WORLD,Greal)
+#endif
   end subroutine dmft_gf_read_realaxis_main
 
 
@@ -1585,7 +1593,9 @@ contains
           !
        end select
     endif
+#ifdef _MPI    
     call Bcast_MPI(MPI_COMM_WORLD,Greal)
+#endif
   end subroutine dmft_gf_read_realaxis_ineq
 
 
@@ -1733,7 +1743,9 @@ contains
           enddo
        end select
     endif
+#ifdef _MPI    
     call Bcast_MPI(MPI_COMM_WORLD,Greal)
+#endif
   end subroutine dmft_gij_read_realaxis
 
 
