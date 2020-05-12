@@ -20,6 +20,7 @@ module TB_WANNIER90
      real(8),allocatable,dimension(:,:)         :: Rgrid
      complex(8),allocatable,dimension(:,:,:)    :: Hij
      complex(8),allocatable,dimension(:,:)      :: Hloc
+     real(8),allocatable,dimension(:,:)         :: Kgrid
      real(8)                                    :: Efermi
      complex(8),allocatable,dimension(:,:)      :: Zeta
      real(8),allocatable,dimension(:,:)         :: Self
@@ -36,6 +37,7 @@ module TB_WANNIER90
 
 
 contains
+
 
 
 
@@ -474,8 +476,12 @@ contains
     Nk =product(Nkvec)
     !
     if(.not.TB_w90%status)stop "build_hk_w90: TB_w90 structure not allocated. Call setup_w90 first."
+    if(Nlso /= TB_w90%Nspin*TB_w90%Num_wann)stop "build_hk_w90 error: incorrect Nlso."
     !
+    if(allocated(TB_w90%Kgrid))deallocate(TB_w90%Kgrid)
+    allocate(TB_w90%Kgrid(Nk,size(Nkvec)))
     call build_kgrid(Nkvec,Kgrid,.true.,TB_w90%BZorigin) !check bk_1,2,3 vectors have been set
+    TB_w90%Kgrid=Kgrid
     if(present(Kpts_grid))Kpts_grid=Kgrid
     !
     Haux=zero
@@ -565,6 +571,128 @@ contains
 #endif
     !
   end subroutine build_hk_w90_path
+
+
+
+
+
+
+
+  subroutine write_hk_w90(file,Nkvec)
+    character(len=*)                              :: file
+    integer                                       :: Nkvec(:)
+    real(8),dimension(product(Nkvec),size(Nkvec)) :: kgrid ![Nk][Ndim]
+    real(8),dimension(3)                          :: kvec
+    integer                                       :: Nktot,unit,Dim
+    integer                                       :: i,ik,io,jo,Nlso,Nlat,Nspin,Norb  
+    complex(8),dimension(:,:),allocatable         :: hk
+    !
+    if(.not.TB_w90%status)stop "read_hk_w90: TB_w90 structure not allocated. Call setup_w90 first."
+    !
+    if(.not.allocated(TB_w90%Kgrid))then
+       call build_kgrid(Nkvec,Kgrid,.true.,TB_w90%BZorigin) !check bk_1,2,3 vectors have been set
+    else
+       call assert_shape(TB_w90%Kgrid,[product(Nkvec),size(Nkvec)],"write_hk_w90","TB_w90%Kgrid")
+       Kgrid = TB_w90%Kgrid
+    endif
+    !
+    Dim   = size(Nkvec)
+    Nktot = product(Nkvec)
+    Nlso  = TB_w90%Num_wann*TB_w90%Nspin
+    Nlat  = TB_w90%Nlat
+    Norb  = TB_w90%Norb
+    Nspin = TB_w90%Nspin
+    !
+    open(free_unit(unit),file=reg(file))
+    write(unit,'(4(I10,1x),F15.9)')Nktot,Nlat,Nspin,Norb,TB_w90%Efermi
+    write(unit,'(1A1,3(A12,1x))')"#",(reg(txtfy(Nkvec(ik))),ik=1,Dim)
+    allocate(Hk(Nlso,Nlso))
+    do ik=1,Nktot
+       Hk(:,:) = w90_hk_model(Kgrid(ik,:),Nlso)
+       kvec=0d0 ; kvec(:Dim) = kgrid(ik,:)
+       write(unit,"(3(F15.9,1x))")(kvec(i),i=1,3) 
+       do io=1,Nlso
+          write(unit,"(1000(F15.9))")(dreal(Hk(io,jo)),jo=1,Nlso)
+       enddo
+       do io=1,Nlso
+          write(unit,"(1000(F15.9))")(dimag(Hk(io,jo)),jo=1,Nlso)
+       enddo
+    enddo
+    close(unit)
+    !
+  end subroutine write_hk_w90
+
+
+
+
+
+
+  subroutine read_hk_w90(Hk,file,Nkvec)
+    complex(8),dimension(:,:,:),allocatable :: Hk
+    character(len=*)                        :: file
+    integer,intent(inout)                   :: Nkvec(:)
+    real(8),dimension(:,:),allocatable      :: kgrid
+    real(8),dimension(3)                    :: kvec
+    integer                                 :: Nktot,unit,Nk(3),Dim
+    integer                                 :: Nlso,Nlat,Nspin,Norb
+    integer                                 :: i,ik,ix,iy,iz,io,jo
+    real(8)                                 :: kx,ky,kz,Ef
+    logical                                 :: ioexist
+    character(len=1)                        :: achar
+    real(8),dimension(:,:),allocatable      :: reH,imH
+    !
+    if(.not.TB_w90%status)stop "read_hk_w90: TB_w90 structure not allocated. Call setup_w90 first."
+    !
+    inquire(file=reg(file),exist=ioexist)
+    if(.not.ioexist)then
+       write(*,*)"can not find file:"//reg(file)
+       stop
+    endif
+    !
+    open(free_unit(unit),file=reg(file))
+    read(unit,'(4(I10,1x),F15.9)')Nktot,Nlat,Nspin,Norb,Ef
+    read(unit,'(1A1,3(I12,1x))')achar,( Nk(ik),ik=1,3 )
+    !
+    TB_w90%Nlat  = Nlat
+    TB_w90%Norb  = Norb
+    TB_w90%Nspin = Nspin
+    TB_w90%Num_wann = Nlat*Norb
+    TB_w90%Efermi = Ef
+    TB_w90%Ifermi =.true.
+    !
+    Dim    = size(Nkvec)
+    Nkvec  = Nk(:Dim)
+    if(Nktot  /= product(Nk))stop "read_hk_w90: Nktot != product(Nk)"
+    Nktot  = product(Nk)
+    Nlso   = Nlat*Nspin*Norb
+    !
+    allocate(Kgrid(Nktot,Dim))
+    allocate(Hk(Nlso,Nlso,Nktot))
+    allocate(reH(Nlso,Nlso),imH(Nlso,Nlso))
+
+    !
+    ik=0
+    do iz=1,Nk(3)
+       do iy=1,Nk(2)
+          do ix=1,Nk(1)
+             ik = ik+1
+             read(unit,"(3(F15.9,1x))")kx,ky,kz
+             kvec = [kx,ky,kz]
+             kgrid(ik,:) = kvec(:Dim)
+             do io=1,Nlso
+                read(unit,"(1000(F15.9))")(reH(io,jo),jo=1,Nlso)
+             enddo
+             do io=1,Nlso
+                read(unit,"(1000(F15.9))")(imH(io,jo),jo=1,Nlso)
+             enddo
+             Hk(:,:,ik) = dcmplx(reH,imH)
+          enddo
+       enddo
+    enddo
+    close(unit)
+    !
+  end subroutine read_hk_w90
+
 
 
 

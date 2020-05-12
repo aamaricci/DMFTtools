@@ -122,7 +122,7 @@
    !
    write(*,'(1A)')"  H(k) produced"
    if(present(Hkfile))then
-      call write_hk_w90_array(ham_k,Hkfile,Nspin*Norb*Nlat,1,1,Nlat,[Nkx,Nky,Nkz])
+      call write_hk_w90_array(ham_k,Hkfile,Nlat,Nspin,Norb,[Nkx,Nky,Nkz])
       write(*,'(2A)')"  H(k) written on: ",Hkfile
    endif
    !

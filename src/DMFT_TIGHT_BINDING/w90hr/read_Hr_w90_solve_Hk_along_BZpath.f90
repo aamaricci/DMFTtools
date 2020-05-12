@@ -135,10 +135,10 @@ subroutine read_Hr_w90_solve_Hk_along_BZpath(       w90_file           &      !o
      enddo
   endif
   !
-  if(present(Hkpathfile))then
-     call write_hk_w90_path(ham_k,Hkpathfile,Nspin*Norb*Nlat,1,1,Nlat,Nk,kpath)
-     write(*,'(2A)')"  H(k) on path written on: ",Hkpathfile
-  endif
+  ! if(present(Hkpathfile))then
+  !    call write_hk_w90_path(ham_k,Hkpathfile,Nspin*Norb*Nlat,1,1,Nlat,Nk,kpath)
+  !    write(*,'(2A)')"  H(k) on path written on: ",Hkpathfile
+  ! endif
   !
   if(present(Kpointpathfile))then
      open(unit=107,file=Kpointpathfile,status="unknown",action="write",position="rewind")

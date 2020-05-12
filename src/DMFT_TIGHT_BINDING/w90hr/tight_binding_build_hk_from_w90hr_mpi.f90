@@ -1,166 +1,166 @@
-  subroutine hk_from_w90_hr_mpi(MpiComm,R1,R2,R3,ham_k,ham_loc,w90_file,Nspin,Norb,Nlat,Nkvec,kpt_latt,Hkfile,Kpointfile)
-   implicit none
-   integer               ,intent(in)            ::   MpiComm
-   real(8)               ,intent(in)            ::   R1(:),R2(:),R3(:)
-   complex(8),allocatable,intent(inout)         ::   ham_k(:,:,:)
-   complex(8),allocatable,intent(inout)         ::   ham_loc(:,:)
-   character(len=*)      ,intent(in)            ::   w90_file
-   integer               ,intent(in)            ::   Nspin,Norb,Nlat
-   integer(4),allocatable,intent(in)            ::   Nkvec(:)             ![Nkx,Nky,Nkz]
-   real(8)   ,allocatable,intent(out),optional  ::   kpt_latt(:,:)        ![ik,3]
-   character(len=*)      ,intent(in) ,optional  ::   Hkfile
-   character(len=*)      ,intent(in) ,optional  ::   Kpointfile
-   !
-   integer                                      ::   mpi_ierr
-   integer                                      ::   mpi_rank
-   integer                                      ::   mpi_size
-   logical                                      ::   mpi_master
-   !
-   logical                                      ::   IOfile
-   integer                                      ::   unitIO
-   integer                                      ::   i,j,ndx1,ndx2
-   integer                                      ::   Nkx,Nky,Nkz
-   integer                                      ::   iktot,num_kpts
-   integer                                      ::   inrpts
-   real(8)                                      ::   bk1(size(R1)),bk2(size(R2)),bk3(size(R3))
-   real(8),dimension(product(Nkvec),size(Nkvec))::   kpt1,kpt2,kpt3
-   real(8)                                      ::   a,b,rdotk
-   integer                                      ::   rst,qst
-   !---- W90 specific ----
-   integer                                      ::   num_wann       !=Norb*Nlat
-   integer                                      ::   nrpts
-   integer(4),allocatable                       ::   ndegen(:)      !(nrpts)
-   integer   ,allocatable                       ::   irvec(:,:)     !(3,nrpts)
-   complex(8),allocatable                       ::   ham_r(:,:,:)
-   complex(8),allocatable                       ::   ham_aux(:,:,:)
-   !
-   !
-   !MPI setup:
-   mpi_size  = MPI_Get_size(MpiComm)
-   mpi_rank =  MPI_Get_rank(MpiComm)
-   mpi_master= MPI_Get_master(MpiComm)
-   !
-   !
-   Nkx=Nkvec(1)
-   Nky=Nkvec(2)
-   Nkz=Nkvec(3)
-   num_kpts=Nkx*Nky*Nkz
-   !
-   unitIO=free_unit()
-   open(unit=unitIO,file=w90_file,status="old",action="read")
-   read(unitIO,*)
-   read(unitIO,*) num_wann
-   read(unitIO,*) nrpts
-   rst=mod(nrpts,15)
-   qst=int(nrpts/15)
-   if(mpi_master)then
-      write(*,*)
-      write(*,'(1A)')         "-------------- H_LDA --------------"
-      write(*,'(A,I6)')      "  number of Wannier functions:   ",num_wann
-      write(*,'(A,I6)')      "  number of Wigner-Seitz vectors:",nrpts
-      write(*,'(A,I6,A,I6)') "  rows:",qst,"  last row elements:",rst
-   endif
-   if(num_wann.ne.Nlat*Norb)stop "hk_from_w90_hr. Something is wrong"
-   !
-   if(allocated(kpt_latt))deallocate(kpt_latt);allocate(kpt_latt(num_kpts,3))                           ;kpt_latt=0d0
-   if(allocated(ndegen))  deallocate(ndegen)  ;allocate(ndegen(nrpts))                                  ;ndegen=0
-   if(allocated(irvec))   deallocate(irvec)   ;allocate(irvec(nrpts,3))                                 ;irvec=0
-   if(allocated(ham_r))   deallocate(ham_r)   ;allocate(ham_r(num_wann*Nspin,num_wann*Nspin,nrpts))     ;ham_r=zero
-   if(allocated(ham_aux)) deallocate(ham_aux) ;allocate(ham_aux(num_wann*Nspin,num_wann*Nspin,num_kpts));ham_aux=zero
-   !
-   !1) k-points mesh
-   call TB_set_ei(R1,R2,R3)
-   call TB_get_bk(bk1,bk2,bk3)
-   call TB_set_bk(bk1,bk2,bk3)
-   call build_kgrid_generic(Nkvec,kpt1,kpt2,kpt3,.true.)
-   if(present(kpt_latt))kpt_latt=kpt1+kpt2+kpt3
-   !
-   !2) read WS degeneracies
-   do i=1,qst
-      read(unitIO,*)(ndegen(j+(i-1)*15),j=1,15)
-   enddo
-   if(rst.ne.0)read(unitIO,*)(ndegen(j+qst*15),j=1,rst)
-   if(mpi_master)write(*,'(1A)')"  degen readed"
-   !
-   !3) read real-space Hamiltonian (no spinup-spindw hybridizations assumed)
-   ham_loc=zero
-   do inrpts=1,nrpts
-      do i=1,num_wann
-         do j=1,num_wann
-            read(unitIO,*)irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3),ndx1,ndx2,a,b
-            !spin up
-            ham_r(ndx1,ndx2,inrpts)=dcmplx(a,b)
-            !spin dw
-            if(Nspin==2)ham_r(ndx1+num_wann,ndx2+num_wann,inrpts)=dcmplx(a,b)
-            !Hloc
-            if(irvec(inrpts,1)==0.and.irvec(inrpts,2)==0.and.irvec(inrpts,3)==0)then
-               ham_loc(ndx1,ndx2)=dcmplx(a,b)
-               if(Nspin==2)ham_loc(ndx1+num_wann,ndx2+num_wann)=dcmplx(a,b)
-            endif
-         enddo
-      enddo
-   enddo
-   close(unitIO)
-   if(mpi_master)write(*,'(2A)')"  H(R) readed from: ",w90_file
-   !
-   !4) Fourier Transform
-   do iktot = 1+mpi_rank, num_kpts, mpi_size
-      do inrpts=1,nrpts
-         rdotk=0.d0
-         rdotk= ( irvec(inrpts,1)*dot_product(kpt1(iktot,:),R1) +  &
-                  irvec(inrpts,2)*dot_product(kpt2(iktot,:),R2) +  &
-                  irvec(inrpts,3)*dot_product(kpt3(iktot,:),R3) )
-         do i=1,num_wann*nspin
-            do j=1,num_wann*nspin
-               !
-               ham_aux(i,j,iktot)=ham_aux(i,j,iktot)+ham_r(i,j,inrpts)*dcmplx(cos(rdotk),-sin(rdotk))/ndegen(inrpts)
-               !
-            enddo
-         enddo
-      enddo
-   enddo
-   call Mpi_AllReduce(ham_aux,ham_k, size(ham_k), MPI_Double_Complex, MPI_Sum, MpiComm, mpi_ierr)
-   call MPI_Barrier(MpiComm,mpi_ierr)
-   !
-   !5) Reordering & hermicity check
-   if(Nspin==2)then
-      ham_aux=zero;ham_aux=ham_k;ham_k=zero
-      do iktot=1,num_kpts
-         ham_k(:,:,iktot)=slo2lso(ham_aux(:,:,iktot),Nlat,Nspin,Norb)
-      enddo
-      ham_loc=slo2lso(ham_loc,Nlat,Nspin,Norb)
-   endif
-   do iktot=1,num_kpts
-      call herm_check(ham_k(:,:,iktot))
-   enddo
-   call herm_check(ham_loc)
-   !
-   if(mpi_master)then
-      write(*,'(1A)')"  H(k) produced"
-      if(present(Hkfile))then
-         call write_hk_w90_array(ham_k,Hkfile,Nspin*Norb*Nlat,1,1,Nlat,[Nkx,Nky,Nkz])
-         write(*,'(2A)')"  H(k) written on: ",Hkfile
-      endif
-      !
-      if(present(Kpointfile))then
-         unitIO=free_unit()
-         open(unit=unitIO,file=Kpointfile,status="unknown",action="write",position="rewind")
-         do iktot=1,num_kpts
-            write(unitIO,'(3F15.7)') (kpt_latt(iktot,i),i=1,3)
-         enddo
-         close(unitIO)
-         write(*,'(2A)')"  Kpoints used written on: ",Kpointfile
-      endif
-   endif
-   !
-   deallocate(ndegen)
-   deallocate(irvec)
-   deallocate(ham_r)
-   deallocate(ham_aux)
-   if(.not.present(kpt_latt))deallocate(kpt_latt)
-   call MPI_Barrier(MpiComm,mpi_ierr)
-   !
-  end subroutine hk_from_w90_hr_mpi
+subroutine hk_from_w90_hr_mpi(MpiComm,R1,R2,R3,ham_k,ham_loc,w90_file,Nspin,Norb,Nlat,Nkvec,kpt_latt,Hkfile,Kpointfile)
+  implicit none
+  integer               ,intent(in)            ::   MpiComm
+  real(8)               ,intent(in)            ::   R1(:),R2(:),R3(:)
+  complex(8),allocatable,intent(inout)         ::   ham_k(:,:,:)
+  complex(8),allocatable,intent(inout)         ::   ham_loc(:,:)
+  character(len=*)      ,intent(in)            ::   w90_file
+  integer               ,intent(in)            ::   Nspin,Norb,Nlat
+  integer(4),allocatable,intent(in)            ::   Nkvec(:)             ![Nkx,Nky,Nkz]
+  real(8)   ,allocatable,intent(out),optional  ::   kpt_latt(:,:)        ![ik,3]
+  character(len=*)      ,intent(in) ,optional  ::   Hkfile
+  character(len=*)      ,intent(in) ,optional  ::   Kpointfile
+  !
+  integer                                      ::   mpi_ierr
+  integer                                      ::   mpi_rank
+  integer                                      ::   mpi_size
+  logical                                      ::   mpi_master
+  !
+  logical                                      ::   IOfile
+  integer                                      ::   unitIO
+  integer                                      ::   i,j,ndx1,ndx2
+  integer                                      ::   Nkx,Nky,Nkz
+  integer                                      ::   iktot,num_kpts
+  integer                                      ::   inrpts
+  real(8)                                      ::   bk1(size(R1)),bk2(size(R2)),bk3(size(R3))
+  real(8),dimension(product(Nkvec),size(Nkvec))::   kpt1,kpt2,kpt3
+  real(8)                                      ::   a,b,rdotk
+  integer                                      ::   rst,qst
+  !---- W90 specific ----
+  integer                                      ::   num_wann       !=Norb*Nlat
+  integer                                      ::   nrpts
+  integer(4),allocatable                       ::   ndegen(:)      !(nrpts)
+  integer   ,allocatable                       ::   irvec(:,:)     !(3,nrpts)
+  complex(8),allocatable                       ::   ham_r(:,:,:)
+  complex(8),allocatable                       ::   ham_aux(:,:,:)
+  !
+  !
+  !MPI setup:
+  mpi_size  = MPI_Get_size(MpiComm)
+  mpi_rank =  MPI_Get_rank(MpiComm)
+  mpi_master= MPI_Get_master(MpiComm)
+  !
+  !
+  Nkx=Nkvec(1)
+  Nky=Nkvec(2)
+  Nkz=Nkvec(3)
+  num_kpts=Nkx*Nky*Nkz
+  !
+  unitIO=free_unit()
+  open(unit=unitIO,file=w90_file,status="old",action="read")
+  read(unitIO,*)
+  read(unitIO,*) num_wann
+  read(unitIO,*) nrpts
+  rst=mod(nrpts,15)
+  qst=int(nrpts/15)
+  if(mpi_master)then
+     write(*,*)
+     write(*,'(1A)')         "-------------- H_LDA --------------"
+     write(*,'(A,I6)')      "  number of Wannier functions:   ",num_wann
+     write(*,'(A,I6)')      "  number of Wigner-Seitz vectors:",nrpts
+     write(*,'(A,I6,A,I6)') "  rows:",qst,"  last row elements:",rst
+  endif
+  if(num_wann.ne.Nlat*Norb)stop "hk_from_w90_hr. Something is wrong"
+  !
+  if(allocated(kpt_latt))deallocate(kpt_latt);allocate(kpt_latt(num_kpts,3))                           ;kpt_latt=0d0
+  if(allocated(ndegen))  deallocate(ndegen)  ;allocate(ndegen(nrpts))                                  ;ndegen=0
+  if(allocated(irvec))   deallocate(irvec)   ;allocate(irvec(nrpts,3))                                 ;irvec=0
+  if(allocated(ham_r))   deallocate(ham_r)   ;allocate(ham_r(num_wann*Nspin,num_wann*Nspin,nrpts))     ;ham_r=zero
+  if(allocated(ham_aux)) deallocate(ham_aux) ;allocate(ham_aux(num_wann*Nspin,num_wann*Nspin,num_kpts));ham_aux=zero
+  !
+  !1) k-points mesh
+  call TB_set_ei(R1,R2,R3)
+  call TB_get_bk(bk1,bk2,bk3)
+  call TB_set_bk(bk1,bk2,bk3)
+  call build_kgrid_generic(Nkvec,kpt1,kpt2,kpt3,.true.)
+  if(present(kpt_latt))kpt_latt=kpt1+kpt2+kpt3
+  !
+  !2) read WS degeneracies
+  do i=1,qst
+     read(unitIO,*)(ndegen(j+(i-1)*15),j=1,15)
+  enddo
+  if(rst.ne.0)read(unitIO,*)(ndegen(j+qst*15),j=1,rst)
+  if(mpi_master)write(*,'(1A)')"  degen readed"
+  !
+  !3) read real-space Hamiltonian (no spinup-spindw hybridizations assumed)
+  ham_loc=zero
+  do inrpts=1,nrpts
+     do i=1,num_wann
+        do j=1,num_wann
+           read(unitIO,*)irvec(inrpts,1),irvec(inrpts,2),irvec(inrpts,3),ndx1,ndx2,a,b
+           !spin up
+           ham_r(ndx1,ndx2,inrpts)=dcmplx(a,b)
+           !spin dw
+           if(Nspin==2)ham_r(ndx1+num_wann,ndx2+num_wann,inrpts)=dcmplx(a,b)
+           !Hloc
+           if(irvec(inrpts,1)==0.and.irvec(inrpts,2)==0.and.irvec(inrpts,3)==0)then
+              ham_loc(ndx1,ndx2)=dcmplx(a,b)
+              if(Nspin==2)ham_loc(ndx1+num_wann,ndx2+num_wann)=dcmplx(a,b)
+           endif
+        enddo
+     enddo
+  enddo
+  close(unitIO)
+  if(mpi_master)write(*,'(2A)')"  H(R) readed from: ",w90_file
+  !
+  !4) Fourier Transform
+  do iktot = 1+mpi_rank, num_kpts, mpi_size
+     do inrpts=1,nrpts
+        rdotk=0.d0
+        rdotk= ( irvec(inrpts,1)*dot_product(kpt1(iktot,:),R1) +  &
+             irvec(inrpts,2)*dot_product(kpt2(iktot,:),R2) +  &
+             irvec(inrpts,3)*dot_product(kpt3(iktot,:),R3) )
+        do i=1,num_wann*nspin
+           do j=1,num_wann*nspin
+              !
+              ham_aux(i,j,iktot)=ham_aux(i,j,iktot)+ham_r(i,j,inrpts)*dcmplx(cos(rdotk),-sin(rdotk))/ndegen(inrpts)
+              !
+           enddo
+        enddo
+     enddo
+  enddo
+  call Mpi_AllReduce(ham_aux,ham_k, size(ham_k), MPI_Double_Complex, MPI_Sum, MpiComm, mpi_ierr)
+  call MPI_Barrier(MpiComm,mpi_ierr)
+  !
+  !5) Reordering & hermicity check
+  if(Nspin==2)then
+     ham_aux=zero;ham_aux=ham_k;ham_k=zero
+     do iktot=1,num_kpts
+        ham_k(:,:,iktot)=slo2lso(ham_aux(:,:,iktot),Nlat,Nspin,Norb)
+     enddo
+     ham_loc=slo2lso(ham_loc,Nlat,Nspin,Norb)
+  endif
+  do iktot=1,num_kpts
+     call herm_check(ham_k(:,:,iktot))
+  enddo
+  call herm_check(ham_loc)
+  !
+  if(mpi_master)then
+     write(*,'(1A)')"  H(k) produced"
+     if(present(Hkfile))then
+        call write_hk_w90_array(ham_k,Hkfile,Nlat,Nspin,Norb,[Nkx,Nky,Nkz])
+        write(*,'(2A)')"  H(k) written on: ",Hkfile
+     endif
+     !
+     if(present(Kpointfile))then
+        unitIO=free_unit()
+        open(unit=unitIO,file=Kpointfile,status="unknown",action="write",position="rewind")
+        do iktot=1,num_kpts
+           write(unitIO,'(3F15.7)') (kpt_latt(iktot,i),i=1,3)
+        enddo
+        close(unitIO)
+        write(*,'(2A)')"  Kpoints used written on: ",Kpointfile
+     endif
+  endif
+  !
+  deallocate(ndegen)
+  deallocate(irvec)
+  deallocate(ham_r)
+  deallocate(ham_aux)
+  if(.not.present(kpt_latt))deallocate(kpt_latt)
+  call MPI_Barrier(MpiComm,mpi_ierr)
+  !
+end subroutine hk_from_w90_hr_mpi
 
 
 

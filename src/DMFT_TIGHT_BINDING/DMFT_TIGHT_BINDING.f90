@@ -47,12 +47,12 @@ module DMFT_TIGHT_BINDING
   interface TB_write_hk
      module procedure :: write_hk_w90_func
      module procedure :: write_hk_w90_array
-     module procedure :: write_hk_w90_path
+     module procedure :: write_hk_w90
   end interface TB_write_hk
 
   interface TB_read_hk
      module procedure :: read_hk_w90_array
-     module procedure :: read_hk_w90_path
+     module procedure :: read_hk_w90
   end interface TB_read_hk
 
   interface TB_write_Hloc
