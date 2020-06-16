@@ -123,20 +123,20 @@ module DMFT_TIGHT_BINDING
 
   interface TB_hr_to_hk
      module procedure :: hk_from_w90_hr
-     module procedure :: hloct_from_w90_hr
+!     module procedure :: hloct_from_w90_hr
 #ifdef _MPI
      module procedure :: hk_from_w90_hr_mpi
-     module procedure :: hkt_from_w90_hr_mpi
+!     module procedure :: hkt_from_w90_hr_mpi
 #endif
   end interface TB_hr_to_hk
 
 
-  interface TB_dipole
-     module procedure :: dipole_t2g_LDA
-#ifdef _MPI
-     module procedure :: dipole_t2g_LDA_mpi
-#endif
-  end interface TB_dipole
+!  interface TB_dipole
+!     module procedure :: dipole_t2g_LDA
+!#ifdef _MPI
+!     module procedure :: dipole_t2g_LDA_mpi
+!#endif
+!  end interface TB_dipole
 
 
   abstract interface
@@ -266,7 +266,7 @@ module DMFT_TIGHT_BINDING
   public :: TB_build_CoordGrid
   public :: TB_find_IndxCoord
   !
-  public :: TB_dipole
+! public :: TB_dipole
   public :: TB_hr_to_hk
 
   public :: TB_set_dos_range
