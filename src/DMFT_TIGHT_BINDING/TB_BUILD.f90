@@ -53,6 +53,7 @@ contains
     !
     Nktot  = size(kgrid,1)
     !
+    Haux   = zero
     do ik=1+mpi_rank,Nktot,mpi_size
        haux(:,:,ik) = hk_model(kgrid(ik,:),Norb)
     enddo
