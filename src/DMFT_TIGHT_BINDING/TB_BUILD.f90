@@ -15,7 +15,7 @@ contains
 
   !< build the \hat{H}({\mathbf k}) or \hat{H}({\mathbf k};i,j) Hamiltonian matrix
   ! from the function user defined hk_model procedure.
-  subroutine build_hk_model_kgrid(Hk,hk_model,Norb,kgrid,wdos)
+  subroutine build_hk_model_kgrid(Hk,hk_model,Norb,kgrid)
     integer                                       :: Norb
     integer                                       :: Nktot
     real(8),dimension(:,:)                        :: kgrid ![Nktot][Ndim]
@@ -29,8 +29,6 @@ contains
          complex(8),dimension(N,N)                :: hk_model
        end function hk_model
     end interface
-    logical,optional                              :: wdos
-    logical                                       :: wdos_
     !
     !MPI setup:
 #ifdef _MPI    
@@ -48,8 +46,6 @@ contains
     mpi_rank=0
     mpi_master=.true.
 #endif
-    !
-    wdos_=.false.;if(present(wdos))wdos_=wdos
     !
     Nktot  = size(kgrid,1)
     !
@@ -68,26 +64,11 @@ contains
     Hk = Haux
 #endif
     !
-    if(wdos_)then
-       allocate(dos_Greal(1,1,1,Norb,Norb,dos_Lreal))
-       allocate(dos_wtk(Nktot))
-       dos_wtk=1d0/Nktot
-#ifdef _MPI
-       if(check_MPI())then
-          call dmft_gloc_realaxis(MPI_COMM_WORLD,Hk,dos_wtk,dos_Greal,zeros(1,1,1,Norb,Norb,dos_Lreal))
-       else
-          call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(1,1,1,Norb,Norb,dos_Lreal))
-       endif
-#else
-       call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(1,1,1,Norb,Norb,dos_Lreal))
-#endif
-       if(mpi_master)call dmft_print_gf_realaxis(dos_Greal(1,:,:,:,:,:),trim(dos_file),iprint=1)
-    endif
   end subroutine build_hk_model_kgrid
 
 
 
-  subroutine build_hk_model_Nkvec(Hk,hk_model,Norb,Nkvec,wdos)
+  subroutine build_hk_model_Nkvec(Hk,hk_model,Norb,Nkvec)
     integer,dimension(:),intent(in)                :: Nkvec
     integer                                        :: Norb
     real(8),dimension(product(Nkvec),size(Nkvec))  :: kgrid ![Nk][Ndim]
@@ -101,8 +82,6 @@ contains
          complex(8),dimension(N,N) :: hk_model
        end function hk_model
     end interface
-    logical,optional                           :: wdos
-    logical                                    :: wdos_
     !
     !MPI setup:
 #ifdef _MPI    
@@ -120,8 +99,6 @@ contains
     mpi_rank=0
     mpi_master=.true.
 #endif
-    !
-    wdos_=.false.;if(present(wdos))wdos_=wdos
     !
     call build_kgrid(Nkvec,kgrid,.true.)
     !
@@ -142,21 +119,6 @@ contains
 #endif
 
     !
-    if(wdos_)then
-       allocate(dos_Greal(1,1,1,Norb,Norb,dos_Lreal))
-       allocate(dos_wtk(Nktot))
-       dos_wtk=1d0/Nktot
-#ifdef _MPI
-       if(check_MPI())then
-          call dmft_gloc_realaxis(MPI_COMM_WORLD,Hk,dos_wtk,dos_Greal,zeros(1,1,1,Norb,Norb,dos_Lreal))
-       else
-          call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(1,1,1,Norb,Norb,dos_Lreal))
-       endif
-#else
-       call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(1,1,1,Norb,Norb,dos_Lreal))
-#endif
-       if(mpi_master)call dmft_print_gf_realaxis(dos_Greal(1,:,:,:,:,:),trim(dos_file),iprint=1)
-    endif
   end subroutine build_hk_model_Nkvec
 
 
@@ -167,7 +129,7 @@ contains
 
 
 
-  subroutine build_hkr_model_kgrid(hk,hkr_model,Nlat,Norb,kgrid,pbc,wdos)
+  subroutine build_hkr_model_kgrid(hk,hkr_model,Nlat,Norb,kgrid,pbc)
     integer                                                 :: Nlat,Norb
     logical                                                 :: pbc
     real(8),dimension(:,:)                                  :: kgrid ![Nktot][Ndim]
@@ -182,8 +144,6 @@ contains
          complex(8),dimension(Nlat*Norb,Nlat*Norb)          :: hkr_model
        end function hkr_model
     end interface
-    logical,optional                           :: wdos
-    logical                                    :: wdos_
     !
     !MPI setup:
 #ifdef _MPI    
@@ -201,9 +161,7 @@ contains
     mpi_rank=0
     mpi_master=.true.
 #endif
-    !
-    wdos_=.false.;if(present(wdos))wdos_=wdos
-    !
+    !    !
     Nktot  = size(kgrid,1)
     Haux   = zero
     do ik=1+mpi_rank,Nktot,mpi_size
@@ -220,27 +178,12 @@ contains
     Hk = Haux
 #endif
     !
-    if(wdos_)then
-       allocate(dos_Greal(Nlat,1,1,Norb,Norb,dos_Lreal))
-       allocate(dos_wtk(Nktot))
-       dos_wtk=1d0/Nktot
-#ifdef _MPI
-       if(check_MPI())then
-          call dmft_gloc_realaxis(MPI_COMM_WORLD,Hk,dos_wtk,dos_Greal,zeros(Nlat,1,1,Norb,Norb,dos_Lreal))
-       else
-          call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(Nlat,1,1,Norb,Norb,dos_Lreal))
-       endif
-#else
-       call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(Nlat,1,1,Norb,Norb,dos_Lreal))
-#endif
-       if(mpi_master)call dmft_print_gf_realaxis(dos_Greal(:,:,:,:,:,:),trim(dos_file),iprint=1)
-    endif
   end subroutine build_hkr_model_kgrid
 
 
 
 
-  subroutine build_hkr_model_nkvec(hk,hkr_model,Nlat,Norb,Nkvec,pbc,wdos)
+  subroutine build_hkr_model_nkvec(hk,hkr_model,Nlat,Norb,Nkvec,pbc)
     integer                                                  :: Nlat,Norb
     logical                                                  :: pbc
     integer,dimension(:),intent(in)                          :: Nkvec
@@ -256,8 +199,6 @@ contains
          complex(8),dimension(Nlat*Norb,Nlat*Norb)           :: hkr_model
        end function hkr_model
     end interface
-    logical,optional                                         :: wdos
-    logical                                                  :: wdos_
     !
     !MPI setup:
 #ifdef _MPI    
@@ -275,8 +216,6 @@ contains
     mpi_rank=0
     mpi_master=.true.
 #endif
-    !
-    wdos_=.false.;if(present(wdos))wdos_=wdos
     !
     call build_kgrid(Nkvec,kgrid,.true.)
     !
@@ -297,21 +236,6 @@ contains
 #endif
 
     !
-    if(wdos_)then
-       allocate(dos_Greal(Nlat,1,1,Norb,Norb,dos_Lreal))
-       allocate(dos_wtk(Nktot))
-       dos_wtk=1d0/Nktot
-#ifdef _MPI
-       if(check_MPI())then
-          call dmft_gloc_realaxis(MPI_COMM_WORLD,Hk,dos_wtk,dos_Greal,zeros(Nlat,1,1,Norb,Norb,dos_Lreal))
-       else
-          call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(Nlat,1,1,Norb,Norb,dos_Lreal))
-       endif
-#else
-       call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(Nlat,1,1,Norb,Norb,dos_Lreal))
-#endif
-       if(mpi_master)call dmft_print_gf_realaxis(dos_Greal(:,:,:,:,:,:),trim(dos_file),iprint=1)
-    endif
   end subroutine build_hkr_model_nkvec
 
 
@@ -453,7 +377,7 @@ contains
 
 
 
-  subroutine build_Hij_Nrvec(Hij,ts_model,Nso,Nrvec,Links,pbc,wdos)
+  subroutine build_Hij_Nrvec(Hij,ts_model,Nso,Nrvec,Links,pbc)
     integer                                                     :: Nso
     integer,dimension(:),intent(in)                             :: Nrvec
     integer,dimension(:,:),intent(in)                           :: Links ![Nlink][dim]
@@ -474,9 +398,6 @@ contains
          complex(8),dimension(Nso,Nso) :: ts_model
        end function ts_model
     end interface
-    logical,optional                           :: wdos
-    logical                                    :: wdos_
-    wdos_=.false.;if(present(wdos))wdos_=wdos
     !
     pbc_ = .true. ; if(present(pbc))pbc_=pbc
     !

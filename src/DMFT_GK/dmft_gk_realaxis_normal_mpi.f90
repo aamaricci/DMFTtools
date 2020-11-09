@@ -1,16 +1,26 @@
-subroutine dmft_get_gk_realaxis_normal_main_mpi(MpiComm,Hk,Wtk,Gkreal,Sreal)
-  integer                                       :: MpiComm
+subroutine dmft_get_gk_realaxis_normal_main(Hk,Gkreal,Sreal)
   complex(8),dimension(:,:),intent(in)          :: Hk        ![Nspin*Norb][Nspin*Norb][Lk]
-  real(8),intent(in)                            :: Wtk       ![Nk]
   complex(8),dimension(:,:,:,:,:),intent(in)    :: Sreal     ![Nspin][Nspin][Norb][Norb][Lreal]
   complex(8),dimension(:,:,:,:,:),intent(inout) :: Gkreal     !as Sreal
   !allocatable arrays
   complex(8),dimension(:,:,:,:,:),allocatable   :: Gtmp      !as Sreal
   complex(8),dimension(:,:,:),allocatable       :: zeta_real ![Nspin*Norb][Nspin*Norb][Lreal] 
   !MPI setup:
-  mpi_size  = MPI_Get_size(MpiComm)
-  mpi_rank =  MPI_Get_rank(MpiComm)
-  mpi_master= MPI_Get_master(MpiComm)
+#ifdef _MPI    
+  if(check_MPI())then
+     mpi_size  = get_size_MPI()
+     mpi_rank =  get_rank_MPI()
+     mpi_master= get_master_MPI()
+  else
+     mpi_size=1
+     mpi_rank=0
+     mpi_master=.true.
+  endif
+#else
+  mpi_size=1
+  mpi_rank=0
+  mpi_master=.true.
+#endif
   !Retrieve parameters:
   call get_ctrl_var(beta,"BETA")
   call get_ctrl_var(xmu,"XMU")
@@ -38,12 +48,11 @@ subroutine dmft_get_gk_realaxis_normal_main_mpi(MpiComm,Hk,Wtk,Gkreal,Sreal)
   !
   !invert (Z-Hk) for each k-point
   Gkreal=zero
-  call invert_gk_normal_mpi(MpiComm,zeta_real,Hk,.false.,Gkreal)      
-end subroutine dmft_get_gk_realaxis_normal_main_mpi
+  call invert_gk_normal(zeta_real,Hk,.false.,Gkreal)      
+end subroutine dmft_get_gk_realaxis_normal_main
 
 
-subroutine dmft_get_gk_realaxis_normal_dos_mpi(MpiComm,Ebands,Dbands,Hloc,Gkreal,Sreal)
-  integer                                       :: MpiComm
+subroutine dmft_get_gk_realaxis_normal_dos(Ebands,Dbands,Hloc,Gkreal,Sreal)
   real(8),dimension(:),intent(in)               :: Ebands    ![Nspin*Norb][Lk]
   real(8),dimension(size(Ebands)),intent(in)    :: Dbands    ![Nspin*Norb][Lk]
   real(8),dimension(size(Ebands)),intent(in)    :: Hloc      ![Nspin*Norb]
@@ -58,9 +67,21 @@ subroutine dmft_get_gk_realaxis_normal_dos_mpi(MpiComm,Ebands,Dbands,Hloc,Gkreal
   real(8)                                       :: wini,wfin
   !
   !MPI setup:
-  mpi_size  = MPI_Get_size(MpiComm)
-  mpi_rank =  MPI_Get_rank(MpiComm)
-  mpi_master= MPI_Get_master(MpiComm)
+#ifdef _MPI    
+  if(check_MPI())then
+     mpi_size  = get_size_MPI()
+     mpi_rank =  get_rank_MPI()
+     mpi_master= get_master_MPI()
+  else
+     mpi_size=1
+     mpi_rank=0
+     mpi_master=.true.
+  endif
+#else
+  mpi_size=1
+  mpi_rank=0
+  mpi_master=.true.
+#endif
   !Retrieve parameters:
   call get_ctrl_var(xmu,"XMU")
   call get_ctrl_var(wini,"WINI")
@@ -97,15 +118,22 @@ subroutine dmft_get_gk_realaxis_normal_dos_mpi(MpiComm,Ebands,Dbands,Hloc,Gkreal
         enddo
      enddo
   end do
-  call Mpi_AllReduce(Gtmp,Gkreal, size(Gkreal), MPI_Double_Complex, MPI_Sum, MpiComm, MPI_ierr)
-end subroutine dmft_get_gk_realaxis_normal_dos_mpi
+#ifdef _MPI    
+  if(check_MPI())then
+     Gkreal=zero
+     call AllReduce_MPI(MPI_COMM_WORLD,Gtmp,Gkreal)
+  else
+     Gkreal=Gtmp
+  endif
+#else
+  Gkreal=Gtmp
+#endif
+end subroutine dmft_get_gk_realaxis_normal_dos
 
 
 
-subroutine dmft_get_gk_realaxis_normal_ineq_mpi(MpiComm,Hk,Wtk,Gkreal,Sreal,tridiag)
-  integer                                         :: MpiComm
+subroutine dmft_get_gk_realaxis_normal_ineq(Hk,Gkreal,Sreal,tridiag)
   complex(8),dimension(:,:),intent(in)            :: Hk        ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Nk]
-  real(8),intent(in)                              :: Wtk       ![Nk]
   complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sreal     ![Nlat][Nspin][Nspin][Norb][Norb][Lreal]
   complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gkreal     !as Sreal
   logical,optional                                :: tridiag
@@ -118,9 +146,21 @@ subroutine dmft_get_gk_realaxis_normal_ineq_mpi(MpiComm,Hk,Wtk,Gkreal,Sreal,trid
   real(8)                                         :: xmu,eps
   real(8)                                         :: wini,wfin  
   !MPI setup:
-  mpi_size  = MPI_Get_size(MpiComm)
-  mpi_rank =  MPI_Get_rank(MpiComm)
-  mpi_master= MPI_Get_master(MpiComm)
+#ifdef _MPI    
+  if(check_MPI())then
+     mpi_size  = get_size_MPI()
+     mpi_rank =  get_rank_MPI()
+     mpi_master= get_master_MPI()
+  else
+     mpi_size=1
+     mpi_rank=0
+     mpi_master=.true.
+  endif
+#else
+  mpi_size=1
+  mpi_rank=0
+  mpi_master=.true.
+#endif
   !Retrieve parameters:
   call get_ctrl_var(beta,"BETA")
   call get_ctrl_var(xmu,"XMU")
@@ -154,11 +194,11 @@ subroutine dmft_get_gk_realaxis_normal_ineq_mpi(MpiComm,Hk,Wtk,Gkreal,Sreal,trid
   !pass each Z_site to the routines that invert (Z-Hk) for each k-point 
   Gkreal=zero
   if(.not.tridiag_)then
-     call invert_gk_normal_ineq_mpi(MpiComm,zeta_real,Hk,.false.,Gkreal)
+     call invert_gk_normal_ineq(zeta_real,Hk,.false.,Gkreal)
   else
-     call invert_gk_normal_tridiag_mpi(MpiComm,zeta_real,Hk,.false.,Gkreal)
+     call invert_gk_normal_tridiag(zeta_real,Hk,.false.,Gkreal)
   endif
-end subroutine dmft_get_gk_realaxis_normal_ineq_mpi
+end subroutine dmft_get_gk_realaxis_normal_ineq
 
 
 

@@ -1,18 +1,26 @@
-subroutine dmft_get_gk_realaxis_superc_main_mpi(MpiComm,Hk,Wtk,Gkreal,Sreal)
-  integer                                         :: MpiComm
+subroutine dmft_get_gk_realaxis_superc_main(Hk,Gkreal,Sreal)
   complex(8),dimension(:,:,:),intent(in)          :: Hk        ![2][Nspin*Norb][Nspin*Norb]
-  real(8),intent(in)                              :: Wtk       !
   complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sreal     ![2][Nspin][Nspin][Norb][Norb][Lreal]
   complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gkreal     !as Sreal
   !allocatable arrays
   complex(8),dimension(:,:,:,:,:,:),allocatable   :: Gtmp    !as Sreal
   complex(8),dimension(:,:,:,:,:),allocatable     :: zeta_real ![2][2][Nspin*Norb][Nspin*Norb][Lreal]
-  !
-  !
   !MPI setup:
-  mpi_size  = MPI_Get_size(MpiComm)
-  mpi_rank =  MPI_Get_rank(MpiComm)
-  mpi_master= MPI_Get_master(MpiComm)
+#ifdef _MPI    
+  if(check_MPI())then
+     mpi_size  = get_size_MPI()
+     mpi_rank =  get_rank_MPI()
+     mpi_master= get_master_MPI()
+  else
+     mpi_size=1
+     mpi_rank=0
+     mpi_master=.true.
+  endif
+#else
+  mpi_size=1
+  mpi_rank=0
+  mpi_master=.true.
+#endif
   !
   !Retrieve parameters:
   call get_ctrl_var(beta,"BETA")
@@ -47,25 +55,24 @@ subroutine dmft_get_gk_realaxis_superc_main_mpi(MpiComm,Hk,Wtk,Gkreal,Sreal)
   !
   !invert (Z-Hk) for each k-point
   Gkreal=zero
-  call invert_gk_superc_mpi(MpiComm,zeta_real,Hk,.false.,Gkreal)
-end subroutine dmft_get_gk_realaxis_superc_main_mpi
+  call invert_gk_superc(zeta_real,Hk,.false.,Gkreal)
+end subroutine dmft_get_gk_realaxis_superc_main
 
 
-subroutine dmft_get_gk_realaxis_superc_dos_mpi(MpiComm,Ebands,Dbands,Hloc,Gkreal,Sreal)
-  integer                                                     :: MpiComm
-  real(8),dimension(:,:),intent(in)                         :: Ebands    ![2][Nspin*Norb]
-  real(8),dimension(size(Ebands,2)),intent(in) :: Dbands    ![Nspin*Norb]
-  real(8),dimension(2,size(Ebands,2)),intent(in)              :: Hloc      ![2][Nspin*Norb]
-  complex(8),dimension(:,:,:,:,:,:),intent(in)                :: Sreal     ![2][Nspin][Nspin][Norb][Norb][Lreal]
-  complex(8),dimension(:,:,:,:,:,:),intent(inout)             :: Gkreal     !as Sreal
+subroutine dmft_get_gk_realaxis_superc_dos(Ebands,Dbands,Hloc,Gkreal,Sreal)
+  real(8),dimension(:,:),intent(in)               :: Ebands    ![2][Nspin*Norb]
+  real(8),dimension(size(Ebands,2)),intent(in)    :: Dbands    ![Nspin*Norb]
+  real(8),dimension(2,size(Ebands,2)),intent(in)  :: Hloc      ![2][Nspin*Norb]
+  complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sreal     ![2][Nspin][Nspin][Norb][Norb][Lreal]
+  complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gkreal     !as Sreal
   !allocatable arrays
-  complex(8)                                                  :: gktmp(2),cdet
-  complex(8)                                                  :: zeta_11,zeta_12,zeta_22 
-  complex(8),dimension(:,:,:,:,:),allocatable                 :: zeta_real ![2][2][Nspin*Norb][Nspin*Norb][Lreal]
-  complex(8),dimension(:,:,:,:,:,:),allocatable               :: Gtmp     ![2][Nspin][Nspin][Norb][Norb][Lreal]
+  complex(8)                                      :: gktmp(2),cdet
+  complex(8)                                      :: zeta_11,zeta_12,zeta_22 
+  complex(8),dimension(:,:,:,:,:),allocatable     :: zeta_real ![2][2][Nspin*Norb][Nspin*Norb][Lreal]
+  complex(8),dimension(:,:,:,:,:,:),allocatable   :: Gtmp     ![2][Nspin][Nspin][Norb][Norb][Lreal]
   !
-  real(8)                                                     :: beta
-  real(8)                                                     :: xmu,eps
+  real(8)                                         :: beta
+  real(8)                                         :: xmu,eps
   !
   !Retrieve parameters:
   call get_ctrl_var(beta,"BETA")
@@ -115,14 +122,21 @@ subroutine dmft_get_gk_realaxis_superc_dos_mpi(MpiComm,Ebands,Dbands,Hloc,Gkreal
         enddo
      enddo
   enddo
-  call Mpi_AllReduce(Gtmp,Gkreal, size(Gkreal), MPI_Double_Complex, MPI_Sum, MpiComm, MPI_ierr)
-end subroutine dmft_get_gk_realaxis_superc_dos_mpi
+#ifdef _MPI    
+  if(check_MPI())then
+     Gkreal=zero
+     call AllReduce_MPI(MPI_COMM_WORLD,Gtmp,Gkreal)
+  else
+     Gkreal=Gtmp
+  endif
+#else
+  Gkreal=Gtmp
+#endif
+end subroutine dmft_get_gk_realaxis_superc_dos
 
 
-subroutine dmft_get_gk_realaxis_superc_ineq_mpi(MpiComm,Hk,Wtk,Gkreal,Sreal)
-  integer                                           :: MpiComm
-  complex(8),dimension(:,:,:),intent(in)          :: Hk        ![2][Nlat*Nspin*Norb][Nlat*Nspin*Norb]
-  real(8),intent(in)                                :: Wtk       !
+subroutine dmft_get_gk_realaxis_superc_ineq(Hk,Gkreal,Sreal)
+  complex(8),dimension(:,:,:),intent(in)            :: Hk        ![2][Nlat*Nspin*Norb][Nlat*Nspin*Norb]
   complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Sreal     ![2][Nlat][Nspin][Nspin][Norb][Norb][Lreal]
   complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gkreal     !as Sreal
   !allocatable arrays
@@ -131,9 +145,21 @@ subroutine dmft_get_gk_realaxis_superc_ineq_mpi(MpiComm,Hk,Wtk,Gkreal,Sreal)
   !
   !
   !MPI setup:
-  mpi_size  = MPI_Get_size(MpiComm)
-  mpi_rank =  MPI_Get_rank(MpiComm)
-  mpi_master= MPI_Get_master(MpiComm)
+#ifdef _MPI    
+    if(check_MPI())then
+       mpi_size  = get_size_MPI()
+       mpi_rank =  get_rank_MPI()
+       mpi_master= get_master_MPI()
+    else
+       mpi_size=1
+       mpi_rank=0
+       mpi_master=.true.
+    endif
+#else
+    mpi_size=1
+    mpi_rank=0
+    mpi_master=.true.
+#endif
   !
   !Retrieve parameters:
   call get_ctrl_var(beta,"BETA")
@@ -174,7 +200,7 @@ subroutine dmft_get_gk_realaxis_superc_ineq_mpi(MpiComm,Hk,Wtk,Gkreal,Sreal)
   enddo
   !
   Gkreal=zero
-  call invert_gk_superc_ineq_mpi(MpiComm,zeta_real,Hk,.false.,Gkreal)
+  call invert_gk_superc_ineq(zeta_real,Hk,.false.,Gkreal)
 end subroutine dmft_get_gk_realaxis_superc_ineq_mpi
 
 

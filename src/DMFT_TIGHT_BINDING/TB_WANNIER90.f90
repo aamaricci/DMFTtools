@@ -440,14 +440,12 @@ contains
 
 
 
-  subroutine build_hk_w90(Hk,Nlso,Nkvec,Kpts_grid,wdos)
+  subroutine build_hk_w90(Hk,Nlso,Nkvec,Kpts_grid)
     integer                                                :: Nlso
     integer,dimension(:),intent(in)                        :: Nkvec
     complex(8),dimension(Nlso,Nlso,product(Nkvec))         :: Hk,haux
     !
     real(8),dimension(product(Nkvec),size(Nkvec)),optional :: Kpts_grid ![Nk][Ndim]
-    logical,optional                                       :: wdos
-    logical                                                :: wdos_
     !
     real(8),dimension(product(Nkvec),size(Nkvec))          :: kgrid ![Nk][Ndim]
     integer                                                :: Nk
@@ -470,8 +468,6 @@ contains
     mpi_rank=0
     mpi_master=.true.
 #endif
-    !
-    wdos_=.false.;if(present(wdos))wdos_=wdos
     !
     Nk =product(Nkvec)
     !
@@ -499,21 +495,6 @@ contains
     Hk = Haux
 #endif
     !
-    if(wdos_)then
-       allocate(dos_Greal(TB_w90%Nlat,TB_w90%Nspin,TB_w90%Nspin,TB_w90%Norb,TB_w90%Norb,dos_Lreal))
-       allocate(dos_wtk(Nk))
-       dos_wtk=1d0/Nk
-#ifdef _MPI
-       if(check_MPI())then
-          call dmft_gloc_realaxis(MPI_COMM_WORLD,Hk,dos_wtk,dos_Greal,zeros(TB_w90%Nlat,TB_w90%Nspin,TB_w90%Nspin,TB_w90%Norb,TB_w90%Norb,dos_Lreal))
-       else
-          call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(TB_w90%Nlat,TB_w90%Nspin,TB_w90%Nspin,TB_w90%Norb,TB_w90%Norb,dos_Lreal))
-       endif
-#else
-       call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(TB_w90%Nlat,TB_w90%Nspin,TB_w90%Nspin,TB_w90%Norb,TB_w90%Norb,dos_Lreal))
-#endif
-       if(mpi_master)call dmft_print_gf_realaxis(dos_Greal,trim(dos_file),iprint=1)
-    endif
   end subroutine build_hk_w90
 
 
