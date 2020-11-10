@@ -25,7 +25,7 @@ ENDIF(NOT CMAKE_Fortran_COMPILER_SUPPORTS_F90)
 IF( (${CMAKE_Fortran_COMPILER_ID} MATCHES Intel) OR (${CMAKE_Fortran_COMPILER_ID} MATCHES GNU))
   MESSAGE(STATUS "Fortran Compiler id = ${CMAKE_Fortran_COMPILER_ID}")
 ELSEIF()
-  MESSAGE(FATAL_ERROR "Unsupported Fortran compiler (use Intel or GNU) ")
+  MESSAGE(FATAL_ERROR "Unsupported Fortran compiler (use Intel or GNU). Try export FC=<your FC compiler> ")
 ENDIF()  
 
 
@@ -37,6 +37,9 @@ IF(VERBOSE)
 ELSE(VERBOSE)
   SET(CMAKE_VERBOSE_MAKEFILE OFF)
 ENDIF(VERBOSE)
+
+
+
 
 
 ############################################################
@@ -56,8 +59,9 @@ ELSE(USE_MPI)
   SET(MPI_CPP "")
 ENDIF(USE_MPI)
 
-# # This executes code that sets the compile flags for DEBUG, RELEASE, and TESTING.
-# INCLUDE(${CMAKE_MODULE_PATH}/SetFortranFlags.cmake)
+
+
+
 
 
 ############################################################
@@ -119,12 +123,14 @@ elseif(CMAKE_Fortran_COMPILER_ID MATCHES Intel)
   SET(CMAKE_Fortran_FLAGS_TESTING "-O2 -ftz")
   SET(CMAKE_Fortran_FLAGS_DEBUG   "-p -O0 -g -fpe1 -warn -debug extended -traceback -check all,noarg_temp_created")
   SET(CMAKE_Fortran_FLAGS_RELEASE "-O3 -ftz")
+
 elseif(CMAKE_Fortran_COMPILER_ID MATCHES G95)
   SET(CMAKE_Fortran_MODDIR_FLAG   "-fmod=")
   SET(CMAKE_Fortran_FLAGS         "-cpp")
   SET(CMAKE_Fortran_FLAGS_TESTING "-O1  -fsloppy-char")
   SET(CMAKE_Fortran_FLAGS_DEBUG   "-O0 -g -ftrace=full")
   SET(CMAKE_Fortran_FLAGS_RELEASE "-O3")
+  
 elseif(CMAKE_Fortran_COMPILER_ID MATCHES PGI)
   SET(CMAKE_Fortran_MODDIR_FLAG   "-module ")
   SET(CMAKE_Fortran_FLAGS         "-")
@@ -132,6 +138,7 @@ elseif(CMAKE_Fortran_COMPILER_ID MATCHES PGI)
   SET(CMAKE_Fortran_FLAGS_DEBUG   "-g -O0 -Mframe")
   SET(CMAKE_Fortran_FLAGS_RELEASE "-O3 -mcmodel=medium -fast -Munroll")
 endif()
+
 
 #set MPI preprocessing defition:
 IF(USE_MPI)
@@ -327,7 +334,6 @@ SET(TMP_PKCONFIG_FILE ${DT_TMP_ETC}/${PROJECT_NAME}.pc)
 BUILD_PKCONFIG(${TMP_PKCONFIG_FILE})
 
 FILE(WRITE  ${DT_TMP_VER}  "${VERSION}\n")
-
 INSTALL(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}/ DESTINATION ${DT_TARGET_INC})
 
 INSTALL(CODE "execute_process(COMMAND \"${CMAKE_COMMAND}\" -E remove ${DT_VERSION_FILE})")
@@ -354,8 +360,6 @@ $ make
 $ make install
 $ make post-install
 ")
-
-
 
 
 ADD_CUSTOM_TARGET(
