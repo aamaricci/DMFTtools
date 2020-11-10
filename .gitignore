@@ -16,3 +16,4 @@ build_gnu_mpi/
 ../src/dmft_tools_version_current_sha1.inc
 build_laptop
 build_debug_laptop/
+build_devel_laptop
