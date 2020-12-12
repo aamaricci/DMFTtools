@@ -14,52 +14,158 @@ module DMFT_GFIO
   private
 
 
+  interface write_function_matsubara
+     module procedure :: dmft_gf_print_matsubara_main
+     module procedure :: dmft_gf_print_matsubara_ineq
+     module procedure :: dmft_gij_print_matsubara
+  end interface write_function_matsubara
+
+  interface dmft_write_function_matsubara
+     module procedure :: dmft_gf_print_matsubara_main
+     module procedure :: dmft_gf_print_matsubara_ineq
+     module procedure :: dmft_gij_print_matsubara
+  end interface dmft_write_function_matsubara
+
+  interface write_gf_matsubara
+     module procedure :: dmft_gf_print_matsubara_main
+     module procedure :: dmft_gf_print_matsubara_ineq
+     module procedure :: dmft_gij_print_matsubara
+  end interface write_gf_matsubara
+
+  interface dmft_write_gf_matsubara
+     module procedure :: dmft_gf_print_matsubara_main
+     module procedure :: dmft_gf_print_matsubara_ineq
+     module procedure :: dmft_gij_print_matsubara
+  end interface dmft_write_gf_matsubara
+
+  interface print_function_matsubara
+     module procedure :: dmft_gf_print_matsubara_main
+     module procedure :: dmft_gf_print_matsubara_ineq
+     module procedure :: dmft_gij_print_matsubara
+  end interface print_function_matsubara
+
+  interface dmft_print_function_matsubara
+     module procedure :: dmft_gf_print_matsubara_main
+     module procedure :: dmft_gf_print_matsubara_ineq
+     module procedure :: dmft_gij_print_matsubara
+  end interface dmft_print_function_matsubara
+
   interface print_gf_matsubara
      module procedure :: dmft_gf_print_matsubara_main
      module procedure :: dmft_gf_print_matsubara_ineq
      module procedure :: dmft_gij_print_matsubara
   end interface print_gf_matsubara
-  !
-  interface read_gf_matsubara
-     module procedure :: dmft_gf_read_matsubara_main
-     module procedure :: dmft_gf_read_matsubara_ineq
-     module procedure :: dmft_gij_read_matsubara
-  end interface read_gf_matsubara
-
-
-  interface print_gf_realaxis
-     module procedure :: dmft_gf_print_realaxis_main
-     module procedure :: dmft_gf_print_realaxis_ineq
-     module procedure :: dmft_gij_print_realaxis
-  end interface print_gf_realaxis
-  !
-  interface read_gf_realaxis
-     module procedure :: dmft_gf_read_realaxis_main
-     module procedure :: dmft_gf_read_realaxis_ineq
-     module procedure :: dmft_gij_read_realaxis
-  end interface read_gf_realaxis
-
-
-
 
   interface dmft_print_gf_matsubara
      module procedure :: dmft_gf_print_matsubara_main
      module procedure :: dmft_gf_print_matsubara_ineq
      module procedure :: dmft_gij_print_matsubara
   end interface dmft_print_gf_matsubara
-  !
-  interface dmft_read_gf_matsubara
-     module procedure :: dmft_gf_read_matsubara_main
-     module procedure :: dmft_gf_read_matsubara_ineq
-     module procedure :: dmft_gij_read_matsubara
-  end interface dmft_read_gf_matsubara
+
+
+
+
+
+  interface write_function_realaxis
+     module procedure :: dmft_gf_print_realaxis_main
+     module procedure :: dmft_gf_print_realaxis_ineq
+     module procedure :: dmft_gij_print_realaxis
+  end interface write_function_realaxis
+
+  interface dmft_write_function_realaxis
+     module procedure :: dmft_gf_print_realaxis_main
+     module procedure :: dmft_gf_print_realaxis_ineq
+     module procedure :: dmft_gij_print_realaxis
+  end interface dmft_write_function_realaxis
+
+  interface write_gf_realaxis
+     module procedure :: dmft_gf_print_realaxis_main
+     module procedure :: dmft_gf_print_realaxis_ineq
+     module procedure :: dmft_gij_print_realaxis
+  end interface write_gf_realaxis
+
+  interface dmft_write_gf_realaxis
+     module procedure :: dmft_gf_print_realaxis_main
+     module procedure :: dmft_gf_print_realaxis_ineq
+     module procedure :: dmft_gij_print_realaxis
+  end interface dmft_write_gf_realaxis
+
+  interface print_function_realaxis
+     module procedure :: dmft_gf_print_realaxis_main
+     module procedure :: dmft_gf_print_realaxis_ineq
+     module procedure :: dmft_gij_print_realaxis
+  end interface print_function_realaxis
+
+  interface dmft_print_function_realaxis
+     module procedure :: dmft_gf_print_realaxis_main
+     module procedure :: dmft_gf_print_realaxis_ineq
+     module procedure :: dmft_gij_print_realaxis
+  end interface dmft_print_function_realaxis
+
+  interface print_gf_realaxis
+     module procedure :: dmft_gf_print_realaxis_main
+     module procedure :: dmft_gf_print_realaxis_ineq
+     module procedure :: dmft_gij_print_realaxis
+  end interface print_gf_realaxis
 
   interface dmft_print_gf_realaxis
      module procedure :: dmft_gf_print_realaxis_main
      module procedure :: dmft_gf_print_realaxis_ineq
      module procedure :: dmft_gij_print_realaxis
   end interface dmft_print_gf_realaxis
-  !
+
+
+
+
+
+  interface read_function_matsubara
+     module procedure :: dmft_gf_read_matsubara_main
+     module procedure :: dmft_gf_read_matsubara_ineq
+     module procedure :: dmft_gij_read_matsubara
+  end interface read_function_matsubara
+
+  interface dmft_read_function_matsubara
+     module procedure :: dmft_gf_read_matsubara_main
+     module procedure :: dmft_gf_read_matsubara_ineq
+     module procedure :: dmft_gij_read_matsubara
+  end interface dmft_read_function_matsubara
+
+  interface read_gf_matsubara
+     module procedure :: dmft_gf_read_matsubara_main
+     module procedure :: dmft_gf_read_matsubara_ineq
+     module procedure :: dmft_gij_read_matsubara
+  end interface read_gf_matsubara
+
+  interface dmft_read_gf_matsubara
+     module procedure :: dmft_gf_read_matsubara_main
+     module procedure :: dmft_gf_read_matsubara_ineq
+     module procedure :: dmft_gij_read_matsubara
+  end interface dmft_read_gf_matsubara
+
+
+
+
+
+
+
+  interface read_function_realaxis
+     module procedure :: dmft_gf_read_realaxis_main
+     module procedure :: dmft_gf_read_realaxis_ineq
+     module procedure :: dmft_gij_read_realaxis
+  end interface read_function_realaxis
+
+  interface dmft_read_function_realaxis
+     module procedure :: dmft_gf_read_realaxis_main
+     module procedure :: dmft_gf_read_realaxis_ineq
+     module procedure :: dmft_gij_read_realaxis
+  end interface dmft_read_function_realaxis
+
+  interface read_gf_realaxis
+     module procedure :: dmft_gf_read_realaxis_main
+     module procedure :: dmft_gf_read_realaxis_ineq
+     module procedure :: dmft_gij_read_realaxis
+  end interface read_gf_realaxis
+
   interface dmft_read_gf_realaxis
      module procedure :: dmft_gf_read_realaxis_main
      module procedure :: dmft_gf_read_realaxis_ineq
@@ -69,16 +175,35 @@ module DMFT_GFIO
 
   public :: set_gf_suffix
 
+  public :: write_function_matsubara
+  public :: write_gf_matsubara
+  public :: dmft_write_function_matsubara
+  public :: dmft_write_gf_matsubara
+
+  public :: print_function_matsubara
   public :: print_gf_matsubara
-  public :: print_gf_realaxis
-
-  public :: read_gf_matsubara
-  public :: read_gf_realaxis
-
+  public :: dmft_print_function_matsubara
   public :: dmft_print_gf_matsubara
+
+
+  public :: write_function_realaxis
+  public :: write_gf_realaxis
+  public :: dmft_write_function_realaxis
+  public :: dmft_write_gf_realaxis
+
+  public :: print_function_realaxis
+  public :: print_gf_realaxis
+  public :: dmft_print_function_realaxis
   public :: dmft_print_gf_realaxis
 
+  public :: read_function_matsubara
+  public :: read_gf_matsubara
+  public :: dmft_read_function_matsubara
   public :: dmft_read_gf_matsubara
+
+  public :: read_function_realaxis
+  public :: read_gf_realaxis
+  public :: dmft_read_function_realaxis
   public :: dmft_read_gf_realaxis
 
 
@@ -914,7 +1039,6 @@ contains
           !
        end select
     endif
-    mpi_master=.true.
 #ifdef _MPI    
     if(check_MPI())call Bcast_MPI(MPI_COMM_WORLD,Gmats)
 #endif
@@ -1322,7 +1446,7 @@ contains
        end select
     endif
 #ifdef _MPI    
-    if(check_MPI())call Bcast_MPI(MPI_COMM_WORLD,Gmats)
+    if(check_MPI())call Bcast_MPI(MPI_COMM_WORLD,Greal)
 #endif
   end subroutine dmft_gf_read_realaxis_main
 
@@ -1505,7 +1629,7 @@ contains
        end select
     endif
 #ifdef _MPI    
-    if(check_MPI())call Bcast_MPI(MPI_COMM_WORLD,Gmats)
+    if(check_MPI())call Bcast_MPI(MPI_COMM_WORLD,Greal)
 #endif
   end subroutine dmft_gf_read_realaxis_ineq
 
@@ -1643,7 +1767,7 @@ contains
        end select
     endif
 #ifdef _MPI    
-    if(check_MPI())call Bcast_MPI(MPI_COMM_WORLD,Gmats)
+    if(check_MPI())call Bcast_MPI(MPI_COMM_WORLD,Greal)
 #endif
   end subroutine dmft_gij_read_realaxis
 

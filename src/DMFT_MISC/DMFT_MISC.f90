@@ -80,11 +80,17 @@ contains
     character(len=*),intent(in),optional :: filename
     character(len=100)                   :: filename_
     integer                              :: unit
+    mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
     filename_="job_done.out";if(present(filename))filename_=filename
     unit=897
-    open(unit,file=trim(filename),status="new")
-    write(unit,*)iter,error
-    close(unit)
+    if(mpi_master)then
+       open(unit,file=trim(filename),status="new")
+       write(unit,*)iter,error
+       close(unit)
+    endif
   end subroutine finalize_run
 
 

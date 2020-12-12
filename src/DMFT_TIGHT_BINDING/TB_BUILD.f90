@@ -49,7 +49,7 @@ contains
     mpi_master=.true.
 #endif
     !
-    wdos_=.false.;if(present(wdos))wdos_=wdos
+    wdos_=.false.
     !
     Nktot  = size(kgrid,1)
     !
@@ -68,21 +68,6 @@ contains
     Hk = Haux
 #endif
     !
-    if(wdos_)then
-       allocate(dos_Greal(1,1,1,Norb,Norb,dos_Lreal))
-       allocate(dos_wtk(Nktot))
-       dos_wtk=1d0/Nktot
-#ifdef _MPI
-       if(check_MPI())then
-          call dmft_gloc_realaxis(MPI_COMM_WORLD,Hk,dos_wtk,dos_Greal,zeros(1,1,1,Norb,Norb,dos_Lreal))
-       else
-          call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(1,1,1,Norb,Norb,dos_Lreal))
-       endif
-#else
-       call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(1,1,1,Norb,Norb,dos_Lreal))
-#endif
-       if(mpi_master)call dmft_print_gf_realaxis(dos_Greal(1,:,:,:,:,:),trim(dos_file),iprint=1)
-    endif
   end subroutine build_hk_model_kgrid
 
 
@@ -121,7 +106,7 @@ contains
     mpi_master=.true.
 #endif
     !
-    wdos_=.false.;if(present(wdos))wdos_=wdos
+    wdos_=.false.
     !
     call build_kgrid(Nkvec,kgrid,.true.)
     !
@@ -140,23 +125,6 @@ contains
 #else
     Hk = Haux
 #endif
-
-    !
-    if(wdos_)then
-       allocate(dos_Greal(1,1,1,Norb,Norb,dos_Lreal))
-       allocate(dos_wtk(Nktot))
-       dos_wtk=1d0/Nktot
-#ifdef _MPI
-       if(check_MPI())then
-          call dmft_gloc_realaxis(MPI_COMM_WORLD,Hk,dos_wtk,dos_Greal,zeros(1,1,1,Norb,Norb,dos_Lreal))
-       else
-          call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(1,1,1,Norb,Norb,dos_Lreal))
-       endif
-#else
-       call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(1,1,1,Norb,Norb,dos_Lreal))
-#endif
-       if(mpi_master)call dmft_print_gf_realaxis(dos_Greal(1,:,:,:,:,:),trim(dos_file),iprint=1)
-    endif
   end subroutine build_hk_model_Nkvec
 
 
@@ -202,7 +170,7 @@ contains
     mpi_master=.true.
 #endif
     !
-    wdos_=.false.;if(present(wdos))wdos_=wdos
+    wdos_=.false.
     !
     Nktot  = size(kgrid,1)
     Haux   = zero
@@ -220,21 +188,6 @@ contains
     Hk = Haux
 #endif
     !
-    if(wdos_)then
-       allocate(dos_Greal(Nlat,1,1,Norb,Norb,dos_Lreal))
-       allocate(dos_wtk(Nktot))
-       dos_wtk=1d0/Nktot
-#ifdef _MPI
-       if(check_MPI())then
-          call dmft_gloc_realaxis(MPI_COMM_WORLD,Hk,dos_wtk,dos_Greal,zeros(Nlat,1,1,Norb,Norb,dos_Lreal))
-       else
-          call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(Nlat,1,1,Norb,Norb,dos_Lreal))
-       endif
-#else
-       call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(Nlat,1,1,Norb,Norb,dos_Lreal))
-#endif
-       if(mpi_master)call dmft_print_gf_realaxis(dos_Greal(:,:,:,:,:,:),trim(dos_file),iprint=1)
-    endif
   end subroutine build_hkr_model_kgrid
 
 
@@ -276,7 +229,7 @@ contains
     mpi_master=.true.
 #endif
     !
-    wdos_=.false.;if(present(wdos))wdos_=wdos
+    wdos_=.false.
     !
     call build_kgrid(Nkvec,kgrid,.true.)
     !
@@ -295,23 +248,6 @@ contains
 #else
     Hk = Haux
 #endif
-
-    !
-    if(wdos_)then
-       allocate(dos_Greal(Nlat,1,1,Norb,Norb,dos_Lreal))
-       allocate(dos_wtk(Nktot))
-       dos_wtk=1d0/Nktot
-#ifdef _MPI
-       if(check_MPI())then
-          call dmft_gloc_realaxis(MPI_COMM_WORLD,Hk,dos_wtk,dos_Greal,zeros(Nlat,1,1,Norb,Norb,dos_Lreal))
-       else
-          call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(Nlat,1,1,Norb,Norb,dos_Lreal))
-       endif
-#else
-       call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(Nlat,1,1,Norb,Norb,dos_Lreal))
-#endif
-       if(mpi_master)call dmft_print_gf_realaxis(dos_Greal(:,:,:,:,:,:),trim(dos_file),iprint=1)
-    endif
   end subroutine build_hkr_model_nkvec
 
 

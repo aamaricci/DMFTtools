@@ -54,10 +54,6 @@ module TB_COMMON
   logical,save                                  :: set_eivec=.false.
   logical,save                                  :: set_bkvec=.false.
 
-  integer,save                                  :: dos_Lreal=2048
-  character(len=128)                            :: dos_file="g0_Hk"
-  real(8),dimension(:),allocatable              :: dos_wtk
-  complex(8),dimension(:,:,:,:,:,:),allocatable :: dos_Greal ![Nlat,Nspin,Nspin,Norb,Norb,dos_Lreal]
 
   integer                                       :: mpi_ierr
   integer                                       :: mpi_rank
@@ -69,17 +65,6 @@ contains
 
 
 
-
-  !< Set properties for non=interacting DOS calculation 
-  subroutine TB_set_dos_lreal(lreal)
-    integer :: lreal
-    dos_lreal = lreal
-  end subroutine TB_set_dos_lreal
-
-  subroutine TB_set_dos_file(file)
-    character(len=*) :: file
-    dos_file = reg(file)
-  end subroutine TB_set_dos_file
 
 
 

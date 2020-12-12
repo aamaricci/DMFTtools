@@ -1,57 +1,28 @@
-module DMFT_GK
+module GF_COMMON
+  USE SF_TIMER
   USE SF_CONSTANTS, only: one,xi,zero,pi
-  USE SF_LINALG,    only: eye,inv,inv_sym,inv_tridiag,get_tridiag
+  USE SF_IOTOOLS,   only: reg,txtfy,splot,file_gzip
+  USE SF_LINALG,    only: eye,inv,inv_sym,inv_tridiag,get_tridiag,diag
   USE SF_ARRAYS,    only: linspace,arange
   USE SF_MISC,      only: assert_shape
-  USE DMFT_CTRL_VARS
 #ifdef _MPI
+  USE SF_MPI
   USE MPI
 #endif
   implicit none
-  private
-
-
-  interface dmft_gk_matsubara
-     module procedure :: dmft_get_gk_matsubara_normal_main
-     module procedure :: dmft_get_gk_matsubara_normal_dos
-     module procedure :: dmft_get_gk_matsubara_normal_ineq
-     module procedure :: dmft_get_gk_matsubara_superc_main
-     module procedure :: dmft_get_gk_matsubara_superc_dos
-     module procedure :: dmft_get_gk_matsubara_superc_ineq
-#ifdef _MPI
-     module procedure :: dmft_get_gk_matsubara_normal_main_mpi
-     module procedure :: dmft_get_gk_matsubara_normal_dos_mpi
-     module procedure :: dmft_get_gk_matsubara_normal_ineq_mpi
-     module procedure :: dmft_get_gk_matsubara_superc_main_mpi
-     module procedure :: dmft_get_gk_matsubara_superc_dos_mpi
-     module procedure :: dmft_get_gk_matsubara_superc_ineq_mpi     
-#endif
-  end interface dmft_gk_matsubara
 
 
 
-  interface dmft_gk_realaxis
-     module procedure :: dmft_get_gk_realaxis_normal_main
-     module procedure :: dmft_get_gk_realaxis_normal_dos
-     module procedure :: dmft_get_gk_realaxis_normal_ineq
-     module procedure :: dmft_get_gk_realaxis_superc_main
-     module procedure :: dmft_get_gk_realaxis_superc_dos
-     module procedure :: dmft_get_gk_realaxis_superc_ineq
-#ifdef _MPI
-     module procedure :: dmft_get_gk_realaxis_normal_main_mpi
-     module procedure :: dmft_get_gk_realaxis_normal_dos_mpi
-     module procedure :: dmft_get_gk_realaxis_normal_ineq_mpi
-     module procedure :: dmft_get_gk_realaxis_superc_main_mpi
-     module procedure :: dmft_get_gk_realaxis_superc_dos_mpi
-     module procedure :: dmft_get_gk_realaxis_superc_ineq_mpi
-#endif
-  end interface dmft_gk_realaxis
+  interface dmft_set_Gamma_matsubara
+     module procedure :: dmft_set_Gamma_matsubara_local
+     module procedure :: dmft_set_Gamma_matsubara_ineq
+  end interface dmft_set_Gamma_matsubara
 
 
-
-  !PUBLIC IN DMFT:
-  public :: dmft_gk_matsubara
-  public :: dmft_gk_realaxis
+  interface dmft_set_Gamma_realaxis
+     module procedure :: dmft_set_Gamma_realaxis_local
+     module procedure :: dmft_set_Gamma_realaxis_ineq
+  end interface dmft_set_Gamma_realaxis
 
 
 
@@ -66,6 +37,10 @@ module DMFT_GK
      module procedure d_nlso2nnn
      module procedure c_nlso2nnn
   end interface lso2nnn_reshape
+  interface lso2nnn_cluster_reshape
+     module procedure d_nlso2nnn_cluster
+     module procedure c_nlso2nnn_cluster
+  end interface lso2nnn_cluster_reshape
   interface so2nn_reshape
      module procedure d_nso2nn
      module procedure c_nso2nn
@@ -74,6 +49,10 @@ module DMFT_GK
      module procedure d_nnn2nlso
      module procedure c_nnn2nlso
   end interface nnn2lso_reshape
+  interface nnn2lso_cluster_reshape
+     module procedure d_nnn2nlso_cluster
+     module procedure c_nnn2nlso_cluster
+  end interface nnn2lso_cluster_reshape
   interface nn2so_reshape
      module procedure d_nn2nso
      module procedure c_nn2nso
@@ -82,6 +61,10 @@ module DMFT_GK
 
   real(8),dimension(:),allocatable          :: wm !Matsubara frequencies
   real(8),dimension(:),allocatable          :: wr !Real frequencies
+  complex(8),dimension(:,:,:),allocatable   :: lattice_Gamma_mats ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lmats]
+  complex(8),dimension(:,:,:,:),allocatable :: local_Gamma_mats   ![Nlat][Nspin*Norb][Nspin*Norb][Lmats]
+  complex(8),dimension(:,:,:),allocatable   :: lattice_Gamma_real ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lmats]
+  complex(8),dimension(:,:,:,:),allocatable :: local_Gamma_real   ![Nlat][Nspin*Norb][Nspin*Norb][Lmats]
   integer                                   :: Lk,Nlso,Nlat,Nspin,Norb,Nso,Lreal,Lmats
   integer                                   :: i,j,ik,ilat,jlat,iorb,jorb,ispin,jspin,io,jo,is,js
   !
@@ -97,30 +80,7 @@ module DMFT_GK
 
 
 
-
-
-  !####################################################################
-  !####################################################################
-
 contains
-
-
-  !####################################################################
-  !####################################################################
-
-  include "dmft_gk_matsubara_normal.f90"
-  include "dmft_gk_matsubara_superc.f90"
-  include "dmft_gk_realaxis_normal.f90"
-  include "dmft_gk_realaxis_superc.f90"
-#ifdef _MPI
-  include "dmft_gk_matsubara_normal_mpi.f90"
-  include "dmft_gk_matsubara_superc_mpi.f90"
-  include "dmft_gk_realaxis_normal_mpi.f90"
-  include "dmft_gk_realaxis_superc_mpi.f90"
-#endif
-
-
-
 
 
 
@@ -180,9 +140,7 @@ contains
   end subroutine invert_gk_normal
 
   !PARALLEL ON FREQ:
-#ifdef _MPI
-  subroutine invert_gk_normal_mpi(MpiComm,zeta,Hk,hk_symm,Gkout)
-    integer                                       :: MpiComm
+  subroutine invert_gk_normal_mpi(zeta,Hk,hk_symm,Gkout)
     complex(8),dimension(:,:,:),intent(in)        :: zeta    ![Nspin*Norb][Nspin*Norb][Lfreq]
     complex(8),dimension(:,:),intent(in)          :: Hk      ![Nspin*Norb][Nspin*Norb]
     logical,intent(in)                            :: hk_symm                
@@ -194,9 +152,21 @@ contains
     !
     !
     !MPI setup:
-    mpi_size  = MPI_Get_size(MpiComm)
-    mpi_rank =  MPI_Get_rank(MpiComm)
-    mpi_master= MPI_Get_master(MpiComm)
+#ifdef _MPI    
+    if(check_MPI())then
+       mpi_size  = get_size_MPI()
+       mpi_rank =  get_rank_MPI()
+       mpi_master= get_master_MPI()
+    else
+       mpi_size=1
+       mpi_rank=0
+       mpi_master=.true.
+    endif
+#else
+    mpi_size=1
+    mpi_rank=0
+    mpi_master=.true.
+#endif
     !
     Nspin = size(Gkout,1)
     Norb  = size(Gkout,3)
@@ -230,12 +200,122 @@ contains
           enddo
        enddo
     enddo
-    Gkout=zero
-    call MPI_AllReduce(Gktmp, Gkout, size(Gkout), MPI_Double_Complex, MPI_Sum, MpiComm, mpi_ierr)
-  end subroutine invert_gk_normal_mpi
+    !
+#ifdef _MPI    
+    if(check_MPI())then
+       Gkout=zero
+       call MPI_AllReduce(Gktmp, Gkout, size(Gkout), MPI_Double_Complex, MPI_Sum, MPI_COMM_WORLD, mpi_ierr)
+    else
+       Gkout=Gktmp
+    endif
+#else
+    Gkout=Gktmp
 #endif
+  end subroutine invert_gk_normal_mpi
 
 
+  ! INVERT_GK_NORMAL_CLUSTER(_MPI)
+  !
+  !SERIAL (OR PARALLEL ON K):
+  subroutine invert_gk_normal_cluster(zeta,Hk,hk_symm,Gkout)
+    complex(8),dimension(:,:,:),intent(in)            :: zeta    ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lfreq]
+    complex(8),dimension(:,:),intent(in)              :: Hk      ![Nlat*Nspin*Norb][Nlat*Nspin*Norb]
+    logical,intent(in)                                :: hk_symm
+    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gkout   ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:,:),allocatable   :: Gktmp   ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
+    complex(8),dimension(:,:),allocatable             :: Gmatrix ![Nlat*Nspin*Norb][Nlat*Nspin*Norb]
+    integer                                           :: Nspin,Norb,Nlso,Lfreq
+    integer                                           :: i,iorb,jorb,ispin,jspin,io,jo
+    !
+    Nlat  = size(Gkout,1)
+    Nspin = size(Gkout,3)
+    Norb  = size(Gkout,5)
+    Lfreq = size(zeta,3)
+    Nlso  = Nlat*Nspin*Norb
+    !testing
+    call assert_shape(zeta,[Nlso,Nlso,Lfreq],"invert_gk_normal_cluster","zeta")
+    call assert_shape(Hk,[Nlso,Nlso],"invert_gk_normal_cluster","Hk")
+    call assert_shape(Gkout,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_normal_cluster","Gkout")
+    !
+    allocate(Gktmp(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq))
+    allocate(Gmatrix(Nlso,Nlso))
+    Gktmp=zero
+    do i=1,Lfreq
+       Gmatrix  = zeta(:,:,i) - Hk
+       if(hk_symm) then
+          call inv_sym(Gmatrix)
+       else
+          call inv(Gmatrix)  ! PAY ATTENTION HERE: it is not guaranteed that Gloc is a symmetric matrix
+       end if
+       !store the diagonal blocks directly into the tmp output 
+       Gktmp(:,:,:,:,:,:,i)=lso2nnn_cluster_reshape(Gmatrix,Nlat,Nspin,Norb)
+    enddo
+    Gkout = Gktmp
+  end subroutine invert_gk_normal_cluster
+
+  !PARALLEL ON FREQ:
+  subroutine invert_gk_normal_cluster_mpi(zeta,Hk,hk_symm,Gkout)
+    complex(8),dimension(:,:,:),intent(in)            :: zeta    ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lfreq]
+    complex(8),dimension(:,:),intent(in)              :: Hk      ![Nlat*Nspin*Norb][Nlat*Nspin*Norb]
+    logical,intent(in)                                :: hk_symm
+    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gkout   ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:,:),allocatable   :: Gktmp   ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
+    complex(8),dimension(:,:),allocatable             :: Gmatrix ![Nlat*Nspin*Norb][Nlat*Nspin*Norb]
+    integer                                           :: Nspin,Norb,Nlso,Lfreq
+    integer                                           :: i,iorb,jorb,ispin,jspin,io,jo
+    !
+    !
+    !MPI setup:
+#ifdef _MPI    
+    if(check_MPI())then
+       mpi_size  = get_size_MPI()
+       mpi_rank =  get_rank_MPI()
+       mpi_master= get_master_MPI()
+    else
+       mpi_size=1
+       mpi_rank=0
+       mpi_master=.true.
+    endif
+#else
+    mpi_size=1
+    mpi_rank=0
+    mpi_master=.true.
+#endif
+    !
+    Nlat  = size(Gkout,1)
+    Nspin = size(Gkout,3)
+    Norb  = size(Gkout,5)
+    Lfreq = size(zeta,3)
+    Nlso   = Nlat*Nspin*Norb
+    !testing
+    call assert_shape(zeta,[Nlso,Nlso,Lfreq],"invert_gk_normal_mpi","zeta")
+    call assert_shape(Hk,[Nlso,Nlso],"invert_gk_normal_mpi","Hk")
+    call assert_shape(Gkout,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_normal_mpi","Gkout")
+    !
+    allocate(Gktmp(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq))
+    allocate(Gmatrix(Nlso,Nlso))
+    Gktmp=zero
+    do i=1+mpi_rank,Lfreq,mpi_size
+       Gmatrix  = zeta(:,:,i) - Hk
+       if(hk_symm) then
+          call inv_sym(Gmatrix)
+       else
+          call inv(Gmatrix)  ! PAY ATTENTION HERE: it is not guaranteed that Gloc is a symmetric matrix
+       end if
+       !store the diagonal blocks directly into the tmp output 
+       Gktmp(:,:,:,:,:,:,i)=lso2nnn_cluster_reshape(Gmatrix,Nlat,Nspin,Norb)
+    enddo
+#ifdef _MPI    
+    if(check_MPI())then
+       Gkout=zero
+       call MPI_AllReduce(Gktmp, Gkout, size(Gkout), MPI_Double_Complex, MPI_Sum, MPI_COMM_WORLD, mpi_ierr)
+    else
+       Gkout=Gktmp
+    endif
+#else
+    Gkout=Gktmp
+#endif
+  end subroutine invert_gk_normal_cluster_mpi
 
 
 
@@ -268,6 +348,17 @@ contains
     call assert_shape(Hk,[Nlso,Nlso],"invert_gk_normal_ineq","Hk")
     call assert_shape(Gkout,[Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_normal_ineq","Gkout")
     !
+    if(allocated(lattice_gamma_mats).AND.allocated(lattice_gamma_real))&
+         stop "invert_gk_normal_ineq: lattice_Gamma_mats & lattice_Gamma_real both allocated"
+    if(allocated(lattice_gamma_mats))then
+       call assert_shape(lattice_gamma_mats,[Nlso,Nlso,Lfreq],"invert_gk_normal_ineq","lattice_gamma_mats")
+       allocate(Gembed(Nlso,Nlso,Lfreq));Gembed=lattice_gamma_mats
+    endif
+    if(allocated(lattice_gamma_real))then
+       call assert_shape(lattice_gamma_real,[Nlso,Nlso,Lfreq],"invert_gk_normal_ineq","lattice_gamma_real")
+       allocate(Gembed(Nlso,Nlso,Lfreq));Gembed=lattice_gamma_real
+    endif
+    !
     allocate(Gktmp(Nlat,Nspin,Nspin,Norb,Norb,Lfreq))
     allocate(Gmatrix(Nlso,Nlso))
     Gktmp=zero
@@ -298,9 +389,7 @@ contains
   end subroutine invert_gk_normal_ineq
 
   !PARALLEL ON FREQ:
-#ifdef _MPI
-  subroutine invert_gk_normal_ineq_mpi(MpiComm,zeta,Hk,hk_symm,Gkout)
-    integer                                         :: MpiComm
+  subroutine invert_gk_normal_ineq_mpi(zeta,Hk,hk_symm,Gkout)
     complex(8),dimension(:,:,:,:),intent(in)        :: zeta    ![Nlat][Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lfreq]
     complex(8),dimension(:,:),intent(in)            :: Hk      ![Nlat*Nspin*Norb][Nlat*Nspin*Norb]
     logical,intent(in)                              :: hk_symm
@@ -313,9 +402,21 @@ contains
     integer                                         :: i,is,ilat,jlat,iorb,jorb,ispin,jspin,io,jo
     !
     !MPI setup:
-    mpi_size  = MPI_Get_size(MpiComm)
-    mpi_rank =  MPI_Get_rank(MpiComm)
-    mpi_master= MPI_Get_master(MpiComm)
+#ifdef _MPI    
+    if(check_MPI())then
+       mpi_size  = get_size_MPI()
+       mpi_rank =  get_rank_MPI()
+       mpi_master= get_master_MPI()
+    else
+       mpi_size=1
+       mpi_rank=0
+       mpi_master=.true.
+    endif
+#else
+    mpi_size=1
+    mpi_rank=0
+    mpi_master=.true.
+#endif
     !
     Nlat  = size(zeta,1)
     Nspin = size(Gkout,2)
@@ -327,6 +428,16 @@ contains
     call assert_shape(Hk,[Nlso,Nlso],"invert_gk_normal_ineq_mpi","Hk")
     call assert_shape(Gkout,[Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_normal_ineq_mpi","Gkout")
     !
+    if(allocated(lattice_gamma_mats).AND.allocated(lattice_gamma_real))&
+         stop "invert_gk_normal_ineq_mpi: lattice_Gamma_mats & lattice_Gamma_real both allocated"
+    if(allocated(lattice_gamma_mats))then
+       call assert_shape(lattice_gamma_mats,[Nlso,Nlso,Lfreq],"invert_gk_normal_ineq_mpi","lattice_gamma_mats")
+       allocate(Gembed(Nlso,Nlso,Lfreq));Gembed=lattice_gamma_mats
+    endif
+    if(allocated(lattice_gamma_real))then
+       call assert_shape(lattice_gamma_real,[Nlso,Nlso,Lfreq],"invert_gk_normal_ineq_mpi","lattice_gamma_real")
+       allocate(Gembed(Nlso,Nlso,Lfreq));Gembed=lattice_gamma_real
+    endif
     !
     allocate(Gktmp(Nlat,Nspin,Nspin,Norb,Norb,Lfreq))
     allocate(Gmatrix(Nlso,Nlso))
@@ -354,14 +465,17 @@ contains
           enddo
        enddo
     enddo
-    Gkout=zero
-    call MPI_AllReduce(Gktmp, Gkout, size(Gkout), MPI_Double_Complex, MPI_Sum, MpiComm, mpi_ierr)
-  end subroutine invert_gk_normal_ineq_mpi
+#ifdef _MPI    
+    if(check_MPI())then
+       Gkout=zero
+       call MPI_AllReduce(Gktmp, Gkout, size(Gkout), MPI_Double_Complex, MPI_Sum, MPI_COMM_WORLD, mpi_ierr)
+    else
+       Gkout=Gktmp
+    endif
+#else
+    Gkout=Gktmp
 #endif
-
-
-
-
+  end subroutine invert_gk_normal_ineq_mpi
 
 
 
@@ -400,6 +514,16 @@ contains
     call assert_shape(Hk,[Nlso,Nlso],"invert_gk_normal_tridiag","Hk")
     call assert_shape(Gkout,[Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_normal_tridiag","Gkout")
     !
+    if(allocated(local_gamma_mats).AND.allocated(local_gamma_real))&
+         stop "invert_gk_normal_tridiag: local_Gamma_mats & local_Gamma_real both allocated"
+    if(allocated(local_gamma_mats))then
+       call assert_shape(local_gamma_mats,[Nlat,Nso,Nso,Lfreq],"invert_gk_normal_tridiag","local_gamma_mats")
+       allocate(Gembed(Nlat,Nso,Nso,Lfreq));Gembed=local_gamma_mats
+    endif
+    if(allocated(lattice_gamma_real))then
+       call assert_shape(lattice_gamma_real,[Nlat,Nso,Nso,Lfreq],"invert_gk_normal_tridiag","local_gamma_real")
+       allocate(Gembed(Nlat,Nso,Nso,Lfreq));Gembed=local_gamma_real
+    endif
     !
     allocate(Sub(Nlat-1,Nso,Nso))
     allocate(Diag(Nlat,Nso,Nso))
@@ -431,9 +555,7 @@ contains
   end subroutine invert_gk_normal_tridiag
 
   !PARALLEL ON FREQ:
-#ifdef _MPI
-  subroutine invert_gk_normal_tridiag_mpi(MpiComm,zeta,Hk,hk_symm,Gkout)
-    integer                                         :: MpiComm
+  subroutine invert_gk_normal_tridiag_mpi(zeta,Hk,hk_symm,Gkout)
     complex(8),dimension(:,:,:,:),intent(in)        :: zeta    ![Nlat][Nspin*Norb][Nspin*Norb][Lfreq]
     complex(8),dimension(:,:),intent(in)            :: Hk      ![Nlat*Nspin*Norb][Nlat*Nspin*Norb]
     logical,intent(in)                              :: hk_symm
@@ -449,9 +571,21 @@ contains
     integer                                         :: i,is,ilat,jlat,iorb,jorb,ispin,jspin,io,jo
     !
     !MPI setup:
-    mpi_size  = MPI_Get_size(MpiComm)
-    mpi_rank =  MPI_Get_rank(MpiComm)
-    mpi_master= MPI_Get_master(MpiComm)
+#ifdef _MPI    
+    if(check_MPI())then
+       mpi_size  = get_size_MPI()
+       mpi_rank =  get_rank_MPI()
+       mpi_master= get_master_MPI()
+    else
+       mpi_size=1
+       mpi_rank=0
+       mpi_master=.true.
+    endif
+#else
+    mpi_size=1
+    mpi_rank=0
+    mpi_master=.true.
+#endif
     !
     Nlat  = size(zeta,1)
     Nspin = size(Gkout,2)
@@ -464,6 +598,16 @@ contains
     call assert_shape(Hk,[Nlso,Nlso],"invert_gk_normal_tridiag_mpi","Hk")
     call assert_shape(Gkout,[Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_normal_tridiag_mpi","Gkout")
     !
+    if(allocated(local_gamma_mats).AND.allocated(local_gamma_real))&
+         stop "invert_gk_normal_tridiag_mpi: local_Gamma_mats & local_Gamma_real both allocated"
+    if(allocated(local_gamma_mats))then
+       call assert_shape(local_gamma_mats,[Nlat,Nso,Nso,Lfreq],"invert_gk_normal_tridiag_mpi","local_gamma_mats")
+       allocate(Gembed(Nlat,Nso,Nso,Lfreq));Gembed=local_gamma_mats
+    endif
+    if(allocated(lattice_gamma_real))then
+       call assert_shape(lattice_gamma_real,[Nlat,Nso,Nso,Lfreq],"invert_gk_normal_tridiag_mpi","local_gamma_real")
+       allocate(Gembed(Nlat,Nso,Nso,Lfreq));Gembed=local_gamma_real
+    endif
     !
     allocate(Sub(Nlat-1,Nso,Nso))
     allocate(Diag(Nlat,Nso,Nso))
@@ -491,15 +635,17 @@ contains
           enddo
        enddo
     enddo
-    Gkout=zero
-    call MPI_AllReduce(Gktmp, Gkout, size(Gkout), MPI_Double_Complex, MPI_Sum, MpiComm, mpi_ierr)
-  end subroutine invert_gk_normal_tridiag_mpi
+#ifdef _MPI    
+    if(check_MPI())then
+       Gkout=zero
+       call MPI_AllReduce(Gktmp, Gkout, size(Gkout), MPI_Double_Complex, MPI_Sum, MPI_COMM_WORLD, mpi_ierr)
+    else
+       Gkout=Gktmp
+    endif
+#else
+    Gkout=Gktmp
 #endif
-
-
-
-
-
+  end subroutine invert_gk_normal_tridiag_mpi
 
 
 
@@ -510,7 +656,171 @@ contains
 
 
   !
-  ! INVERT_GK_NORMAL(_MPI)
+  ! INVERT_GK_NORMAL_GIJ(_MPI)
+  !
+  !SERIAL (OR PARALLEL ON K)
+  subroutine invert_gk_normal_gij(zeta,Hk,hk_symm,Gkout)
+    complex(8),dimension(:,:,:,:),intent(in)          :: zeta    ![Nlat][Nspin*Norb][Nspin*Norb][Lfreq]
+    complex(8),dimension(:,:),intent(in)              :: Hk      ![Nlat*Nspin*Norb][Nlat*Nspin*Norb]
+    logical,intent(in)                                :: hk_symm
+    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gkout   ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
+    !allocatable arrays
+    complex(8),dimension(:,:,:),allocatable           :: Gembed  ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:,:),allocatable   :: Gktmp   ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
+    complex(8),dimension(:,:),allocatable             :: Gmatrix ![Nlat*Nspin*Norb][Nlat*Nspin*Norb]
+    integer                                           :: Lfreq
+    Nlat  = size(zeta,1)
+    Nspin = size(Gkout,3)
+    Norb  = size(Gkout,5)
+    Lfreq = size(zeta,4)
+    Nso   = Nspin*Norb
+    Nlso  = Nlat*Nspin*Norb
+    call assert_shape(zeta,[Nlat,Nso,Nso,Lfreq],"invert_gk_normal_gij","zeta")
+    call assert_shape(Hk,[Nlso,Nlso],"invert_gk_normal_gij","Hk")
+    call assert_shape(Gkout,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_normal_gij","Gkout")
+    !
+    if(allocated(lattice_gamma_mats).AND.allocated(lattice_gamma_real))&
+         stop "invert_gk_normal_ineq: lattice_Gamma_mats & lattice_Gamma_real both allocated"
+    if(allocated(lattice_gamma_mats))then
+       call assert_shape(lattice_gamma_mats,[Nlso,Nlso,Lfreq],"invert_gk_normal_gij","lattice_gamma_mats")
+       allocate(Gembed(Nlso,Nlso,Lfreq));Gembed=lattice_gamma_mats
+    endif
+    if(allocated(lattice_gamma_real))then
+       call assert_shape(lattice_gamma_real,[Nlso,Nlso,Lfreq],"invert_gk_normal_gij","lattice_gamma_real")
+       allocate(Gembed(Nlso,Nlso,Lfreq));Gembed=lattice_gamma_real
+    endif
+    !
+    allocate(Gktmp(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq))
+    allocate(Gmatrix(Nlso,Nlso))
+    Gktmp=zero
+    do i=1,Lfreq
+       Gmatrix  = blocks_to_matrix(zeta(:,:,:,i),Nlat,Nso) - Hk
+       if(allocated(Gembed))Gmatrix = Gmatrix - Gembed(:,:,i)
+       if(hk_symm) then
+          call inv_sym(Gmatrix)
+       else
+          call inv(Gmatrix)  ! PAY ATTENTION HERE: it is not guaranteed that Gloc is a symmetric matrix
+       end if
+       !store the diagonal blocks directly into the tmp output 
+       do ilat=1,Nlat
+          do jlat=1,Nlat
+             do ispin=1,Nspin
+                do jspin=1,Nspin
+                   do iorb=1,Norb
+                      do jorb=1,Norb
+                         io = iorb + (ispin-1)*Norb + (ilat-1)*Nspin*Norb
+                         jo = jorb + (jspin-1)*Norb + (jlat-1)*Nspin*Norb
+                         Gktmp(ilat,jlat,ispin,jspin,iorb,jorb,i) = Gmatrix(io,jo)
+                      enddo
+                   enddo
+                enddo
+             enddo
+          enddo
+       enddo
+    enddo
+    Gkout = Gktmp
+  end subroutine invert_gk_normal_gij
+
+  !PARALLEL ON FREQ:
+  subroutine invert_gk_normal_gij_mpi(zeta,Hk,hk_symm,Gkout)
+    complex(8),dimension(:,:,:,:),intent(in)          :: zeta    ![Nlat][Nspin*Norb][Nspin*Norb][Lfreq]
+    complex(8),dimension(:,:),intent(in)              :: Hk      ![Nlat*Nspin*Norb][Nlat*Nspin*Norb]
+    logical,intent(in)                                :: hk_symm
+    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gkout   ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
+    !allocatable arrays
+    complex(8),dimension(:,:,:),allocatable           :: Gembed  ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:,:),allocatable   :: Gktmp   ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
+    complex(8),dimension(:,:),allocatable             :: Gmatrix ![Nlat*Nspin*Norb][Nlat*Nspin*Norb]
+    integer                                           :: Lfreq
+    !
+    !
+    !MPI setup:
+#ifdef _MPI    
+    if(check_MPI())then
+       mpi_size  = get_size_MPI()
+       mpi_rank =  get_rank_MPI()
+       mpi_master= get_master_MPI()
+    else
+       mpi_size=1
+       mpi_rank=0
+       mpi_master=.true.
+    endif
+#else
+    mpi_size=1
+    mpi_rank=0
+    mpi_master=.true.
+#endif
+    !
+    Nlat  = size(zeta,1)
+    Nspin = size(Gkout,3)
+    Norb  = size(Gkout,5)
+    Lfreq = size(zeta,4)
+    Nso   = Nspin*Norb
+    Nlso  = Nlat*Nspin*Norb
+    call assert_shape(zeta,[Nlat,Nso,Nso,Lfreq],"invert_gk_normal_gij_mpi","zeta")
+    call assert_shape(Hk,[Nlso,Nlso],"invert_gk_normal_gij_mpi","Hk")
+    call assert_shape(Gkout,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_normal_gij_mpi","Gkout")
+    !
+    if(allocated(lattice_gamma_mats).AND.allocated(lattice_gamma_real))&
+         stop "invert_gk_normal_gij_mpi: lattice_Gamma_mats & lattice_Gamma_real both allocated"
+    if(allocated(lattice_gamma_mats))then
+       call assert_shape(lattice_gamma_mats,[Nlso,Nlso,Lfreq],"invert_gk_normal_gij_mpi","lattice_gamma_mats")
+       allocate(Gembed(Nlso,Nlso,Lfreq));Gembed=lattice_gamma_mats
+    endif
+    if(allocated(lattice_gamma_real))then
+       call assert_shape(lattice_gamma_real,[Nlso,Nlso,Lfreq],"invert_gk_normal_gij","lattice_gamma_real")
+       allocate(Gembed(Nlso,Nlso,Lfreq));Gembed=lattice_gamma_real
+    endif
+    !
+    allocate(Gktmp(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq))
+    allocate(Gmatrix(Nlso,Nlso))
+    Gktmp=zero
+    do i=1+mpi_rank,Lfreq,mpi_size
+       Gmatrix  = blocks_to_matrix(zeta(:,:,:,i),Nlat,Nso) - Hk
+       if(allocated(Gembed))Gmatrix = Gmatrix - Gembed(:,:,i)
+       if(hk_symm) then
+          call inv_sym(Gmatrix)
+       else
+          call inv(Gmatrix)  ! PAY ATTENTION HERE: it is not guaranteed that Gloc is a symmetric matrix
+       end if
+       !store the diagonal blocks directly into the tmp output 
+       do ilat=1,Nlat
+          do jlat=1,Nlat
+             do ispin=1,Nspin
+                do jspin=1,Nspin
+                   do iorb=1,Norb
+                      do jorb=1,Norb
+                         io = iorb + (ispin-1)*Norb + (ilat-1)*Nspin*Norb
+                         jo = jorb + (jspin-1)*Norb + (jlat-1)*Nspin*Norb
+                         Gktmp(ilat,jlat,ispin,jspin,iorb,jorb,i) = Gmatrix(io,jo)
+                      enddo
+                   enddo
+                enddo
+             enddo
+          enddo
+       enddo
+    enddo
+#ifdef _MPI    
+    if(check_MPI())then
+       Gkout=zero
+       call MPI_AllReduce(Gktmp, Gkout, size(Gkout), MPI_Double_Complex, MPI_Sum, MPI_COMM_WORLD, mpi_ierr)
+    else
+       Gkout=Gktmp
+    endif
+#else
+    Gkout=Gktmp
+#endif
+  end subroutine invert_gk_normal_gij_mpi
+
+
+
+
+
+
+
+
+  !
+  ! INVERT_GK_SUPERC(_MPI)
   !
   !SERIAL (OR PARALLEL ON K):
   subroutine invert_gk_superc(zeta,Hk,hk_symm,Gkout)
@@ -563,12 +873,11 @@ contains
     Gkout = Gktmp
   end subroutine invert_gk_superc
 
+
   !PARALLEL ON FREQ:
-#ifdef _MPI
-  subroutine invert_gk_superc_mpi(MpiComm,zeta,Hk,hk_symm,Gkout)
-    integer                                         :: MpiComm
+  subroutine invert_gk_superc_mpi(zeta,Hk,hk_symm,Gkout)
     complex(8),dimension(:,:,:,:,:),intent(in)      :: zeta    ![2][2][Nspin*Norb][Nspin*Norb][Lfreq]
-    complex(8),dimension(:,:,:),intent(in)            :: Hk      ![2][Nspin*Norb][Nspin*Norb]
+    complex(8),dimension(:,:,:),intent(in)          :: Hk      ![2][Nspin*Norb][Nspin*Norb]
     logical,intent(in)                              :: hk_symm !
     complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gkout   ![2][Nspin][Nspin][Norb][Norb][Lfreq]
     complex(8),dimension(:,:,:,:,:,:),allocatable   :: Gktmp   ![2][Nspin][Nspin][Norb][Norb][Lfreq]
@@ -577,9 +886,21 @@ contains
     integer                                         :: i,iorb,jorb,ispin,jspin,io,jo
     !
     !MPI setup:
-    mpi_size  = MPI_Get_size(MpiComm)
-    mpi_rank =  MPI_Get_rank(MpiComm)
-    mpi_master= MPI_Get_master(MpiComm)
+#ifdef _MPI    
+    if(check_MPI())then
+       mpi_size  = get_size_MPI()
+       mpi_rank =  get_rank_MPI()
+       mpi_master= get_master_MPI()
+    else
+       mpi_size=1
+       mpi_rank=0
+       mpi_master=.true.
+    endif
+#else
+    mpi_size=1
+    mpi_rank=0
+    mpi_master=.true.
+#endif
     !
     Nspin = size(Gkout,2)
     Norb  = size(Gkout,4)
@@ -618,16 +939,21 @@ contains
           enddo
        enddo
     enddo
-    Gkout=zero
-    call MPI_AllReduce(Gktmp, Gkout, size(Gkout), MPI_Double_Complex, MPI_Sum, MpiComm, mpi_ierr)
-  end subroutine invert_gk_superc_mpi
+#ifdef _MPI    
+    if(check_MPI())then
+       Gkout=zero
+       call MPI_AllReduce(Gktmp, Gkout, size(Gkout), MPI_Double_Complex, MPI_Sum, MPI_COMM_WORLD, mpi_ierr)
+    else
+       Gkout=Gktmp
+    endif
+#else
+    Gkout=Gktmp
 #endif
-
-
+  end subroutine invert_gk_superc_mpi
 
 
   !
-  ! INVERT_GK_NORMAL_INEQ(_MPI)
+  ! INVERT_GK_SUPERC_INEQ(_MPI)
   !
   !SERIAL (OR PARALLEL ON K)
   subroutine invert_gk_superc_ineq(zeta,Hk,hk_symm,Gkout)
@@ -686,9 +1012,7 @@ contains
 
 
   !PARALLEL ON FREQ:
-#ifdef _MPI
-  subroutine invert_gk_superc_ineq_mpi(MpiComm,zeta,Hk,hk_symm,Gkout)
-    integer                                           :: MpiComm
+  subroutine invert_gk_superc_ineq_mpi(zeta,Hk,hk_symm,Gkout)
     complex(8),dimension(:,:,:,:,:,:),intent(in)      :: zeta    ![2][2][Nlat][Nspin*Norb][Nspin*Norb][Lfreq]
     complex(8),dimension(:,:,:),intent(in)              :: Hk      ![2][Nlat*Nspin*Norb][Nlat*Nspin*Norb]
     logical,intent(in)                                :: hk_symm !
@@ -699,9 +1023,21 @@ contains
     integer                                           :: i,is,ilat,jlat,iorb,jorb,ispin,jspin,io,jo
     !
     !MPI setup:
-    mpi_size  = MPI_Get_size(MpiComm)
-    mpi_rank =  MPI_Get_rank(MpiComm)
-    mpi_master= MPI_Get_master(MpiComm)
+#ifdef _MPI    
+    if(check_MPI())then
+       mpi_size  = get_size_MPI()
+       mpi_rank =  get_rank_MPI()
+       mpi_master= get_master_MPI()
+    else
+       mpi_size=1
+       mpi_rank=0
+       mpi_master=.true.
+    endif
+#else
+    mpi_size=1
+    mpi_rank=0
+    mpi_master=.true.
+#endif
     !
     Nlat  = size(zeta,3)
     Nspin = size(Gkout,3)
@@ -744,10 +1080,254 @@ contains
           enddo
        enddo
     enddo
-    Gkout=zero
-    call MPI_AllReduce(Gktmp, Gkout, size(Gkout), MPI_Double_Complex, MPI_Sum, MpiComm, mpi_ierr)
-  end subroutine invert_gk_superc_ineq_mpi
+#ifdef _MPI    
+    if(check_MPI())then
+       Gkout=zero
+       call MPI_AllReduce(Gktmp, Gkout, size(Gkout), MPI_Double_Complex, MPI_Sum, MPI_COMM_WORLD, mpi_ierr)
+    else
+       Gkout=Gktmp
+    endif
+#else
+    Gkout=Gktmp
 #endif
+  end subroutine invert_gk_superc_ineq_mpi
+
+
+
+
+  subroutine invert_gk_superc_gij(zeta,Hk,hk_symm,Gkout,Fkout)
+    complex(8)                                        :: zeta(:,:,:,:,:,:)              ![2][2][Nlat][Nspin*Norb][Nspin*Norb][Lfreq]
+    complex(8)                                        :: Hk(2,Nlat*Nspin*Norb,Nlat*Nspin*Norb) 
+    logical                                           :: hk_symm                
+    !output:
+    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gkout   ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Fkout   ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:,:),allocatable   :: Gktmp   ![Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:,:),allocatable   :: Fktmp   ![Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
+    complex(8),dimension(:,:),allocatable             :: Gmatrix ![2*Nlat*Nspin*Norb][2*Nlat*Nspin*Norb]
+    integer                                           :: Lfreq
+    !
+    Nlat  = size(zeta,3)
+    Nspin = size(Gkout,3)
+    Norb  = size(Gkout,5)
+    Lfreq = size(zeta,6)
+    Nso   = Nspin*Norb
+    Nlso  = Nlat*Nspin*Norb
+    call assert_shape(zeta,[2,2,Nlat,Nso,Nso,Lfreq],"invert_gk_superc_gij","zeta")
+    call assert_shape(Hk,[2,Nlso,Nlso],"invert_gk_superc_gij","Hk")
+    call assert_shape(Gkout,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_superc_gij","Gkout")
+    call assert_shape(Fkout,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_superc_gij","Fkout")
+    !
+    allocate(Gktmp(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq))
+    allocate(Fktmp(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq))
+    allocate(Gmatrix(2*Nlso,2*Nlso))
+    Gkout = zero
+    Fkout = zero
+    Gktmp = zero
+    Fktmp = zero
+    do i=1,Lfreq
+       Gmatrix  = zero
+       Gmatrix(1:Nlso,1:Nlso)        = blocks_to_matrix(zeta(1,1,:,:,:,i),Nlat,Nso) - Hk(1,:,:)
+       Gmatrix(1:Nlso,Nlso+1:2*Nlso) = blocks_to_matrix(zeta(1,2,:,:,:,i),Nlat,Nso)
+       Gmatrix(Nlso+1:2*Nlso,1:Nlso) = blocks_to_matrix(zeta(2,1,:,:,:,i),Nlat,Nso)
+       Gmatrix(Nlso+1:2*Nlso,Nlso+1:2*Nlso) = blocks_to_matrix(zeta(2,2,:,:,:,i),Nlat,Nso) - Hk(2,:,:) !+ Hk
+       if(hk_symm) then
+          call inv_sym(Gmatrix)
+       else
+          call inv(Gmatrix)  ! PAY ATTENTION HERE: it is not guaranteed that Gloc is a symmetric matrix
+       end if
+       !store the diagonal blocks directly into the tmp output 
+       do ilat=1,Nlat
+          do jlat=1,Nlat
+             do ispin=1,Nspin
+                do jspin=1,Nspin
+                   do iorb=1,Norb
+                      do jorb=1,Norb
+                         io = iorb + (ispin-1)*Norb + (ilat-1)*Nspin*Norb
+                         jo = jorb + (jspin-1)*Norb + (jlat-1)*Nspin*Norb
+                         Gktmp(ilat,jlat,ispin,jspin,iorb,jorb,i) = Gmatrix(io,jo)
+                         Fktmp(ilat,jlat,ispin,jspin,iorb,jorb,i) = Gmatrix(io,Nlso+jo)
+                      enddo
+                   enddo
+                enddo
+             enddo
+          enddo
+       enddo
+       !
+    enddo
+    Gkout = Gktmp
+    Fkout = Fktmp
+  end subroutine invert_gk_superc_gij
+
+  subroutine invert_gk_superc_gij_mpi(zeta,Hk,hk_symm,Gkout,Fkout)
+    complex(8)                                        :: zeta(:,:,:,:,:,:)              ![2][2][Nlat][Nspin*Norb][Nspin*Norb][Lfreq]
+    complex(8)                                        :: Hk(2,Nlat*Nspin*Norb,Nlat*Nspin*Norb) 
+    logical                                           :: hk_symm                
+    !output:
+    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gkout   ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Fkout   ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:,:),allocatable   :: Gktmp   ![Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:,:),allocatable   :: Fktmp   ![Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
+    complex(8),dimension(:,:),allocatable             :: Gmatrix ![2*Nlat*Nspin*Norb][2*Nlat*Nspin*Norb]
+    integer                                           :: Lfreq
+    !
+    !MPI setup:
+#ifdef _MPI    
+    if(check_MPI())then
+       mpi_size  = get_size_MPI()
+       mpi_rank =  get_rank_MPI()
+       mpi_master= get_master_MPI()
+    else
+       mpi_size=1
+       mpi_rank=0
+       mpi_master=.true.
+    endif
+#else
+    mpi_size=1
+    mpi_rank=0
+    mpi_master=.true.
+#endif
+    !
+    Nlat  = size(zeta,3)
+    Nspin = size(Gkout,3)
+    Norb  = size(Gkout,5)
+    Lfreq = size(zeta,6)
+    Nso   = Nspin*Norb
+    Nlso  = Nlat*Nspin*Norb
+    call assert_shape(zeta,[2,2,Nlat,Nso,Nso,Lfreq],"invert_gk_superc_gij","zeta")
+    call assert_shape(Hk,[2,Nlso,Nlso],"invert_gk_superc_gij","Hk")
+    call assert_shape(Gkout,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_superc_gij","Gkout")
+    call assert_shape(Fkout,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"invert_gk_superc_gij","Fkout")
+    !
+    allocate(Gktmp(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq))
+    allocate(Fktmp(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq))
+    allocate(Gmatrix(2*Nlso,2*Nlso))
+    Gktmp = zero
+    Fktmp = zero
+    do i=1+mpi_rank,Lfreq,mpi_size
+       Gmatrix  = zero
+       Gmatrix(1:Nlso,1:Nlso)        = blocks_to_matrix(zeta(1,1,:,:,:,i),Nlat,Nso) - Hk(1,:,:)
+       Gmatrix(1:Nlso,Nlso+1:2*Nlso) = blocks_to_matrix(zeta(1,2,:,:,:,i),Nlat,Nso)
+       Gmatrix(Nlso+1:2*Nlso,1:Nlso) = blocks_to_matrix(zeta(2,1,:,:,:,i),Nlat,Nso)
+       Gmatrix(Nlso+1:2*Nlso,Nlso+1:2*Nlso) = blocks_to_matrix(zeta(2,2,:,:,:,i),Nlat,Nso) - Hk(2,:,:) !+ Hk
+       if(hk_symm) then
+          call inv_sym(Gmatrix)
+       else
+          call inv(Gmatrix)  ! PAY ATTENTION HERE: it is not guaranteed that Gloc is a symmetric matrix
+       end if
+       !store the diagonal blocks directly into the tmp output 
+       do ilat=1,Nlat
+          do jlat=1,Nlat
+             do ispin=1,Nspin
+                do jspin=1,Nspin
+                   do iorb=1,Norb
+                      do jorb=1,Norb
+                         io = iorb + (ispin-1)*Norb + (ilat-1)*Nspin*Norb
+                         jo = jorb + (jspin-1)*Norb + (jlat-1)*Nspin*Norb
+                         Gktmp(ilat,jlat,ispin,jspin,iorb,jorb,i) = Gmatrix(io,jo)
+                         Fktmp(ilat,jlat,ispin,jspin,iorb,jorb,i) = Gmatrix(io,Nlso+jo)
+                      enddo
+                   enddo
+                enddo
+             enddo
+          enddo
+       enddo
+       !
+    enddo
+#ifdef _MPI    
+    if(check_MPI())then
+       Gkout=zero
+       Fkout=zero
+       call MPI_AllReduce(Gktmp, Gkout, size(Gkout), MPI_Double_Complex, MPI_Sum, MPI_COMM_WORLD, mpi_ierr)
+       call MPI_AllReduce(Fktmp, Fkout, size(Fkout), MPI_Double_Complex, MPI_Sum, MPI_COMM_WORLD, mpi_ierr)
+    else
+       Gkout=Gktmp
+       Fkout=Fktmp
+    endif
+#else
+    Gkout=Gktmp
+    Fkout=Fktmp
+#endif
+  end subroutine invert_gk_superc_gij_mpi
+
+
+
+
+
+
+
+  !--------------------------------------------------------------------!
+  ! PURPOSE: Set the lattice/local Gamma functions for Embedding
+  !--------------------------------------------------------------------!
+  subroutine dmft_set_Gamma_matsubara_ineq(Gamma_mats)
+    complex(8),dimension(:,:,:) :: Gamma_mats![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lmats]
+    integer                     :: Nlso,Lmats
+    Nlso  = size(Gamma_mats,1)
+    Lmats = size(Gamma_mats,3)
+    !Testing part:
+    call assert_shape(Gamma_mats,[Nlso,Nlso,Lmats],"dmft_set_Gamma_matsubara_ineq","Gamma_mats")
+    !
+    if(allocated(lattice_Gamma_mats))deallocate(lattice_Gamma_mats)
+    if(allocated(lattice_Gamma_real))deallocate(lattice_Gamma_real)
+    allocate(lattice_Gamma_mats(Nlso,Nlso,Lmats))
+    !
+    write(*,"(A)")"Set lattice Gamma_mats"
+    lattice_Gamma_mats = Gamma_mats
+  end subroutine dmft_set_Gamma_matsubara_ineq
+
+  subroutine dmft_set_Gamma_matsubara_local(Gamma_mats)
+    complex(8),dimension(:,:,:,:),optional          :: Gamma_mats![Nlat][Nspin*Norb][Nspin*Norb][Lmats]
+    integer                                         :: Nlat,Nso,Lmats
+    !
+    Nlat  = size(Gamma_mats,1)
+    Nso   = size(Gamma_mats,2)
+    Lmats = size(Gamma_mats,4)
+    !Testing part:
+    call assert_shape(Gamma_mats,[Nlat,Nso,Nso,Lmats],"dmft_set_Gamma_matsubara_local","Gamma_mats")         
+    if(allocated(local_Gamma_mats))deallocate(local_Gamma_mats)
+    if(allocated(local_Gamma_real))deallocate(local_Gamma_real)
+    allocate(local_Gamma_mats(Nlat,Nso,Nso,Lmats))
+    !
+    write(*,"(A)")"Set local Gamma_mats"
+    local_Gamma_mats = Gamma_mats
+  end subroutine dmft_set_Gamma_matsubara_local
+
+  subroutine dmft_set_Gamma_realaxis_ineq(Gamma_real)
+    complex(8),dimension(:,:,:) :: Gamma_real![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lreal]
+    integer                     :: Nlso,Lreal
+    Nlso  = size(Gamma_real,1)
+    Lreal = size(Gamma_real,3)
+    !Testing part:
+    call assert_shape(Gamma_real,[Nlso,Nlso,Lreal],"dmft_set_Gamma_realaxis_ineq","Gamma_real")
+    !
+    if(allocated(lattice_Gamma_mats))deallocate(lattice_Gamma_mats)
+    if(allocated(lattice_Gamma_real))deallocate(lattice_Gamma_real)
+    allocate(lattice_Gamma_real(Nlso,Nlso,Lreal))
+    !
+    write(*,"(A)")"Set lattice Gamma_real"
+    lattice_Gamma_real = Gamma_real
+  end subroutine dmft_set_Gamma_realaxis_ineq
+
+  subroutine dmft_set_Gamma_realaxis_local(Gamma_real)
+    complex(8),dimension(:,:,:,:),optional          :: Gamma_real![Nlat][Nspin*Norb][Nspin*Norb][Lreal]
+    integer                                         :: Nlat,Nso,Lreal
+    !
+    Nlat  = size(Gamma_real,1)
+    Nso   = size(Gamma_real,2)
+    Lreal = size(Gamma_real,4)
+    !Testing part:
+    call assert_shape(Gamma_real,[Nlat,Nso,Nso,Lreal],"dmft_set_Gamma_realaxis_local","Gamma_real")         
+    if(allocated(local_Gamma_mats))deallocate(local_Gamma_mats)
+    if(allocated(local_Gamma_real))deallocate(local_Gamma_real)
+    allocate(local_Gamma_real(Nlat,Nso,Nso,Lreal))
+    !
+    write(*,"(A)")"Set local Gamma_real"
+    local_Gamma_real = Gamma_real
+  end subroutine dmft_set_Gamma_realaxis_local
+
+
+
+
 
 
 
@@ -1050,4 +1630,123 @@ contains
   end function c_nn2nso
 
 
-end module DMFT_GK
+
+  !+-----------------------------------------------------------------------------+!
+  !PURPOSE: 
+  ! reshape a matrix from the [Nlso][Nlso] shape
+  ! _nlso2nnn : from [Nlso][Nlso] to [Nlat][Nlat][Nspin][Nspin][Norb][Norb]  !
+  !+-----------------------------------------------------------------------------+!
+
+  function d_nlso2nnn_cluster(Hlso,Nlat,Nspin,Norb) result(Hnnn)
+    integer                                            :: Nlat,Nspin,Norb
+    real(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hlso
+    real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hnnn
+    integer                                            :: ilat,jlat
+    integer                                            :: iorb,jorb
+    integer                                            :: ispin,jspin
+    integer                                            :: is,js
+    Hnnn=zero
+    do ilat=1,Nlat
+       do jlat=1,Nlat
+          do ispin=1,Nspin
+             do jspin=1,Nspin
+                do iorb=1,Norb
+                   do jorb=1,Norb
+                      is = iorb + (ilat-1)*Norb + (ispin-1)*Norb*Nlat
+                      js = jorb + (jlat-1)*Norb + (jspin-1)*Norb*Nlat
+                      Hnnn(ilat,jlat,ispin,jspin,iorb,jorb) = Hlso(is,js)
+                   enddo
+                enddo
+             enddo
+          enddo
+       enddo
+    enddo
+  end function d_nlso2nnn_cluster
+  !
+  function c_nlso2nnn_cluster(Hlso,Nlat,Nspin,Norb) result(Hnnn)
+    integer                                               :: Nlat,Nspin,Norb
+    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hlso
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hnnn
+    integer                                               :: ilat,jlat
+    integer                                               :: iorb,jorb
+    integer                                               :: ispin,jspin
+    integer                                               :: is,js
+    Hnnn=zero
+    do ilat=1,Nlat
+       do jlat=1,Nlat
+          do ispin=1,Nspin
+             do jspin=1,Nspin
+                do iorb=1,Norb
+                   do jorb=1,Norb
+                      is = iorb + (ilat-1)*Norb + (ispin-1)*Norb*Nlat
+                      js = jorb + (jlat-1)*Norb + (jspin-1)*Norb*Nlat
+                      Hnnn(ilat,jlat,ispin,jspin,iorb,jorb) = Hlso(is,js)
+                   enddo
+                enddo
+             enddo
+          enddo
+       enddo
+    enddo
+  end function c_nlso2nnn_cluster
+
+
+  !+-----------------------------------------------------------------------------+!
+  !PURPOSE: 
+  ! reshape a matrix from the [Nlat][Nlat][Nspin][Nspin][Norb][Norb] shape
+  ! _nnn2nlso : from [Nlat][Nlat][Nspin][Nspin][Norb][Norb] to [Nlso][Nlso]
+  !+-----------------------------------------------------------------------------+!
+
+  function d_nnn2nlso_cluster(Hnnn,Nlat,Nspin,Norb) result(Hlso)
+    integer                                            :: Nlat,Nspin,Norb
+    real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hnnn
+    real(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hlso
+    integer                                            :: ilat,jlat
+    integer                                            :: iorb,jorb
+    integer                                            :: ispin,jspin
+    integer                                            :: is,js
+    Hlso=zero
+    do ilat=1,Nlat
+       do jlat=1,Nlat
+          do ispin=1,Nspin
+             do jspin=1,Nspin
+                do iorb=1,Norb
+                   do jorb=1,Norb
+                      is = iorb + (ilat-1)*Norb + (ispin-1)*Norb*Nlat
+                      js = jorb + (jlat-1)*Norb + (jspin-1)*Norb*Nlat
+                      Hlso(is,js) = Hnnn(ilat,jlat,ispin,jspin,iorb,jorb)
+                   enddo
+                enddo
+             enddo
+          enddo
+       enddo
+    enddo
+  end function d_nnn2nlso_cluster
+  !
+  function c_nnn2nlso_cluster(Hnnn,Nlat,Nspin,Norb) result(Hlso)
+    integer                                               :: Nlat,Nspin,Norb
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hnnn
+    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hlso
+    integer                                               :: ilat,jlat
+    integer                                               :: iorb,jorb
+    integer                                               :: ispin,jspin
+    integer                                               :: is,js
+    Hlso=zero
+    do ilat=1,Nlat
+       do jlat=1,Nlat
+          do ispin=1,Nspin
+             do jspin=1,Nspin
+                do iorb=1,Norb
+                   do jorb=1,Norb
+                      is = iorb + (ilat-1)*Norb + (ispin-1)*Norb*Nlat
+                      js = jorb + (jlat-1)*Norb + (jspin-1)*Norb*Nlat
+                      Hlso(is,js) = Hnnn(ilat,jlat,ispin,jspin,iorb,jorb)
+                   enddo
+                enddo
+             enddo
+          enddo
+       enddo
+    enddo
+  end function c_nnn2nlso_cluster
+
+
+end module GF_COMMON

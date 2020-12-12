@@ -49,7 +49,7 @@ contains
     integer                     :: Nspin
     real(8),optional            :: origin(:)
     logical,optional            :: verbose,Hcheck
-    logical                     :: verbose_,hcheck_,master=.true.
+    logical                     :: verbose_,hcheck_
     integer                     :: unitIO
     integer                     :: Num_wann
     integer                     :: Nrpts
@@ -127,10 +127,11 @@ contains
     !
     TB_w90%Hloc=slo2lso(TB_w90%Hloc,TB_w90%Nlat,TB_w90%Nspin,TB_w90%Norb)
     !
+    mpi_master=.true.
 #ifdef _MPI    
-    if(Check_MPI())master = get_master_MPI()
+    if(check_MPI())mpi_master= get_master_MPI()
 #endif
-    if(master)then
+    if(mpi_master)then
        write(*,*)
        write(*,'(1A)')         "-------------- H_LDA --------------"
        write(*,'(A,I6)')      "  Number of Wannier functions:   ",TB_w90%num_wann
@@ -148,7 +149,7 @@ contains
     integer                     :: Nspin
     real(8),optional            :: origin(:)
     logical,optional            :: verbose,hcheck
-    logical                     :: verbose_,hcheck_,master=.true.
+    logical                     :: verbose_,hcheck_
     integer                     :: unitIO
     integer                     :: Num_wann,Nlso
     integer                     :: i,j,ir,a,b,len
@@ -223,10 +224,11 @@ contains
     !
     TB_w90%Hloc=slo2lso(TB_w90%Hloc,TB_w90%Nlat,TB_w90%Nspin,TB_w90%Norb)
     !
+    mpi_master=.true.
 #ifdef _MPI    
-    if(Check_MPI())master = get_master_MPI()
+    if(check_MPI())mpi_master= get_master_MPI()
 #endif
-    if(master)then
+    if(mpi_master)then
        write(*,*)
        write(*,'(1A)')         "-------------- H_LDA --------------"
        write(*,'(A,I6)')      "  Number of Wannier functions:   ",TB_w90%num_wann
@@ -273,38 +275,47 @@ contains
     character(len=33)           :: header
     character(len=9)             :: cdate, ctime
     !
-    inquire(file=reg(file),exist=bool)
-    if(.not.bool)stop "TB_fix_w90: file not found"
-    !
-    len = file_length(reg(file))
-    if(Nrpts/=len/Num_wann/Num_wann)stop "TB_fix_w90: wrong file length"
-    !
-    allocate(ndegen(Nrpts));Ndegen=1
-    !
-    file_bkp = reg(file)//".backup"
-    !
-    call system("cp -vf "//reg(file)//" "//reg(file_bkp))
-    open(free_unit(ubkp),file=reg(file_bkp))
-    open(free_unit(unit),file=reg(file))
-    !
-    call io_date(cdate,ctime)
-    header = 'fixed on '//cdate//' at '//ctime
-    write(unit,*)header ! Date and time
-    write(unit,*)num_wann
-    write(unit,*)nrpts
-    write(unit,"(15I5)")(ndegen(i), i=1, nrpts)
-    !
-    do ir=1,Nrpts
-       do i=1,Num_wann
-          do j=1,Num_wann
-             !
-             read(ubkp,*)rx,ry,rz,a,b,re,im
-             write(unit,"(5I5,2F12.6)")rx,ry,rz,a,b,re,im
+    mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
+    if(mpi_master)then
+       inquire(file=reg(file),exist=bool)
+       if(.not.bool)stop "TB_fix_w90: file not found"
+       !
+       len = file_length(reg(file))
+       if(Nrpts/=len/Num_wann/Num_wann)stop "TB_fix_w90: wrong file length"
+       !
+       allocate(ndegen(Nrpts));Ndegen=1
+       !
+       file_bkp = reg(file)//".backup"
+       !
+       call system("cp -vf "//reg(file)//" "//reg(file_bkp))
+       open(free_unit(ubkp),file=reg(file_bkp))
+       open(free_unit(unit),file=reg(file))
+       !
+       call io_date(cdate,ctime)
+       header = 'fixed on '//cdate//' at '//ctime
+       write(unit,*)header ! Date and time
+       write(unit,*)num_wann
+       write(unit,*)nrpts
+       write(unit,"(15I5)")(ndegen(i), i=1, nrpts)
+       !
+       do ir=1,Nrpts
+          do i=1,Num_wann
+             do j=1,Num_wann
+                !
+                read(ubkp,*)rx,ry,rz,a,b,re,im
+                write(unit,"(5I5,2F12.6)")rx,ry,rz,a,b,re,im
+             enddo
           enddo
        enddo
-    enddo
-    close(ubkp)
-    close(unit)
+       close(ubkp)
+       close(unit)
+    endif
+#ifdef _MPI    
+    if(check_MPI())call MPI_Barrier(MPI_COMM_WORLD,mpi_ierr)
+#endif
   contains
     !From Wannier90
     subroutine io_date(cdate, ctime)
@@ -471,7 +482,7 @@ contains
     mpi_master=.true.
 #endif
     !
-    wdos_=.false.;if(present(wdos))wdos_=wdos
+    wdos_=.false.
     !
     Nk =product(Nkvec)
     !
@@ -499,21 +510,6 @@ contains
     Hk = Haux
 #endif
     !
-    if(wdos_)then
-       allocate(dos_Greal(TB_w90%Nlat,TB_w90%Nspin,TB_w90%Nspin,TB_w90%Norb,TB_w90%Norb,dos_Lreal))
-       allocate(dos_wtk(Nk))
-       dos_wtk=1d0/Nk
-#ifdef _MPI
-       if(check_MPI())then
-          call dmft_gloc_realaxis(MPI_COMM_WORLD,Hk,dos_wtk,dos_Greal,zeros(TB_w90%Nlat,TB_w90%Nspin,TB_w90%Nspin,TB_w90%Norb,TB_w90%Norb,dos_Lreal))
-       else
-          call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(TB_w90%Nlat,TB_w90%Nspin,TB_w90%Nspin,TB_w90%Norb,TB_w90%Norb,dos_Lreal))
-       endif
-#else
-       call dmft_gloc_realaxis(Hk,dos_wtk,dos_Greal,zeros(TB_w90%Nlat,TB_w90%Nspin,TB_w90%Nspin,TB_w90%Norb,TB_w90%Norb,dos_Lreal))
-#endif
-       if(mpi_master)call dmft_print_gf_realaxis(dos_Greal,trim(dos_file),iprint=1)
-    endif
   end subroutine build_hk_w90
 
 
@@ -587,6 +583,11 @@ contains
     integer                                       :: i,ik,io,jo,Nlso,Nlat,Nspin,Norb  
     complex(8),dimension(:,:),allocatable         :: hk
     !
+    mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
+    !
     if(.not.TB_w90%status)stop "read_hk_w90: TB_w90 structure not allocated. Call setup_w90 first."
     !
     if(.not.allocated(TB_w90%Kgrid))then
@@ -603,22 +604,24 @@ contains
     Norb  = TB_w90%Norb
     Nspin = TB_w90%Nspin
     !
-    open(free_unit(unit),file=reg(file))
-    write(unit,'(4(I10,1x),F15.9)')Nktot,Nlat,Nspin,Norb,TB_w90%Efermi
-    write(unit,'(1A1,3(A12,1x))')"#",(reg(txtfy(Nkvec(ik))),ik=1,Dim)
-    allocate(Hk(Nlso,Nlso))
-    do ik=1,Nktot
-       Hk(:,:) = w90_hk_model(Kgrid(ik,:),Nlso)
-       kvec=0d0 ; kvec(:Dim) = kgrid(ik,:)
-       write(unit,"(3(F15.9,1x))")(kvec(i),i=1,3) 
-       do io=1,Nlso
-          write(unit,"(1000(F15.9))")(dreal(Hk(io,jo)),jo=1,Nlso)
+    if(mpi_master)then
+       open(free_unit(unit),file=reg(file))
+       write(unit,'(4(I10,1x),F15.9)')Nktot,Nlat,Nspin,Norb,TB_w90%Efermi
+       write(unit,'(1A1,3(A12,1x))')"#",(reg(txtfy(Nkvec(ik))),ik=1,Dim)
+       allocate(Hk(Nlso,Nlso))
+       do ik=1,Nktot
+          Hk(:,:) = w90_hk_model(Kgrid(ik,:),Nlso)
+          kvec=0d0 ; kvec(:Dim) = kgrid(ik,:)
+          write(unit,"(3(F15.9,1x))")(kvec(i),i=1,3) 
+          do io=1,Nlso
+             write(unit,"(1000(F15.9))")(dreal(Hk(io,jo)),jo=1,Nlso)
+          enddo
+          do io=1,Nlso
+             write(unit,"(1000(F15.9))")(dimag(Hk(io,jo)),jo=1,Nlso)
+          enddo
        enddo
-       do io=1,Nlso
-          write(unit,"(1000(F15.9))")(dimag(Hk(io,jo)),jo=1,Nlso)
-       enddo
-    enddo
-    close(unit)
+       close(unit)
+    endif
     !
   end subroutine write_hk_w90
 
