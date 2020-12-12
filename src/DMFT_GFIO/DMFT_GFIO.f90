@@ -1322,7 +1322,7 @@ contains
        end select
     endif
 #ifdef _MPI    
-    if(check_MPI())call Bcast_MPI(MPI_COMM_WORLD,Gmats)
+    if(check_MPI())call Bcast_MPI(MPI_COMM_WORLD,Greal)
 #endif
   end subroutine dmft_gf_read_realaxis_main
 
@@ -1505,7 +1505,7 @@ contains
        end select
     endif
 #ifdef _MPI    
-    if(check_MPI())call Bcast_MPI(MPI_COMM_WORLD,Gmats)
+    if(check_MPI())call Bcast_MPI(MPI_COMM_WORLD,Greal)
 #endif
   end subroutine dmft_gf_read_realaxis_ineq
 
@@ -1643,7 +1643,7 @@ contains
        end select
     endif
 #ifdef _MPI    
-    if(check_MPI())call Bcast_MPI(MPI_COMM_WORLD,Gmats)
+    if(check_MPI())call Bcast_MPI(MPI_COMM_WORLD,Greal)
 #endif
   end subroutine dmft_gij_read_realaxis
 
