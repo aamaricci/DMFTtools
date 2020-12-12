@@ -1,8 +1,15 @@
 module DMFT_CONVERGENCE
   USE SF_FONTS
   USE SF_IOTOOLS, only: reg
+#ifdef _MPI
+  USE SF_MPI
+  USE MPI
+#endif
   implicit none
   private
+
+  logical :: mpi_master
+  integer :: mpi_rank,mpi_size,irank
 
 
   !CONVERGENCE
@@ -51,6 +58,10 @@ module DMFT_CONVERGENCE
 
 contains
 
+
+
+
+
   !err = sum(NEW-OLD)/sum(NEW)
   include "error_convergence_relative.f90"
 
@@ -59,5 +70,24 @@ contains
 
   !err = sum((NEW-OLD)/NEW)
   include "error_convergence_global.f90"
+
+
+
+  subroutine setup_mpi()
+    mpi_master=.true.    
+#ifdef _MPI    
+    if(check_MPI())then
+       mpi_master  = get_master_MPI()
+    else
+       mpi_master=.true.
+    endif
+#else
+    mpi_master=.true.
+#endif
+  end subroutine setup_mpi
+
+
+
+
 
 end module DMFT_CONVERGENCE

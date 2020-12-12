@@ -119,15 +119,9 @@ contains
     character(len=*),intent(in)                :: fname
     integer,intent(in)                         :: iprint
     !
-    !MPI setup:
-#ifdef _MPI    
-    if(check_MPI())then
-       mpi_master= get_master_MPI()
-    else
-       mpi_master=.true.
-    endif
-#else
     mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
 #endif
     !
     !Retrieve parameters:
@@ -202,14 +196,9 @@ contains
     integer                                      :: pad
     !
     !MPI setup:
-#ifdef _MPI    
-    if(check_MPI())then
-       mpi_master= get_master_MPI()
-    else
-       mpi_master=.true.
-    endif
-#else
     mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
 #endif
     !
     if(present(ineq_index))then
@@ -359,15 +348,9 @@ contains
     character(len=*),intent(in)                    :: fname
     integer,intent(in)                             :: iprint
     !
-    !MPI setup:
-#ifdef _MPI    
-    if(check_MPI())then
-       mpi_master= get_master_MPI()
-    else
-       mpi_master=.true.
-    endif
-#else
     mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
 #endif
     !
     !Retrieve parameters:
@@ -506,15 +489,9 @@ contains
     character(len=*),intent(in)                :: fname
     integer,intent(in)                         :: iprint
     !
-    !MPI setup:
-#ifdef _MPI    
-    if(check_MPI())then
-       mpi_master= get_master_MPI()
-    else
-       mpi_master=.true.
-    endif
-#else
     mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
 #endif
     !
     !Retrieve parameters:
@@ -589,15 +566,9 @@ contains
     character(len=:),allocatable                 :: index
     integer                                      :: pad
     !
-    !MPI setup:
-#ifdef _MPI    
-    if(check_MPI())then
-       mpi_master= get_master_MPI()
-    else
-       mpi_master=.true.
-    endif
-#else
     mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
 #endif
     !
     if(present(ineq_index))then
@@ -747,14 +718,9 @@ contains
     integer                                        :: Nlat,Nspin,Norb,ispin,jspin,iorb,jorb,ilat,jlat
     !
     !MPI setup:
-#ifdef _MPI    
-    if(check_MPI())then
-       mpi_master= get_master_MPI()
-    else
-       mpi_master=.true.
-    endif
-#else
     mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
 #endif
     !
     !Retrieve parameters:
@@ -886,20 +852,9 @@ contains
     integer,intent(in)                         :: iprint
     !
     !MPI setup:
-#ifdef _MPI    
-    if(check_MPI())then
-       mpi_size  = get_size_MPI()
-       mpi_rank =  get_rank_MPI()
-       mpi_master= get_master_MPI()
-    else
-       mpi_size=1
-       mpi_rank=0
-       mpi_master=.true.
-    endif
-#else
-    mpi_size=1
-    mpi_rank=0
     mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
 #endif
     !
     !Retrieve parameters:
@@ -959,8 +914,9 @@ contains
           !
        end select
     endif
+    mpi_master=.true.
 #ifdef _MPI    
-    call Bcast_MPI(MPI_COMM_WORLD,Gmats)
+    if(check_MPI())call Bcast_MPI(MPI_COMM_WORLD,Gmats)
 #endif
   end subroutine dmft_gf_read_matsubara_main
 
@@ -976,20 +932,9 @@ contains
     integer                                      :: pad
     !
     !MPI setup:
-#ifdef _MPI    
-    if(check_MPI())then
-       mpi_size  = get_size_MPI()
-       mpi_rank =  get_rank_MPI()
-       mpi_master= get_master_MPI()
-    else
-       mpi_size=1
-       mpi_rank=0
-       mpi_master=.true.
-    endif
-#else
-    mpi_size=1
-    mpi_rank=0
     mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
 #endif
     !
     if(present(ineq_index))then
@@ -1154,7 +1099,7 @@ contains
        end select
     endif
 #ifdef _MPI    
-    call Bcast_MPI(MPI_COMM_WORLD,Gmats)
+    if(check_MPI())call Bcast_MPI(MPI_COMM_WORLD,Gmats)
 #endif
   end subroutine dmft_gf_read_matsubara_ineq
 
@@ -1168,21 +1113,9 @@ contains
     character(len=*),intent(in)                    :: fname
     integer,intent(in)                             :: iprint
     !
-    !MPI setup:
-#ifdef _MPI    
-    if(check_MPI())then
-       mpi_size  = get_size_MPI()
-       mpi_rank =  get_rank_MPI()
-       mpi_master= get_master_MPI()
-    else
-       mpi_size=1
-       mpi_rank=0
-       mpi_master=.true.
-    endif
-#else
-    mpi_size=1
-    mpi_rank=0
     mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
 #endif
     !
     !Retrieve parameters:
@@ -1300,7 +1233,7 @@ contains
        end select
     endif
 #ifdef _MPI    
-    call Bcast_MPI(MPI_COMM_WORLD,Gmats)
+    if(check_MPI())call Bcast_MPI(MPI_COMM_WORLD,Gmats)
 #endif
   end subroutine dmft_gij_read_matsubara
 
@@ -1325,20 +1258,9 @@ contains
     integer,intent(in)                         :: iprint
     !
     !MPI setup:
-#ifdef _MPI    
-    if(check_MPI())then
-       mpi_size  = get_size_MPI()
-       mpi_rank =  get_rank_MPI()
-       mpi_master= get_master_MPI()
-    else
-       mpi_size=1
-       mpi_rank=0
-       mpi_master=.true.
-    endif
-#else
-    mpi_size=1
-    mpi_rank=0
     mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
 #endif
     !
     !Retrieve parameters:
@@ -1400,7 +1322,7 @@ contains
        end select
     endif
 #ifdef _MPI    
-    call Bcast_MPI(MPI_COMM_WORLD,Greal)
+    if(check_MPI())call Bcast_MPI(MPI_COMM_WORLD,Gmats)
 #endif
   end subroutine dmft_gf_read_realaxis_main
 
@@ -1416,20 +1338,9 @@ contains
     integer                                      :: pad
     !
     !MPI setup:
-#ifdef _MPI    
-    if(check_MPI())then
-       mpi_size  = get_size_MPI()
-       mpi_rank =  get_rank_MPI()
-       mpi_master= get_master_MPI()
-    else
-       mpi_size=1
-       mpi_rank=0
-       mpi_master=.true.
-    endif
-#else
-    mpi_size=1
-    mpi_rank=0
     mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
 #endif
     !
     if(present(ineq_index))then
@@ -1594,7 +1505,7 @@ contains
        end select
     endif
 #ifdef _MPI    
-    call Bcast_MPI(MPI_COMM_WORLD,Greal)
+    if(check_MPI())call Bcast_MPI(MPI_COMM_WORLD,Gmats)
 #endif
   end subroutine dmft_gf_read_realaxis_ineq
 
@@ -1608,21 +1519,9 @@ contains
     integer,intent(in)                             :: iprint
     integer                                        :: Nlat,Nspin,Norb,ispin,jspin,iorb,jorb,ilat,jlat
     !
-    !MPI setup:
-#ifdef _MPI    
-    if(check_MPI())then
-       mpi_size  = get_size_MPI()
-       mpi_rank =  get_rank_MPI()
-       mpi_master= get_master_MPI()
-    else
-       mpi_size=1
-       mpi_rank=0
-       mpi_master=.true.
-    endif
-#else
-    mpi_size=1
-    mpi_rank=0
     mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
 #endif
     !
     !Retrieve parameters:
@@ -1744,7 +1643,7 @@ contains
        end select
     endif
 #ifdef _MPI    
-    call Bcast_MPI(MPI_COMM_WORLD,Greal)
+    if(check_MPI())call Bcast_MPI(MPI_COMM_WORLD,Gmats)
 #endif
   end subroutine dmft_gij_read_realaxis
 

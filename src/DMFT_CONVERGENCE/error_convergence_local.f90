@@ -18,6 +18,7 @@ function i0_check_convergence_local(Xnew,eps,N1,N2,id,file,index,total,oerr,rese
   character(len=2)                             :: label
   character(len=*),optional                    :: file
   character(len=100)                           :: file_
+  call setup_mpi()
   file_='error.err';if(present(file))file_=reg(file)
   reset_=.true.;if(present(reset))reset_=reset
   extend_=.false.;if(present(extend))extend_=extend
@@ -65,6 +66,7 @@ function i1_check_convergence_local(Xnew,eps,N1,N2,id,file,index,total,strict,oe
   logical                                      :: strict_
   character(len=*),optional                    :: file
   character(len=100)                           :: file_
+  call setup_mpi()
   file_='error.err';if(present(file))file_=reg(file)
   reset_=.true.;if(present(reset))reset_=reset
   extend_=.false.;if(present(extend))extend_=extend
@@ -118,6 +120,7 @@ function i2_check_convergence_local(Xnew,eps,N1,N2,id,file,index,total,strict,oe
   logical                                      :: strict_
   character(len=*),optional                    :: file
   character(len=100)                           :: file_
+  call setup_mpi()
   file_='error.err';if(present(file))file_=reg(file)
   reset_=.true.;if(present(reset))reset_=reset
   extend_=.false.;if(present(extend))extend_=extend
@@ -172,6 +175,7 @@ function d0_check_convergence_local(Xnew,eps,N1,N2,id,file,index,total,oerr,rese
   character(len=2)                             :: label
   character(len=*),optional                    :: file
   character(len=100)                           :: file_
+  call setup_mpi()
   file_='error.err';if(present(file))file_=reg(file)
   reset_=.true.;if(present(reset))reset_=reset
   extend_=.false.;if(present(extend))extend_=extend
@@ -219,6 +223,7 @@ function d1_check_convergence_local(Xnew,eps,N1,N2,id,file,index,total,strict,oe
   logical                                      :: strict_
   character(len=*),optional                    :: file
   character(len=100)                           :: file_
+  call setup_mpi()
   file_='error.err';if(present(file))file_=reg(file)
   reset_=.true.;if(present(reset))reset_=reset
   extend_=.false.;if(present(extend))extend_=extend
@@ -272,6 +277,7 @@ function d2_check_convergence_local(Xnew,eps,N1,N2,id,file,index,total,strict,oe
   logical                                      :: strict_
   character(len=*),optional                    :: file
   character(len=100)                           :: file_
+  call setup_mpi()
   file_='error.err';if(present(file))file_=reg(file)
   reset_=.true.;if(present(reset))reset_=reset
   extend_=.false.;if(present(extend))extend_=extend
@@ -326,6 +332,7 @@ function z0_check_convergence_local(Xnew,eps,N1,N2,id,file,index,total,oerr,rese
   character(len=2)                             :: label
   character(len=*),optional                    :: file
   character(len=100)                           :: file_
+  call setup_mpi()
   file_='error.err';if(present(file))file_=reg(file)
   reset_=.true.;if(present(reset))reset_=reset
   extend_=.false.;if(present(extend))extend_=extend
@@ -373,6 +380,7 @@ function z1_check_convergence_local(Xnew,eps,N1,N2,id,file,index,total,strict,oe
   logical                                      :: strict_
   character(len=*),optional                    :: file
   character(len=100)                           :: file_
+  call setup_mpi()
   file_='error.err';if(present(file))file_=reg(file)
   reset_=.true.;if(present(reset))reset_=reset
   extend_=.false.;if(present(extend))extend_=extend
@@ -426,6 +434,7 @@ function z2_check_convergence_local(Xnew,eps,N1,N2,id,file,index,total,strict,oe
   logical                                      :: strict_
   character(len=*),optional                    :: file
   character(len=100)                           :: file_
+  call setup_mpi()
   file_='error.err';if(present(file))file_=reg(file)
   reset_=.true.;if(present(reset))reset_=reset
   extend_=.false.;if(present(extend))extend_=extend

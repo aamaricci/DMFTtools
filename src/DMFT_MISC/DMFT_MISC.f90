@@ -1,10 +1,18 @@
 module DMFT_MISC
   USE SF_TIMER
   USE SF_CONSTANTS, only: pi,zero
+#ifdef _MPI
+  USE SF_MPI
+  USE MPI
+#endif
+
   implicit none
   private
 
-
+  integer :: mpi_rank
+  integer :: mpi_size
+  integer :: mpi_ierr
+  logical :: mpi_master
 
   !LOOP:
   public :: start_loop
@@ -32,17 +40,21 @@ contains
     character(len=*),optional :: name
     character(len=16)         :: loop_name
     integer                   :: unit_,id_
+    mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
     loop_name="main-loop";if(present(name))loop_name=name
     unit_    =6          ;if(present(unit))unit_=unit
     id_      =0          ;if(present(id))id_=id
     write(unit_,*)
     if(.not.present(max))then
-       write(unit_,"(A,I5)")"-----"//trim(adjustl(trim(loop_name))),loop,"-----"
+       if(mpi_master)write(unit_,"(A,I5)")"-----"//trim(adjustl(trim(loop_name))),loop,"-----"
     else
-       write(unit_,"(A,I5,A,I5,A)")"-----"//trim(adjustl(trim(loop_name))),loop,&
+       if(mpi_master)write(unit_,"(A,I5,A,I5,A)")"-----"//trim(adjustl(trim(loop_name))),loop,&
             " (max:",max,")-----"
     endif
-    call start_timer
+    if(mpi_master)call start_timer
   end subroutine start_loop
 
 
@@ -51,10 +63,14 @@ contains
     integer          :: unit_,id_
     unit_=6 ; if(present(unit))unit_=unit
     id_  =0 ; if(present(id))id_=id
-    write(unit_,"(A)")"====================================="
-    call stop_timer
-    write(unit_,*)
-    write(unit_,*)
+    mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
+    if(mpi_master)write(unit_,"(A)")"====================================="
+    if(mpi_master)call stop_timer
+    if(mpi_master)write(unit_,*)
+    if(mpi_master)write(unit_,*)
   end subroutine end_loop
 
 

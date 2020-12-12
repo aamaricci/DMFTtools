@@ -224,6 +224,8 @@ contains
   !####################################################################
   !####################################################################
 
+
+
   include "dmft_gloc_matsubara_normal.f90"
   include "dmft_gloc_matsubara_superc.f90"
   include "dmft_gloc_realaxis_normal.f90"
@@ -1648,9 +1650,9 @@ contains
        enddo
     enddo
   end function c_nn2nso
-  
-  
-  
+
+
+
   !+-----------------------------------------------------------------------------+!
   !PURPOSE: 
   ! reshape a matrix from the [Nlso][Nlso] shape
