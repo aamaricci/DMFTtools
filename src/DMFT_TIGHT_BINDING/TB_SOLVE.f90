@@ -44,6 +44,11 @@ contains
     real(8),allocatable                       :: kseg(:),Ekval(:,:)
     integer,allocatable                       :: Ekcol(:,:)
     !
+    mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
+    !
     file_    = "Eigenbands.tb";if(present(file))file_=file
     iproject_= TB_w90%status
     if(TB_w90%status)write(*,*)"Using iproject=.TRUE. in W90 interface. Disable it explicitly using iproject=.false. "
@@ -58,8 +63,6 @@ contains
     !
     if(.not.set_bkvec)stop "solve_w90hk_along_BZpath ERROR: bk vectors not set!"
     !  
-
-
     if(iproject_)then
        select case(Ndim)
        case (1)
@@ -72,11 +75,13 @@ contains
     endif
     !
     !
-    write(*,*)"Solving model along the path:"
-    write(fmt,"(A3,I0,A)")"(A,",size(kpath,2),"F7.4,A1)"
-    do ipts=1,Npts
-       write(*,fmt)"Point"//str(ipts)//": [",(kpath(ipts,ic),ic=1,size(kpath,2)),"]"
-    enddo
+    if(mpi_master)then
+       write(*,*)"Solving model along the path:"
+       write(fmt,"(A3,I0,A)")"(A,",size(kpath,2),"F7.4,A1)"
+       do ipts=1,Npts
+          write(*,fmt)"Point"//str(ipts)//": [",(kpath(ipts,ic),ic=1,size(kpath,2)),"]"
+       enddo
+    endif
     !
     ic = 0
     allocate(kseg(Nktot))
@@ -105,46 +110,48 @@ contains
     enddo
     ktics(Npts) = kseg(ic-1)
     !
-    unit=free_unit()
-    open(unit,file=reg(file_))
-    do iorb=1,Nlso
-       do ic=1,Nktot
-          write(unit,*)kseg(ic),Ekval(ic,iorb),Ekcol(ic,iorb)
+    if(mpi_master)then
+       unit=free_unit()
+       open(unit,file=reg(file_))
+       do iorb=1,Nlso
+          do ic=1,Nktot
+             write(unit,*)kseg(ic),Ekval(ic,iorb),Ekcol(ic,iorb)
+          enddo
+          write(unit,*)""
        enddo
+       close(unit)
+       !
+       xtics="'"//reg(points_name(1))//"'"//str(ktics(1))//","
+       do ipts=2,Npts-1
+          xtics=reg(xtics)//"'"//reg(points_name(ipts))//"'"//str(ktics(ipts))//","
+       enddo
+       xtics=reg(xtics)//"'"//reg(points_name(Npts))//"'"//str(ktics(Npts))//""
+       !
+       open(unit,file=reg(file_)//".gp")
+       write(unit,*)"#set terminal pngcairo size 350,262 enhanced font 'Verdana,10'"
+       write(unit,*)"#set out '"//reg(file_)//".png'"
        write(unit,*)""
-    enddo
-    close(unit)
-    !
-    xtics="'"//reg(points_name(1))//"'"//str(ktics(1))//","
-    do ipts=2,Npts-1
-       xtics=reg(xtics)//"'"//reg(points_name(ipts))//"'"//str(ktics(ipts))//","
-    enddo
-    xtics=reg(xtics)//"'"//reg(points_name(Npts))//"'"//str(ktics(Npts))//""
-    !
-    open(unit,file=reg(file_)//".gp")
-    write(unit,*)"#set terminal pngcairo size 350,262 enhanced font 'Verdana,10'"
-    write(unit,*)"#set out '"//reg(file_)//".png'"
-    write(unit,*)""
-    write(unit,*)"#set terminal svg size 350,262 fname 'Verdana, Helvetica, Arial, sans-serif'"
-    write(unit,*)"#set out '"//reg(file_)//".svg'"
-    write(unit,*)""
-    write(unit,*)"#set term postscript eps enhanced color 'Times'"
-    write(unit,*)"#set output '|ps2pdf -dEPSCrop - "//reg(file_)//".pdf'"
-    write(unit,*)"unset key"
-    write(unit,*)"set xtics ("//reg(xtics)//")"
-    write(unit,*)"set grid noytics xtics"
-    !
-    do iorb=1,Nlso
-       chpoint=str(0.95d0-(iorb-1)*0.05d0)
-       write(unit,"(A)")str("#set label 'Orb "//str(iorb)//"' tc rgb "//str(rgb(corb(iorb)))//&
-            " at graph 0.9,"//reg(chpoint)//" font 'Times-Italic,11'")
-    enddo
-    !
-    write(unit,*)"plot '"//reg(file_)//"' every :::0 u 1:2:3 w l lw 3 lc rgb variable"
-    write(unit,*)"# to print from the i-th to the j-th block use: every :::i::j"
-    !
-    close(unit)
-    call system("chmod +x "//reg(file_)//".gp")
+       write(unit,*)"#set terminal svg size 350,262 fname 'Verdana, Helvetica, Arial, sans-serif'"
+       write(unit,*)"#set out '"//reg(file_)//".svg'"
+       write(unit,*)""
+       write(unit,*)"#set term postscript eps enhanced color 'Times'"
+       write(unit,*)"#set output '|ps2pdf -dEPSCrop - "//reg(file_)//".pdf'"
+       write(unit,*)"unset key"
+       write(unit,*)"set xtics ("//reg(xtics)//")"
+       write(unit,*)"set grid noytics xtics"
+       !
+       do iorb=1,Nlso
+          chpoint=str(0.95d0-(iorb-1)*0.05d0)
+          write(unit,"(A)")str("#set label 'Orb "//str(iorb)//"' tc rgb "//str(rgb(corb(iorb)))//&
+               " at graph 0.9,"//reg(chpoint)//" font 'Times-Italic,11'")
+       enddo
+       !
+       write(unit,*)"plot '"//reg(file_)//"' every :::0 u 1:2:3 w l lw 3 lc rgb variable"
+       write(unit,*)"# to print from the i-th to the j-th block use: every :::i::j"
+       !
+       close(unit)
+       call system("chmod +x "//reg(file_)//".gp")
+    endif
   end subroutine solve_Hk_along_BZpath
 
   subroutine solve_w90Hk_along_BZpath(Nlso,kpath,Nkpath,colors_name,points_name,file,iproject)
@@ -202,6 +209,11 @@ contains
     real(8),allocatable                       :: kseg(:),Ekval(:,:)
     integer,allocatable                       :: Ekcol(:,:)
     !
+    mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
+    !
     file_    = "Eigenbands.tb";if(present(file))file_=file
     iproject_= .false.        ;if(present(iproject))iproject_=iproject
     pbc_     = .true.         ;if(present(pbc))pbc_=pbc
@@ -230,17 +242,19 @@ contains
        end select
     endif
     !
-    write(*,*)"Solving model along the path:"
-    do ipts=1,Npts
-       write(*,"(A,10(A,1x),A1)")"Point"//str(ipts)//": [",(str(kpath(ipts,ic)),ic=1,size(kpath,2)),"]"
-    enddo
+    if(mpi_master)then
+       write(*,*)"Solving model along the path:"
+       do ipts=1,Npts
+          write(*,"(A,10(A,1x),A1)")"Point"//str(ipts)//": [",(str(kpath(ipts,ic)),ic=1,size(kpath,2)),"]"
+       enddo
+    endif
     !
     ic=0
     allocate(kseg(Nktot))
     allocate(ekval(Nktot,Nlso))
     allocate(ekcol(Nktot,Nlso))
     klen = 0d0
-    call start_timer()
+    if(mpi_master)call start_timer()
     do ipts=1,Npts-1
        kstart = kpath(ipts,:)
        kstop  = kpath(ipts+1,:)
@@ -251,7 +265,7 @@ contains
           kpoint = kstart + (ik-1)*kdiff
           h = hkr_model(kpoint,Nlat,Nso,pbc)
           call eigh(h,Eval)
-          call eta(ic,Nktot)
+          if(mpi_master)call eta(ic,Nktot)
           do io=1,Nlso
              coeff(:)=h(:,io)*conjg(h(:,io))
              c(io) = coeff.dot.corb
@@ -263,44 +277,46 @@ contains
        enddo
     enddo
     ktics(Npts) = Kseg(ic-1)
-    call stop_timer()
+    if(mpi_master)call stop_timer()
     !
-    open(free_unit(unit),file=str(file_))
-    do io=1,Nlso
-       do ic=1,Nktot
-          write(unit,*)kseg(ic),Ekval(ic,io),Ekcol(ic,io)
+    if(mpi_master)then
+       open(free_unit(unit),file=str(file_))
+       do io=1,Nlso
+          do ic=1,Nktot
+             write(unit,*)kseg(ic),Ekval(ic,io),Ekcol(ic,io)
+          enddo
+          write(unit,*)""
        enddo
+       close(unit)
+       !
+       !
+       xtics=""
+       xtics="'"//reg(points_name(1))//"'"//str(ktics(1))//","
+       do ipts=2,Npts-1
+          xtics=reg(xtics)//"'"//reg(points_name(ipts))//"'"//str(ktics(ipts))//","
+       enddo
+       xtics=reg(xtics)//"'"//reg(points_name(Npts))//"'"//str(ktics(Npts))//""
+       !
+       open(unit,file=reg(file_)//".gp")
+       write(unit,*)"#set terminal pngcairo size 350,262 enhanced font 'Verdana,10'"
+       write(unit,*)"#set out '"//reg(file_)//".png'"
        write(unit,*)""
-    enddo
-    close(unit)
-    !
-    !
-    xtics=""
-    xtics="'"//reg(points_name(1))//"'"//str(ktics(1))//","
-    do ipts=2,Npts-1
-       xtics=reg(xtics)//"'"//reg(points_name(ipts))//"'"//str(ktics(ipts))//","
-    enddo
-    xtics=reg(xtics)//"'"//reg(points_name(Npts))//"'"//str(ktics(Npts))//""
-    !
-    open(unit,file=reg(file_)//".gp")
-    write(unit,*)"#set terminal pngcairo size 350,262 enhanced font 'Verdana,10'"
-    write(unit,*)"#set out '"//reg(file_)//".png'"
-    write(unit,*)""
-    write(unit,*)"#set terminal svg size 350,262 fname 'Verdana, Helvetica, Arial, sans-serif'"
-    write(unit,*)"#set out '"//reg(file_)//".svg'"
-    write(unit,*)""
-    write(unit,*)"#set term postscript eps enhanced color 'Times'"
-    write(unit,*)"#set output '|ps2pdf  -dEPSCrop - "//reg(file_)//".pdf'"
-    write(unit,*)"unset key"
-    write(unit,*)"set xtics ("//reg(xtics)//")"
-    write(unit,*)"set grid ytics xtics"
-    !
-    write(unit,*)"plot '"//reg(file_)//"' every :::0 u 1:2:3 w l lw 3 lc rgb variable"
-    write(unit,*)"# to print from the i-th to the j-th block use every :::i::j"
-    !
-    close(unit)
-    !
-    call system("chmod +x "//reg(file_)//".gp")
+       write(unit,*)"#set terminal svg size 350,262 fname 'Verdana, Helvetica, Arial, sans-serif'"
+       write(unit,*)"#set out '"//reg(file_)//".svg'"
+       write(unit,*)""
+       write(unit,*)"#set term postscript eps enhanced color 'Times'"
+       write(unit,*)"#set output '|ps2pdf  -dEPSCrop - "//reg(file_)//".pdf'"
+       write(unit,*)"unset key"
+       write(unit,*)"set xtics ("//reg(xtics)//")"
+       write(unit,*)"set grid ytics xtics"
+       !
+       write(unit,*)"plot '"//reg(file_)//"' every :::0 u 1:2:3 w l lw 3 lc rgb variable"
+       write(unit,*)"# to print from the i-th to the j-th block use every :::i::j"
+       !
+       close(unit)
+       !
+       call system("chmod +x "//reg(file_)//".gp")
+    endif
   end subroutine solve_HkR_along_BZpath
 
 

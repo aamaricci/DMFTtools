@@ -28,24 +28,30 @@ contains
        end function hk_model
     end interface
     !
+    mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
+    !
     call build_kgrid(Nkvec,kgrid,.true.)
     !
     Nktot  = product(Nkvec)
     Nlso   = Nlat*Nspin*Norb
     !
-    open(free_unit(unit),file=reg(file))
-    write(unit,'(10(A10,1x))')str(Nktot),str(Nlat),str(Nspin),str(Norb)
-    write(unit,'(1A1,3(A12,1x))')"#",(reg(txtfy(Nkvec(ik))),ik=1,size(Nkvec))
-    do ik=1,Nktot
-       Hk(:,:) = hk_model(kgrid(ik,:),Nlso)
-       kvec=0d0 ; kvec(:size(Nkvec)) = kgrid(ik,:size(Nkvec))
-       write(unit,"(3(F15.9,1x))")(kvec(i),i=1,3) 
-       do io=1,Nlso
-          write(unit,"(1000(2F15.9,1x))")(Hk(io,jo),jo=1,Nlso)
+    if(mpi_master)then
+       open(free_unit(unit),file=reg(file))
+       write(unit,'(10(A10,1x))')str(Nktot),str(Nlat),str(Nspin),str(Norb)
+       write(unit,'(1A1,3(A12,1x))')"#",(reg(txtfy(Nkvec(ik))),ik=1,size(Nkvec))
+       do ik=1,Nktot
+          Hk(:,:) = hk_model(kgrid(ik,:),Nlso)
+          kvec=0d0 ; kvec(:size(Nkvec)) = kgrid(ik,:size(Nkvec))
+          write(unit,"(3(F15.9,1x))")(kvec(i),i=1,3) 
+          do io=1,Nlso
+             write(unit,"(1000(2F15.9,1x))")(Hk(io,jo),jo=1,Nlso)
+          enddo
        enddo
-    enddo
-    close(unit)
-    !
+       close(unit)
+    endif
   end subroutine write_hk_w90_func
 
 
@@ -59,24 +65,29 @@ contains
     integer                                                              :: i,ik,io,jo
     complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb,product(Nkvec)) :: Hk
     !
+    mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
     !
     call build_kgrid(Nkvec,kgrid,.true.)
     !
     Nktot  = product(Nkvec)!==size(Hk,3)
     Nlso   = Nlat*Nspin*Norb
     !
-    open(free_unit(unit),file=reg(file))
-    write(unit,'(10(A10,1x))')str(Nktot),str(Nlat),str(Nspin),str(Norb)
-    write(unit,'(1A1,3(A12,1x))')"#",(reg(txtfy(Nkvec(ik))),ik=1,size(Nkvec))
-    do ik=1,Nktot
-       kvec=0d0 ; kvec(:size(Nkvec)) = kgrid(ik,:size(Nkvec))
-       write(unit,"(3(F15.9,1x))")(kvec(i),i=1,3) 
-       do io=1,Nlso
-          write(unit,"(1000(2F15.9,1x))")(Hk(io,jo,ik),jo=1,Nlso)
+    if(mpi_master)then
+       open(free_unit(unit),file=reg(file))
+       write(unit,'(10(A10,1x))')str(Nktot),str(Nlat),str(Nspin),str(Norb)
+       write(unit,'(1A1,3(A12,1x))')"#",(reg(txtfy(Nkvec(ik))),ik=1,size(Nkvec))
+       do ik=1,Nktot
+          kvec=0d0 ; kvec(:size(Nkvec)) = kgrid(ik,:size(Nkvec))
+          write(unit,"(3(F15.9,1x))")(kvec(i),i=1,3) 
+          do io=1,Nlso
+             write(unit,"(1000(2F15.9,1x))")(Hk(io,jo,ik),jo=1,Nlso)
+          enddo
        enddo
-    enddo
-    close(unit)
-    !
+       close(unit)
+    endif
   end subroutine write_hk_w90_array
 
 
@@ -170,6 +181,10 @@ contains
     complex(8),dimension(:,:) :: Hloc
     character(len=*),optional :: file
     integer                   :: iorb,jorb,Ni,Nj,unit
+    mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
     unit=6;
     if(present(file))then
        unit=free_unit()
@@ -177,22 +192,24 @@ contains
     endif
     Ni=size(Hloc,1)
     Nj=size(Hloc,2)
-    if(present(file))then
-       do iorb=1,Ni
-          write(unit,"(9000F12.6)")(dreal(Hloc(iorb,jorb)),jorb=1,Nj)
-       enddo
-       write(unit,*)""
-       do iorb=1,Ni
-          write(unit,"(9000F12.6)")(dimag(Hloc(iorb,jorb)),jorb=1,Nj)
-       enddo
-       write(unit,*)""
-       close(unit)
-    else
-       do iorb=1,Ni
-          write(unit,"(20(A1,F7.3,A1,F7.3,A1,2x))")&
-               ('(',dreal(Hloc(iorb,jorb)),',',dimag(Hloc(iorb,jorb)),')',jorb =1,Nj)
-       enddo
-       write(unit,*)""
+    if(mpi_master)then
+       if(present(file))then
+          do iorb=1,Ni
+             write(unit,"(9000F12.6)")(dreal(Hloc(iorb,jorb)),jorb=1,Nj)
+          enddo
+          write(unit,*)""
+          do iorb=1,Ni
+             write(unit,"(9000F12.6)")(dimag(Hloc(iorb,jorb)),jorb=1,Nj)
+          enddo
+          write(unit,*)""
+          close(unit)
+       else
+          do iorb=1,Ni
+             write(unit,"(20(A1,F7.3,A1,F7.3,A1,2x))")&
+                  ('(',dreal(Hloc(iorb,jorb)),',',dimag(Hloc(iorb,jorb)),')',jorb =1,Nj)
+          enddo
+          write(unit,*)""
+       endif
     endif
   end subroutine write_hloc_1
 
@@ -201,6 +218,10 @@ contains
     character(len=*),optional     :: file
     integer                       :: iorb,jorb,ispin,jspin
     integer                       :: Norb,Nspin,unit
+    mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
     unit=6;
     if(present(file))then
        unit=free_unit()
@@ -209,32 +230,35 @@ contains
     Nspin=size(Hloc,1)
     Norb=size(Hloc,3)
     call assert_shape(Hloc,[Nspin,Nspin,Norb,Norb],"Write_Hloc_2","Hloc")
-    if(present(file))then
-       do ispin=1,Nspin
-          do iorb=1,Norb
-             write(unit,"(9000F12.6)")((dreal(Hloc(ispin,jspin,iorb,jorb)),jorb=1,Norb),jspin=1,Nspin)
+    !
+    if(mpi_master)then
+       if(present(file))then
+          do ispin=1,Nspin
+             do iorb=1,Norb
+                write(unit,"(9000F12.6)")((dreal(Hloc(ispin,jspin,iorb,jorb)),jorb=1,Norb),jspin=1,Nspin)
+             enddo
           enddo
-       enddo
-       write(unit,*)""
-       do ispin=1,Nspin
-          do iorb=1,Norb
-             write(unit,"(9000F12.6)")((dimag(Hloc(ispin,jspin,iorb,jorb)),jorb=1,Norb),jspin=1,Nspin)
+          write(unit,*)""
+          do ispin=1,Nspin
+             do iorb=1,Norb
+                write(unit,"(9000F12.6)")((dimag(Hloc(ispin,jspin,iorb,jorb)),jorb=1,Norb),jspin=1,Nspin)
+             enddo
           enddo
-       enddo
-       write(unit,*)""
-       close(unit)
-    else
-       do ispin=1,Nspin
-          do iorb=1,Norb
-             write(unit,"(20(A1,F7.3,A1,F7.3,A1,2x))")&
-                  (&
-                  (&
-                  '(',dreal(Hloc(ispin,jspin,iorb,jorb)),',',dimag(Hloc(ispin,jspin,iorb,jorb)),')',&
-                  jorb =1,Norb),&
-                  jspin=1,Nspin)
+          write(unit,*)""
+          close(unit)
+       else
+          do ispin=1,Nspin
+             do iorb=1,Norb
+                write(unit,"(20(A1,F7.3,A1,F7.3,A1,2x))")&
+                     (&
+                     (&
+                     '(',dreal(Hloc(ispin,jspin,iorb,jorb)),',',dimag(Hloc(ispin,jspin,iorb,jorb)),')',&
+                     jorb =1,Norb),&
+                     jspin=1,Nspin)
+             enddo
           enddo
-       enddo
-       write(unit,*)""
+          write(unit,*)""
+       endif
     endif
   end subroutine write_hloc_2
 

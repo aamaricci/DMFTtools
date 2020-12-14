@@ -151,13 +151,19 @@ contains
     character(len=*),optional :: pfile
     integer                   :: unit,i
     if(io_eivec)return
-    unit=6
-    if(present(pfile))open(free_unit(unit),file=reg(pfile))
-    write(unit,"(A)")"Using Direct Lattice vectors:"
-    write(unit,"(A,3F8.4,A1)")"ei_x = [",(ei_x(i),i=1,3),"]"
-    write(unit,"(A,3F8.4,A1)")"ei_y = [",(ei_y(i),i=1,3),"]"
-    write(unit,"(A,3F8.4,A1)")"ei_z = [",(ei_z(i),i=1,3),"]"
-    if(present(pfile))close(unit)
+    mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif    
+    if(mpi_master)then
+       unit=6
+       if(present(pfile))open(free_unit(unit),file=reg(pfile))
+       write(unit,"(A)")"Using Direct Lattice vectors:"
+       write(unit,"(A,3F8.4,A1)")"ei_x = [",(ei_x(i),i=1,3),"]"
+       write(unit,"(A,3F8.4,A1)")"ei_y = [",(ei_y(i),i=1,3),"]"
+       write(unit,"(A,3F8.4,A1)")"ei_z = [",(ei_z(i),i=1,3),"]"
+       if(present(pfile))close(unit)
+    endif
     io_eivec=.true.
   end subroutine print_ei
 
@@ -165,13 +171,19 @@ contains
     character(len=*),optional :: pfile
     integer                   :: unit,i
     if(io_bkvec)return
-    unit=6
-    if(present(pfile))open(free_unit(unit),file=reg(pfile))
-    write(unit,"(A)")"Using Reciprocal Lattice vectors:"
-    write(unit,"(A,3F8.4,A1)")"bk_x = [",(bk_x(i),i=1,3),"]"
-    write(unit,"(A,3F8.4,A1)")"bk_y = [",(bk_y(i),i=1,3),"]"
-    write(unit,"(A,3F8.4,A1)")"bk_z = [",(bk_z(i),i=1,3),"]"
-    if(present(pfile))close(unit)
+    mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
+    if(mpi_master)then
+       unit=6
+       if(present(pfile))open(free_unit(unit),file=reg(pfile))
+       write(unit,"(A)")"Using Reciprocal Lattice vectors:"
+       write(unit,"(A,3F8.4,A1)")"bk_x = [",(bk_x(i),i=1,3),"]"
+       write(unit,"(A,3F8.4,A1)")"bk_y = [",(bk_y(i),i=1,3),"]"
+       write(unit,"(A,3F8.4,A1)")"bk_z = [",(bk_z(i),i=1,3),"]"
+       if(present(pfile))close(unit)
+    endif
     io_bkvec=.true.
   end subroutine print_bk
 
@@ -387,6 +399,11 @@ contains
     logical,dimension(size(kcenters,1)-1)   :: cond_Lvec
     !
     !
+    mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
+    !
     Ncntr = size(kcenters,1)
     Nktot = product(Nkvec)
     Ndim  = size(Nkvec)          !dimension of the grid to be built
@@ -419,9 +436,9 @@ contains
     enddo
     !
     !
-    call start_timer()
+    if(mpi_master)call start_timer()
     do icntr=1,Ncntr
-       call eta(icntr,Ncntr)
+       if(mpi_master)call eta(icntr,Ncntr)
        !
        grid_x = linspace(0d0,Dk(1),Nk(1),iend=.false.) + kstart(icntr,1)
        grid_y = linspace(0d0,Dk(2),Nk(2),iend=.false.) + kstart(icntr,2)
@@ -446,7 +463,7 @@ contains
           call add_to(kgrid_refine,kvec)
        end do
     enddo
-    call stop_timer("TB_refine_kgrid")
+    if(mpi_master)call stop_timer("TB_refine_kgrid")
     !
   contains
     !
@@ -488,11 +505,17 @@ contains
     real(8),dimension(:,:) :: Grid ![Nk/Nr,Ndim]
     character(len=*)       :: file_grid
     integer                :: i,j,unit
-    open(free_unit(unit),file=reg(file_grid),status="unknown",action="write",position="rewind")
-    do i=1,size(Grid,1)
-       write(unit,'(3F15.7)') (Grid(i,j),j=1,size(Grid,2))
-    enddo
-    close(unit)
+    mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
+    if(mpi_master)then
+       open(free_unit(unit),file=reg(file_grid),status="unknown",action="write",position="rewind")
+       do i=1,size(Grid,1)
+          write(unit,'(3F15.7)') (Grid(i,j),j=1,size(Grid,2))
+       enddo
+       close(unit)
+    endif
   end subroutine TB_write_grid
 
 

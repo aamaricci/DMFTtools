@@ -219,9 +219,6 @@ module DMFT_TIGHT_BINDING
   public :: TB_dipole
   public :: TB_hr_to_hk
 
-  public :: TB_set_dos_lreal
-  public :: TB_set_dos_file
-
   public :: TB_slo2lso_model
   !
   public :: kpoint_gamma
