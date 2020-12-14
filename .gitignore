@@ -19,3 +19,5 @@ build_debug_laptop/
 ../build_devel_laptop
 ../build_laptop
 build_devel_laptop
+build_devel
+build_stable

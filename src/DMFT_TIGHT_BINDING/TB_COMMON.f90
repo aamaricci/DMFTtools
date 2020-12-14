@@ -9,7 +9,6 @@ module TB_COMMON
   USE SF_MISC, only: assert_shape,sort_array
   USE SF_OPTIMIZE,only: fmin_cgminimize,fzero
   USE DMFT_CTRL_VARS
-  USE DMFT_GLOC
   USE DMFT_GFIO
 #ifdef _MPI
   USE MPI
