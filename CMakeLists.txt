@@ -315,7 +315,10 @@ INCLUDE(${CMAKE_MODULE_PATH}/PostBuildDmftTools.cmake)
 FILE(REMOVE_RECURSE ${DT_TMP_ETC}/modules/)
 SET(TMP_MODULE_NAME "${FULL_VER}" CACHE PATH "Prefix prepended to install directories")
 SET(TMP_ENV_MODULE_FILE ${DT_TMP_ETC}/modules/${PROJECT_NAME}/${TMP_MODULE_NAME})
+SET(TMP_VER_MODULE_FILE ${DT_TMP_ETC}/modules/${PROJECT_NAME}/${FC_ID}/.version)
 BUILD_ENV_MODULE(${TMP_ENV_MODULE_FILE})
+BUILD_VERSION_MODULE(${TMP_VER_MODULE_FILE})
+
 
 #Build the user config script (sourced in user shell config file, i.e. .bashrc)
 SET(TMP_CONFIGVARS_USER_FILE ${DT_TMP_BIN}/dmft_tools_config_user.sh)
