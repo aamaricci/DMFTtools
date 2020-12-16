@@ -267,7 +267,7 @@ contains
     real(8),dimension(:),allocatable        :: grid_x,grid_y,grid_z
     integer                                 :: ik,Ivec(3),Nk(3),ndim,Nktot,i
     real(8)                                 :: Lb(3)
-    real(8),dimension(3,3)                  :: bk_grid
+    ! real(8),dimension(3,3)                  :: bk_grid
     real(8),dimension(3)                    :: ktmp
     !
     Nktot = product(Nkvec)
@@ -285,7 +285,7 @@ contains
     call print_bk()
     if(check_bk_.AND..not.set_bkvec)stop "TB_build_grid ERROR: bk vectors not set"
     !
-    call TB_get_bk(bk_grid(1,:),bk_grid(2,:),bk_grid(3,:))
+    ! call TB_get_bk(bk_grid(1,:),bk_grid(2,:),bk_grid(3,:))
     !    
     allocate(grid_x(Nk(1)))
     allocate(grid_y(Nk(2)))   
@@ -296,10 +296,10 @@ contains
     grid_z = linspace(0d0,1d0,Nk(3),iend=.false.) + BZ_origin(3)
     !
     do ik=1,Nktot
-       ivec = i2indices(ik,Nk)       
+       ivec = i2indices(ik,Nk)
        ktmp = [grid_x(ivec(1)), grid_y(ivec(2)), grid_z(ivec(3))]
-       forall(i=1:Ndim)kvec(i) = dot_product(ktmp,bk_grid(:,i))
-       kgrid(ik,:)=kvec
+       ! forall(i=1:Ndim)kvec(i) = dot_product(ktmp,bk_grid(:,i))
+       kgrid(ik,:) = ktmp(1)*bk_x(:ndim) + ktmp(2)*bk_y(:ndim) + ktmp(3)*bk_z(:ndim)
     end do
   end subroutine build_kgrid
 
