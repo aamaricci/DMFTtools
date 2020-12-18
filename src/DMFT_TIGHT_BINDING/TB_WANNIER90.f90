@@ -491,7 +491,7 @@ contains
     !
     if(allocated(TB_w90%Kgrid))deallocate(TB_w90%Kgrid)
     allocate(TB_w90%Kgrid(Nk,size(Nkvec)))
-    call build_kgrid(Nkvec,Kgrid,.true.,TB_w90%BZorigin) !check bk_1,2,3 vectors have been set
+    call build_kgrid(Nkvec,Kgrid,TB_w90%BZorigin) !check bk_1,2,3 vectors have been set
     TB_w90%Kgrid=Kgrid
     if(present(Kpts_grid))Kpts_grid=Kgrid
     !
@@ -591,7 +591,7 @@ contains
     if(.not.TB_w90%status)stop "read_hk_w90: TB_w90 structure not allocated. Call setup_w90 first."
     !
     if(.not.allocated(TB_w90%Kgrid))then
-       call build_kgrid(Nkvec,Kgrid,.true.,TB_w90%BZorigin) !check bk_1,2,3 vectors have been set
+       call build_kgrid(Nkvec,Kgrid,TB_w90%BZorigin) !check bk_1,2,3 vectors have been set
     else
        call assert_shape(TB_w90%Kgrid,[product(Nkvec),size(Nkvec)],"write_hk_w90","TB_w90%Kgrid")
        Kgrid = TB_w90%Kgrid

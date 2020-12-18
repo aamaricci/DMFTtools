@@ -72,7 +72,7 @@ subroutine hk_from_w90_hr_mpi(MpiComm,R1,R2,R3,ham_k,ham_loc,w90_file,Nspin,Norb
   call TB_set_ei(R1,R2,R3)
   call TB_get_bk(bk1,bk2,bk3)
   call TB_set_bk(bk1,bk2,bk3)
-  call build_kgrid_generic(Nkvec,kpt1,kpt2,kpt3,.true.)
+  call build_kgrid_generic(Nkvec,kpt1,kpt2,kpt3)
   if(present(kpt_latt))kpt_latt=kpt1+kpt2+kpt3
   !
   !2) read WS degeneracies
@@ -260,7 +260,7 @@ end subroutine hk_from_w90_hr_mpi
    call TB_set_ei(R1,R2,R3)
    call TB_get_bk(bk1,bk2,bk3)
    call TB_set_bk(bk1,bk2,bk3)
-   call build_kgrid_generic(Nkvec,kpt1,kpt2,kpt3,.true.)
+   call build_kgrid_generic(Nkvec,kpt1,kpt2,kpt3)
    !
    !2) read WS degeneracies
    do i=1,qst

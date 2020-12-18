@@ -142,7 +142,7 @@ contains
     !
     if(mpi_master)write(*,*)"TB_FSurface: get FS"
     !
-    call build_kgrid(Nkvec,kgrid,.true.,BZ_origin)
+    call build_kgrid(Nkvec,kgrid,BZ_origin)
     if(iwrite_)call TB_write_grid(kgrid,"rfd_kgrid_1")
     !
     allocate(kpts(0,Ndim))

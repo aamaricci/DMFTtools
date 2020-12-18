@@ -1,10 +1,31 @@
+!There are different ways to set the direct-reciprocal lattice basis ei-bk:
+! 1) user calls TB_set_ei/bk (user knows the vectors or uses default ones)
+!
+! 2) user calls either TB_set_ei OR TB_set_bk. IF set_bkvec/set_eivec=F  the TB_
+! procedures will build the requied basis thru TB_build_bk/ei with a warning to the user.
+! IF no basis is set the grid creation raises error  
+!
+! 3) user calls either TB_set_ei OR TB_set_bk. Then user calls TB_build_bk/TB_build_ei
+!    to implicitly construct the missing basis without retrieving it. This will be used by the TB_
+!
+! 4) user calls either TB_set_ei OR TB_set_bk. Then user constructs and retrieve reciprocal basis
+! explicitly then pushes them using again TB_set_bk OR TB_set_ei.
+
+
 module TB_BASIS
   USE TB_COMMON
   implicit none
-
-
+  
 
 contains
+
+  
+  !This check that at least one basis is set
+  !F = F.or.F, T otherwise
+  function TB_basis_check() result(bool)
+    logical :: bool
+    bool = set_eivec.OR.set_bkvec    
+  end function TB_basis_check
 
 
   subroutine TB_reset_ei
@@ -23,98 +44,81 @@ contains
   end subroutine TB_reset_bk
 
 
+  !Called with no argument will just use default basis vectors
   subroutine TB_set_ei(eix,eiy,eiz)
-    real(8),dimension(:),intent(in)                  :: eix
-    real(8),dimension(size(eix)),intent(in),optional :: eiy
-    real(8),dimension(size(eix)),intent(in),optional :: eiz
-    ei_x = 0d0
-    ei_x(1:size(eix)) = eix
+    real(8),dimension(:),intent(in),optional :: eix
+    real(8),dimension(:),intent(in),optional :: eiy
+    real(8),dimension(:),intent(in),optional :: eiz
+    logical :: bool
+    !
+    mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
+    !
+    !Reset to default
+    call TB_reset_ei()
+    bool=.true.
+    !
+    if(present(eix))then
+       ei_x = 0d0
+       ei_x(1:size(eix)) = eix
+       bool=.false.
+    endif
     !
     if(present(eiy))then
        ei_y = 0d0
        ei_y(1:size(eiy)) = eiy
+       bool=.false.
     endif
     !
     if(present(eiz))then
        ei_z = 0d0
        ei_z(1:size(eiz)) = eiz
+       bool=.false.
     endif
     !
+    if(bool.and.mpi_master)write(*,"(A)")"TB_set_ei: using default values"
     set_eivec=.true.
   end subroutine TB_set_ei
 
-
   subroutine TB_set_bk(bkx,bky,bkz)
-    real(8),dimension(:),intent(in)                  :: bkx
-    real(8),dimension(size(bkx)),intent(in),optional :: bky
-    real(8),dimension(size(bkx)),intent(in),optional :: bkz
-    bk_x = 0d0
-    bk_x(1:size(bkx)) = bkx
+    real(8),dimension(:),intent(in),optional :: bkx
+    real(8),dimension(:),intent(in),optional :: bky
+    real(8),dimension(:),intent(in),optional :: bkz
+    logical :: bool
+    !
+    mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif    
+    !
+    !Reset to default
+    call TB_reset_bk()
+    bool=.true.
+    !
+    if(present(bkx))then
+       bk_x = 0d0
+       bk_x(1:size(bkx)) = bkx
+       bool=.false.
+    endif
     !
     if(present(bky))then
        bk_y = 0d0
        bk_y(1:size(bky)) = bky
+       bool=.false.
     endif
     !
     if(present(bkz))then
        bk_z = 0d0
        bk_z(1:size(bkz)) = bkz
+       bool=.false.
     endif
     !
+    if(bool.AND.mpi_master)write(*,"(A)")"TB_set_bk: using default values"
     set_bkvec=.true.
   end subroutine TB_set_bk
 
-
-
-
-
-  subroutine TB_get_bk(bkx,bky,bkz)
-    real(8),dimension(:),intent(inout)                  :: bkx
-    real(8),dimension(size(bkx)),intent(inout),optional :: bky
-    real(8),dimension(size(bkx)),intent(inout),optional :: bkz
-    real(8),dimension(3)                                :: b1,b2,b3
-    !
-    call TB_reciprocal_basis(a1=ei_x,a2=ei_y,a3=ei_z,b1=b1,b2=b2,b3=b3)
-    !
-    bkx = b1(1:size(bkx))
-    if(present(bky))bky = b2(1:size(bky))
-    if(present(bkz))bkz = b3(1:size(bkz))
-    !
-  end subroutine TB_get_bk
-
-  subroutine TB_get_ei(eix,eiy,eiz)
-    real(8),dimension(:),intent(inout)                  :: eix
-    real(8),dimension(size(eix)),intent(inout),optional :: eiy
-    real(8),dimension(size(eix)),intent(inout),optional :: eiz
-    real(8),dimension(3)                                :: a1,a2,a3
-    !
-    call TB_reciprocal_basis(a1=bk_x,a2=bk_y,a3=bk_z,b1=a1,b2=a2,b3=a3)
-    !
-    eix = a1(1:size(eix))
-    if(present(eiy))eiy = a2(1:size(eiy))
-    if(present(eiz))eiz = a3(1:size(eiz))
-    !
-  end subroutine TB_get_ei
-
-
-  subroutine TB_ei_length(len)
-    real(8),dimension(:) :: len
-    integer              :: i,n
-    n=size(len)
-    if(n>0)len(1) = sqrt(dot_product(ei_x,ei_x))
-    if(n>1)len(2) = sqrt(dot_product(ei_y,ei_y))
-    if(n>2)len(3) = sqrt(dot_product(ei_z,ei_z))
-  end subroutine TB_ei_length
-
-
-  subroutine TB_bk_length(len)
-    real(8),dimension(:) :: len
-    integer              :: i,n
-    n=size(len)
-    if(n>0)len(1) = sqrt(dot_product(bk_x,bk_x))
-    if(n>1)len(2) = sqrt(dot_product(bk_y,bk_y))
-    if(n>2)len(3) = sqrt(dot_product(bk_z,bk_z))
-  end subroutine TB_bk_length
 
 
 
@@ -146,11 +150,88 @@ contains
 
 
 
+  subroutine TB_get_bk(bkx,bky,bkz)
+    real(8),dimension(:),intent(inout)                  :: bkx
+    real(8),dimension(size(bkx)),intent(inout),optional :: bky
+    real(8),dimension(size(bkx)),intent(inout),optional :: bkz
+    real(8),dimension(3)                                :: b1,b2,b3
+    !
+    mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
+    !
+    if(tb_basis_check())stop "TB_get_bk ERROR: neiter ei nor bk basis are set."
+    !
+    if(.not.set_bkvec)then !set_eivec==T 
+       if(mpi_master)write(*,"(A)")"Building bk from ei:"
+       call TB_build_bk(.true.)
+    endif
+    !
+    bkx = b1(1:size(bkx))
+    if(present(bky))bky = b2(1:size(bky))
+    if(present(bkz))bkz = b3(1:size(bkz))
+    !
+  end subroutine TB_get_bk
+
+  subroutine TB_get_ei(eix,eiy,eiz)
+    real(8),dimension(:),intent(inout)                  :: eix
+    real(8),dimension(size(eix)),intent(inout),optional :: eiy
+    real(8),dimension(size(eix)),intent(inout),optional :: eiz
+    real(8),dimension(3)                                :: a1,a2,a3
+    !
+    mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
+    !
+    if(tb_basis_check())stop "TB_get_ei ERROR: neiter ei nor bk basis are set."
+    !
+    if(.not.set_eivec)then  !set_bkvec==T 
+       if(mpi_master)write(*,"(A)")"Building ei from bk:"
+       call TB_build_ei(.true.)
+    endif
+    !
+    eix = a1(1:size(eix))
+    if(present(eiy))eiy = a2(1:size(eiy))
+    if(present(eiz))eiz = a3(1:size(eiz))
+    !
+  end subroutine TB_get_ei
+
+
+  subroutine TB_ei_length(len)
+    real(8),dimension(:) :: len
+    integer              :: i,n
+    if(.not.set_eivec)stop "TB_ei_length error: ei basis not set"
+    n=size(len)
+    if(n>0)len(1) = sqrt(dot_product(ei_x,ei_x))
+    if(n>1)len(2) = sqrt(dot_product(ei_y,ei_y))
+    if(n>2)len(3) = sqrt(dot_product(ei_z,ei_z))
+  end subroutine TB_ei_length
+
+
+  subroutine TB_bk_length(len)
+    real(8),dimension(:) :: len
+    integer              :: i,n
+    if(.not.set_bkvec)stop "TB_bk_length error: bk basis not set"
+    n=size(len)
+    if(n>0)len(1) = sqrt(dot_product(bk_x,bk_x))
+    if(n>1)len(2) = sqrt(dot_product(bk_y,bk_y))
+    if(n>2)len(3) = sqrt(dot_product(bk_z,bk_z))
+  end subroutine TB_bk_length
+
+
+
+
+
+
+
 
   subroutine print_ei(pfile)
     character(len=*),optional :: pfile
     integer                   :: unit,i
     if(io_eivec)return
+    if(.not.set_eivec)stop "TB_print_ei error: ei basis not set"
     mpi_master=.true.
 #ifdef _MPI    
     if(check_MPI())mpi_master= get_master_MPI()
@@ -171,6 +252,7 @@ contains
     character(len=*),optional :: pfile
     integer                   :: unit,i
     if(io_bkvec)return
+    if(.not.set_bkvec)stop "TB_bk_length error: bk basis not set"
     mpi_master=.true.
 #ifdef _MPI    
     if(check_MPI())mpi_master= get_master_MPI()
@@ -256,19 +338,16 @@ contains
 
 
 
-  subroutine build_kgrid(Nkvec,kgrid,check_bk,origin)
+  subroutine build_kgrid(Nkvec,kgrid,origin)
     integer,dimension(:)                    :: Nkvec
     real(8),dimension(:,:)                  :: kgrid ![Nk][Ndim]
-    logical,intent(in),optional             :: check_bk
     real(8),dimension(size(Nkvec)),optional :: origin
-    !
-    logical                                 :: check_bk_    
     real(8),dimension(size(Nkvec))          :: kvec
     real(8),dimension(:),allocatable        :: grid_x,grid_y,grid_z
     integer                                 :: ik,Ivec(3),Nk(3),ndim,Nktot,i
-    real(8)                                 :: Lb(3)
-    ! real(8),dimension(3,3)                  :: bk_grid
     real(8),dimension(3)                    :: ktmp
+    !
+    if(.not.set_bkvec)stop "TB_build_grid ERROR: bk vectors not set"
     !
     Nktot = product(Nkvec)
     Ndim  = size(Nkvec)          !dimension of the grid to be built
@@ -283,10 +362,7 @@ contains
     if(product(Nk)/=product(Nkvec))stop "TB_build_grid ERROR: product(Nkvec) != product(Nk)"
     !
     call print_bk()
-    if(check_bk_.AND..not.set_bkvec)stop "TB_build_grid ERROR: bk vectors not set"
     !
-    ! call TB_get_bk(bk_grid(1,:),bk_grid(2,:),bk_grid(3,:))
-    !    
     allocate(grid_x(Nk(1)))
     allocate(grid_y(Nk(2)))   
     allocate(grid_z(Nk(3)))
@@ -298,24 +374,21 @@ contains
     do ik=1,Nktot
        ivec = i2indices(ik,Nk)
        ktmp = [grid_x(ivec(1)), grid_y(ivec(2)), grid_z(ivec(3))]
-       ! forall(i=1:Ndim)kvec(i) = dot_product(ktmp,bk_grid(:,i))
        kgrid(ik,:) = ktmp(1)*bk_x(:ndim) + ktmp(2)*bk_y(:ndim) + ktmp(3)*bk_z(:ndim)
     end do
   end subroutine build_kgrid
 
 
-  subroutine build_kgrid_generic(Nkvec,kgrid_x,kgrid_y,kgrid_z,check_bk)
+  subroutine build_kgrid_generic(Nkvec,kgrid_x,kgrid_y,kgrid_z)
     integer,dimension(:)                          :: Nkvec   ! Nk=product(Nkvec);Ndim=size(Nkvec)
     real(8),dimension(product(Nkvec),size(Nkvec)) :: kgrid_x ![Nk][Ndim]
     real(8),dimension(product(Nkvec),size(Nkvec)) :: kgrid_y ![Nk][Ndim]
     real(8),dimension(product(Nkvec),size(Nkvec)) :: kgrid_z ![Nk][Ndim]
-    logical,intent(in),optional                   :: check_bk
-    logical                                       :: check_bk_
     real(8),dimension(size(Nkvec))                :: kvec    ![Ndim]
     integer                                       :: ik,ix,iy,iz,Nk(3),ndim
     real(8)                                       :: kx,ky,kz
     !
-    check_bk_=.false.;if(present(check_bk))check_bk_=check_bk
+    if(.not.set_bkvec)stop "TB_build_grid ERROR: bk vectors not set"
     !
     ndim = size(Nkvec)          !dimension of the grid to be built
     !
@@ -326,7 +399,6 @@ contains
     if(product(Nk)/=product(Nkvec))stop "TB_build_grid ERROR: product(Nkvec) != product(Nk)"
     !
     call print_bk()
-    if(check_bk_.AND..not.set_bkvec)stop "TB_build_grid ERROR: bk vectors not set"
     !
     ik=0
     do iz=1,Nk(3)
@@ -345,15 +417,13 @@ contains
   end subroutine build_kgrid_generic
 
 
-  subroutine build_rgrid(Nrvec,Rgrid,check_ei)
+  subroutine build_rgrid(Nrvec,Rgrid)
     integer,dimension(:)                          :: Nrvec ! Nr=product(Nrvec);Ndim=size(Nrvec)
     real(8),dimension(product(Nrvec),size(Nrvec)) :: Rgrid ![Nk][Ndim]
-    logical,intent(in),optional                   :: check_ei
-    logical                                       :: check_ei_
     real(8),dimension(size(Nrvec))                :: Rvec  ![Ndim]
     integer                                       :: ir,ix,iy,iz,Nr(3)
     !
-    check_ei_=.false.;if(present(check_ei))check_ei_=check_ei
+    if(.not.set_eivec)stop "TB_build_Rgrid ERROR: Ei vectors not set"
     !
     Nr=1
     do ir=1,size(Nrvec)
@@ -362,7 +432,6 @@ contains
     if(product(Nr)/=product(Nrvec))stop "TB_build_Rgrid ERROR: product(Nrvec) != product(Nr)"
     !
     call print_ei()
-    if(check_ei_.AND..not.set_eivec)stop "TB_build_Rgrid ERROR: Ei vectors not set"
     !
     ir=0
     do iz=1,Nr(3)
@@ -398,6 +467,7 @@ contains
     logical                                 :: boolBZ,boolOlap
     logical,dimension(size(kcenters,1)-1)   :: cond_Lvec
     !
+    if(.not.set_bkvec)stop "TB_regine_kgrid ERROR: bk vectors not set"
     !
     mpi_master=.true.
 #ifdef _MPI    
@@ -500,7 +570,7 @@ contains
 
 
 
-  
+
   subroutine TB_write_grid(Grid,file_grid)
     real(8),dimension(:,:) :: Grid ![Nk/Nr,Ndim]
     character(len=*)       :: file_grid

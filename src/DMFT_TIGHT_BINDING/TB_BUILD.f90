@@ -108,7 +108,7 @@ contains
     !
     wdos_=.false.
     !
-    call build_kgrid(Nkvec,kgrid,.true.)
+    call build_kgrid(Nkvec,kgrid)
     !
     Nktot  = product(Nkvec)
     Haux   = zero
@@ -231,7 +231,7 @@ contains
     !
     wdos_=.false.
     !
-    call build_kgrid(Nkvec,kgrid,.true.)
+    call build_kgrid(Nkvec,kgrid)
     !
     Nktot  = product(Nkvec)
     Haux   = zero

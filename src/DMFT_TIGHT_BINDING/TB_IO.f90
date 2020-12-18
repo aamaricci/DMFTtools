@@ -33,7 +33,7 @@ contains
     if(check_MPI())mpi_master= get_master_MPI()
 #endif
     !
-    call build_kgrid(Nkvec,kgrid,.true.)
+    call build_kgrid(Nkvec,kgrid)
     !
     Nktot  = product(Nkvec)
     Nlso   = Nlat*Nspin*Norb
@@ -70,7 +70,7 @@ contains
     if(check_MPI())mpi_master= get_master_MPI()
 #endif
     !
-    call build_kgrid(Nkvec,kgrid,.true.)
+    call build_kgrid(Nkvec,kgrid)
     !
     Nktot  = product(Nkvec)!==size(Hk,3)
     Nlso   = Nlat*Nspin*Norb
