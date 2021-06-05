@@ -232,104 +232,139 @@ contains
 
 
   subroutine dmft_get_gloc_matsubara_normal_dos(Ebands,Dbands,Hloc,Gmats,Smats)
-    real(8),dimension(:,:),intent(in)                           :: Ebands    ![Nspin*Norb][Lk]
-    real(8),dimension(size(Ebands,1),size(Ebands,2)),intent(in) :: Dbands    ![Nspin*Norb][Lk]
-    real(8),dimension(size(Ebands,1)),intent(in)                :: Hloc      ![Nspin*Norb]
-    complex(8),dimension(:,:,:,:,:),intent(in)                  :: Smats     ![Nspin][Nspin][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:,:),intent(inout)               :: Gmats     !as Smats
-    !
-    complex(8)                                                  :: gktmp
-    complex(8),dimension(:,:,:),allocatable                     :: zeta_mats ![Nspin*Norb][Nspin*Norb][Lmats]
-    complex(8),dimension(:,:,:,:,:),allocatable                 :: Gtmp      !as Smats
-    !
-    real(8)                                                     :: beta
-    real(8)                                                     :: xmu,eps
-    real(8)                                                     :: wini,wfin
-    !
-    !MPI setup:
+  real(8),dimension(:,:),intent(in)                             :: Ebands    ![Nspin*Norb][Lk]
+  real(8),dimension(:,:),intent(in)                             :: Dbands    !1. [Nspin*Norb][Lk] / 2. [1][Lk]
+  real(8),dimension(size(Ebands,1)),intent(in)                  :: Hloc      ![Nspin*Norb]
+  complex(8),dimension(:,:,:,:,:),intent(in)                    :: Smats     ![Nspin][Nspin][Norb][Norb][Lmats]
+  complex(8),dimension(:,:,:,:,:),intent(inout)                 :: Gmats     !as Smats
+  !
+  complex(8)                                                    :: gktmp
+  complex(8),dimension(:,:,:),allocatable                       :: zeta_mats ![Nspin*Norb][Nspin*Norb][Lmats]
+  complex(8),dimension(:,:,:,:,:),allocatable                   :: Gtmp      !as Smats
+  !
+  real(8)                                                       :: beta
+  real(8)                                                       :: xmu,eps
+  real(8)                                                       :: wini,wfin
+  !
+  !New
+  complex(8),dimension(:,:),allocatable                         :: Gdos_tmp ![Nspin*Norb][Nspin*Norb]
+  logical                                                       :: dos_diag !1. T / 2. F
+  !
+  !MPI setup:
 #ifdef _MPI    
-    if(check_MPI())then
-       mpi_size  = get_size_MPI()
-       mpi_rank =  get_rank_MPI()
-       mpi_master= get_master_MPI()
-    else
-       mpi_size=1
-       mpi_rank=0
-       mpi_master=.true.
-    endif
+  if(check_MPI())then
+     mpi_size  = get_size_MPI()
+     mpi_rank =  get_rank_MPI()
+     mpi_master= get_master_MPI()
+  else
+     mpi_size=1
+     mpi_rank=0
+     mpi_master=.true.
+  endif
 #else
-    mpi_size=1
-    mpi_rank=0
-    mpi_master=.true.
+  mpi_size=1
+  mpi_rank=0
+  mpi_master=.true.
 #endif
-    !Retrieve parameters:
-    call get_ctrl_var(beta,"BETA")
-    call get_ctrl_var(xmu,"XMU")
-    !
-    Nspin = size(Smats,1)
-    Norb  = size(Smats,3)
-    Lmats = size(Smats,5)
-    Lk    = size(Ebands,2)
-    Nso   = Nspin*Norb
-    !
-    !Testing part:
-    call assert_shape(Ebands,[Nso,Lk],"dmft_get_gloc_matsubara_normal_dos_main_mpi","Ebands")
-    call assert_shape(Smats,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_gloc_matsubara_normal_dos_main_mpi","Smats")
-    call assert_shape(Gmats,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_gloc_matsubara_normal_dos_main_mpi","Gmats")
-    !
-    !Allocate and setup the Matsubara freq.
-    allocate(zeta_mats(Nso,Nso,Lmats))
-    if(allocated(wm))deallocate(wm);allocate(wm(Lmats))
-    wm = pi/beta*dble(2*arange(1,Lmats)-1)
-    !
-    do i=1,Lmats
-       zeta_mats(:,:,i)=(xi*wm(i)+xmu)*eye(Nso) - nn2so_reshape(Smats(:,:,:,:,i),Nspin,Norb)
-    enddo
-    !
-    !invert (Z-Hk) for each k-point
-    if(mpi_master)write(*,"(A)")"Get local Matsubara Green's function (no print)"
-    if(mpi_master)call start_timer
-    allocate(Gtmp(Nspin,Nspin,Norb,Norb,Lmats));Gtmp=zero
-    !
-    if(Lmats>=Lk)then
-       do i = 1+mpi_rank, Lmats, mpi_size
-          do ispin=1,Nspin
-             do iorb=1,Norb
-                io = iorb + (ispin-1)*Norb
-                do ik=1,Lk
-                   gktmp = Dbands(io,ik)/( zeta_mats(io,io,i)-Hloc(io)-Ebands(io,ik) )
-                   Gtmp(ispin,ispin,iorb,iorb,i) = Gtmp(ispin,ispin,iorb,iorb,i) + gktmp
-                enddo
-             enddo
-          enddo
-          if(mpi_master)call eta(i,Lmats)
-       end do
-    else
-       do ik = 1+mpi_rank, Lk, mpi_size
-          do ispin=1,Nspin
-             do iorb=1,Norb
-                io = iorb + (ispin-1)*Norb
-                do i=1,Lmats
-                   gktmp = Dbands(io,ik)/( zeta_mats(io,io,i)-Hloc(io)-Ebands(io,ik) )
-                   Gtmp(ispin,ispin,iorb,iorb,i) = Gtmp(ispin,ispin,iorb,iorb,i) + gktmp
-                enddo
-             enddo
-          enddo
-          if(mpi_master)call eta(ik,Lk)
-       end do
-    end if
+  !Retrieve parameters:
+  call get_ctrl_var(beta,"BETA")
+  call get_ctrl_var(xmu,"XMU")
+  !
+  Nspin = size(Smats,1)
+  Norb  = size(Smats,3)
+  Lmats = size(Smats,5)
+  Lk    = size(Ebands,2)
+  Nso   = Nspin*Norb
+  !
+  !case F  => one DOS, H(e)=diag(Ebands), non-diag
+  !case T => more DOS, Ebands, diag
+  dos_diag = .not.( size(Dbands,1) < size(Ebands,1) )
+  !
+  !Testing part:
+  call assert_shape(Ebands,[Nso,Lk],"dmft_get_gloc_matsubara_normal_dos_main_mpi","Ebands")
+  call assert_shape(Smats,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_gloc_matsubara_normal_dos_main_mpi","Smats")
+  call assert_shape(Gmats,[Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_gloc_matsubara_normal_dos_main_mpi","Gmats")
+  !
+  !Allocate and setup the Matsubara freq.
+  allocate(zeta_mats(Nso,Nso,Lmats))
+  if(allocated(wm))deallocate(wm);allocate(wm(Lmats))
+  wm = pi/beta*dble(2*arange(1,Lmats)-1)
+  !
+  do i=1,Lmats
+     zeta_mats(:,:,i)=(xi*wm(i)+xmu)*eye(Nso) - nn2so_reshape(Smats(:,:,:,:,i),Nspin,Norb)
+  enddo
+  !
+  !invert (Z-Hk) for each k-point
+  if(mpi_master)write(*,"(A)")"Get local Matsubara Green's function (no print)"
+  if(mpi_master)call start_timer
+  allocate(Gtmp(Nspin,Nspin,Norb,Norb,Lmats));Gtmp=zero
+  !
+  !
+  ! diagonal case
+  if(dos_diag)then
+     if(Lmats>=Lk)then
+        do i = 1+mpi_rank, Lmats, mpi_size
+           do ispin=1,Nspin
+              do iorb=1,Norb
+                 io = iorb + (ispin-1)*Norb
+                 do ik=1,Lk
+                    gktmp = Dbands(io,ik)/( zeta_mats(io,io,i)-Hloc(io)-Ebands(io,ik) )
+                    Gtmp(ispin,ispin,iorb,iorb,i) = Gtmp(ispin,ispin,iorb,iorb,i) + gktmp
+                 enddo
+              enddo
+           enddo
+           if(mpi_master)call eta(i,Lmats)
+        end do
+     else
+        do ik = 1+mpi_rank, Lk, mpi_size
+           do ispin=1,Nspin
+              do iorb=1,Norb
+                 io = iorb + (ispin-1)*Norb
+                 do i=1,Lmats
+                    gktmp = Dbands(io,ik)/( zeta_mats(io,io,i)-Hloc(io)-Ebands(io,ik) )
+                    Gtmp(ispin,ispin,iorb,iorb,i) = Gtmp(ispin,ispin,iorb,iorb,i) + gktmp
+                 enddo
+              enddo
+           enddo
+           if(mpi_master)call eta(ik,Lk)
+        end do
+     end if
+  ! non diagonal case   
+  else
+     allocate(Gdos_tmp(Nso,Nso)) ;Gdos_tmp=zero
+     if(Lmats>=Lk)then
+        do i = 1+mpi_rank, Lmats, mpi_size                                 !MPI loop over Matsubara frequencies
+           do ik=1,Lk                                                      !for all e-value (here named ik)
+              Gdos_tmp = zeta_mats(:,:,i)-diag(Hloc(:))-diag(Ebands(:,ik)) !G(e,w) = zeta_mats - Hloc - H(e)
+              call inv(Gdos_tmp)
+              Gtmp(:,:,:,:,i) = Gtmp(:,:,:,:,i) + Dbands(1,ik)*so2nn_reshape(Gdos_tmp,Nspin,Norb)
+           enddo
+           if(mpi_master)call eta(i,Lmats)
+        end do
+     else
+        do ik = 1+mpi_rank, Lk, mpi_size
+           do i=1,Lmats
+              Gdos_tmp = zeta_mats(:,:,i)-diag(Hloc(:))-diag(Ebands(:,ik)) !G(e,w) = zeta_mats - Hloc - H(e)
+              call inv(Gdos_tmp)
+              Gtmp(:,:,:,:,i) = Gtmp(:,:,:,:,i) + Dbands(1,ik)*so2nn_reshape(Gdos_tmp,Nspin,Norb)
+           enddo
+           if(mpi_master)call eta(ik,Lk)
+        end do
+     end if
+  end if
 #ifdef _MPI    
-    if(check_MPI())then
-       Gmats=zero
-       call Mpi_AllReduce(Gtmp,Gmats, size(Gmats), MPI_Double_Complex, MPI_Sum, MPI_COMM_WORLD, MPI_ierr)
-    else
-       Gmats=Gtmp
-    endif
+  if(check_MPI())then
+     Gmats=zero
+     call Mpi_AllReduce(Gtmp,Gmats, size(Gmats), MPI_Double_Complex, MPI_Sum, MPI_COMM_WORLD, MPI_ierr)
+  else
+     Gmats=Gtmp
+  endif
 #else
-    Gmats=Gtmp
+  Gmats=Gtmp
 #endif
-    if(mpi_master)call stop_timer
-  end subroutine dmft_get_gloc_matsubara_normal_dos
+  if(mpi_master)call stop_timer
+end subroutine dmft_get_gloc_matsubara_normal_dos
+
 
 
   subroutine dmft_get_gloc_matsubara_normal_ineq(Hk,Gmats,Smats,tridiag,hk_symm)
