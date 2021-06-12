@@ -227,7 +227,7 @@ contains
 
   subroutine dmft_get_gloc_realaxis_normal_dos(Ebands,Dbands,Hloc,Greal,Sreal)
     real(8),dimension(:,:),intent(in)                           :: Ebands    ![Nspin*Norb][Lk]
-    real(8),dimension(size(Ebands,1),size(Ebands,2)),intent(in) :: Dbands    ![Nspin*Norb][Lk]
+  real(8),dimension(:,:),intent(in)                             :: Dbands    !1. [Nspin*Norb][Lk] / 2. [1][Lk]
     real(8),dimension(size(Ebands,1)),intent(in)                :: Hloc      ![Nspin*Norb]
     complex(8),dimension(:,:,:,:,:),intent(in)                  :: Sreal     ![Nspin][Nspin][Norb][Norb][Lreal]
     complex(8),dimension(:,:,:,:,:),intent(inout)               :: Greal     !as Sreal
@@ -239,6 +239,9 @@ contains
     real(8)                                                     :: beta
     real(8)                                                     :: xmu,eps
     real(8)                                                     :: wini,wfin
+    !
+    complex(8),dimension(:,:),allocatable                         :: Gdos_tmp ![Nspin*Norb][Nspin*Norb]
+    logical                                                       :: dos_diag !1. T / 2. F
     !
     !MPI setup:
 #ifdef _MPI    
@@ -266,7 +269,12 @@ contains
     Norb  = size(Sreal,3)
     Lreal = size(Sreal,5)
     Lk    = size(Ebands,2)
-    Nso   = Nspin*Norb    
+    Nso   = Nspin*Norb
+    !
+    !case F => one DOS, H(e)=diag(Ebands), non-diag
+    !case T => more DOS, Ebands, diag
+    dos_diag = .not.( size(Dbands,1) < size(Ebands,1) )
+    !
     !Testing part:
     call assert_shape(Ebands,[Nso,Lk],'dmft_get_gloc_realaxis_normal_dos_main_mpi',"Ebands")
     call assert_shape(Sreal,[Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_realaxis_normal_dos_main_mpi',"Sreal")
@@ -287,32 +295,57 @@ contains
     Greal=zero
     allocate(Gtmp(Nspin,Nspin,Norb,Norb,Lreal));Gtmp=zero
     !
-    if(Lreal>=Lk)then
-       do i = 1+mpi_rank, Lreal, mpi_size
-          do ispin=1,Nspin
-             do iorb=1,Norb
-                io = iorb + (ispin-1)*Norb
-                do ik=1,Lk
-                   gktmp = Dbands(io,ik)/( zeta_real(io,io,i)-Hloc(io)-Ebands(io,ik) )
-                   Gtmp(ispin,ispin,iorb,iorb,i) = Gtmp(ispin,ispin,iorb,iorb,i) + gktmp
+    ! diagonal case
+    if(dos_diag)then
+       if(Lmats>=Lk)then
+          do i = 1+mpi_rank, Lreal, mpi_size
+             do ispin=1,Nspin
+                do iorb=1,Norb
+                   io = iorb + (ispin-1)*Norb
+                   do ik=1,Lk
+                      gktmp = Dbands(io,ik)/( zeta_real(io,io,i)-Hloc(io)-Ebands(io,ik) )
+                      Gtmp(ispin,ispin,iorb,iorb,i) = Gtmp(ispin,ispin,iorb,iorb,i) + gktmp
+                   enddo
                 enddo
              enddo
-          enddo
-          if(mpi_master)call eta(i,Lreal)
-       end do
+             if(mpi_master)call eta(i,Lmats)
+          end do
+       else
+          do ik = 1+mpi_rank, Lk, mpi_size
+             do ispin=1,Nspin
+                do iorb=1,Norb
+                   io = iorb + (ispin-1)*Norb
+                   do i=1,Lreal
+                      gktmp = Dbands(io,ik)/( zeta_real(io,io,i)-Hloc(io)-Ebands(io,ik) )
+                      Gtmp(ispin,ispin,iorb,iorb,i) = Gtmp(ispin,ispin,iorb,iorb,i) + gktmp
+                   enddo
+                enddo
+             enddo
+             if(mpi_master)call eta(ik,Lk)
+          end do
+       end if
+       ! non diagonal case
     else
-       do ik = 1+mpi_rank, Lk, mpi_size
-          do ispin=1,Nspin
-             do iorb=1,Norb
-                io = iorb + (ispin-1)*Norb
-                do i=1,Lreal
-                   gktmp = Dbands(io,ik)/( zeta_real(io,io,i)-Hloc(io)-Ebands(io,ik) )
-                   Gtmp(ispin,ispin,iorb,iorb,i) = Gtmp(ispin,ispin,iorb,iorb,i) + gktmp
-                enddo
+       allocate(Gdos_tmp(Nso,Nso)) ;Gdos_tmp=zero
+       if(Lmats>=Lk)then
+          do i = 1+mpi_rank, Lreal, mpi_size                                 !MPI loop over real frequencies
+             do ik=1,Lk                                                      !for all e-value (here named ik)
+                Gdos_tmp = zeta_real(:,:,i)-diag(Hloc(:))-diag(Ebands(:,ik)) !G(e,w) = zeta_real - Hloc - H(e)
+                call inv(Gdos_tmp)
+                Gtmp(:,:,:,:,i) = Gtmp(:,:,:,:,i) + Dbands(1,ik)*so2nn_reshape(Gdos_tmp,Nspin,Norb)
              enddo
-          enddo
-          if(mpi_master)call eta(ik,Lk)
-       end do
+             if(mpi_master)call eta(i,Lmats)
+          end do
+       else
+          do ik = 1+mpi_rank, Lk, mpi_size
+             do i=1,Lreal
+                Gdos_tmp = zeta_real(:,:,i)-diag(Hloc(:))-diag(Ebands(:,ik)) !G(e,w) = zeta_real - Hloc - H(e)
+                call inv(Gdos_tmp)
+                Gtmp(:,:,:,:,i) = Gtmp(:,:,:,:,i) + Dbands(1,ik)*so2nn_reshape(Gdos_tmp,Nspin,Norb)
+             enddo
+             if(mpi_master)call eta(ik,Lk)
+          end do
+       end if
     end if
 #ifdef _MPI    
     if(check_MPI())then
