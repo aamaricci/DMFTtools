@@ -1,9 +1,9 @@
 ##################################################
 # DMFT_TOOLS PROJECT
 ##################################################
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8.8)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.0.0)
 PROJECT(dmft_tools Fortran)
-SET(VERSION 1.2.20)
+SET(VERSION 2.1.1)
 
 MESSAGE(STATUS "OS: ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_VERSION}")
 SET(BUILD_TYPE "RELEASE" CACHE STRING "Build type")
@@ -12,7 +12,7 @@ MESSAGE(STATUS "BUILD_TYPE=${BUILD_TYPE}")
 SET(CMAKE_BUILD_TYPE ${BUILD_TYPE} CACHE INTERNAL "Build type" FORCE)
 
 # Add our local CMAKE modules to the module path
-SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
+SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 INCLUDE(${CMAKE_MODULE_PATH}/ColorsMsg.cmake)
 
@@ -113,7 +113,12 @@ SET(VERSION ${GIT_TAG})    	#Update version
 # -mcmodel=large  this is to remove the 2Gb limit of virtual memory allocation
 if(CMAKE_Fortran_COMPILER_ID MATCHES GNU) # this is gfortran
   SET(CMAKE_Fortran_MODDIR_FLAG   "-J")
-  SET(CMAKE_Fortran_FLAGS         "-cpp -ffree-line-length-none") 
+  SET(CMAKE_Fortran_FLAGS         "-cpp -ffree-line-length-none -fPIC -w ")
+   IF(CMAKE_Fortran_COMPILER_VERSION LESS 10.0.0)
+    SET(CMAKE_Fortran_FLAGS         "${CMAKE_Fortran_FLAGS} -Wno-argument-mismatch")
+  ELSE()
+    SET(CMAKE_Fortran_FLAGS         "${CMAKE_Fortran_FLAGS} -fallow-argument-mismatch")
+  ENDIF()
   SET(CMAKE_Fortran_FLAGS_TESTING "-O2 -funroll-loops")
   SET(CMAKE_Fortran_FLAGS_DEBUG   "-O0 -p -g -Wsurprising -Waliasing -fwhole-file -fcheck=all -pedantic -fbacktrace -fbounds-check")
   SET(CMAKE_Fortran_FLAGS_RELEASE "-O3   -funroll-loops")   
@@ -138,6 +143,14 @@ elseif(CMAKE_Fortran_COMPILER_ID MATCHES PGI)
   SET(CMAKE_Fortran_FLAGS_DEBUG   "-g -O0 -Mframe")
   SET(CMAKE_Fortran_FLAGS_RELEASE "-O3 -mcmodel=medium -fast -Munroll")
 endif()
+
+IF( "${BUILD_TYPE}" MATCHES "DEBUG")
+  MESSAGE(STATUS "Fortran Compiler options = ${CMAKE_Fortran_FLAGS} ${CMAKE_Fortran_FLAGS_DEBUG}")
+ELSEIF("${BUILD_TYPE}" MATCHES "TESTING")
+  MESSAGE(STATUS "Fortran Compiler options = ${CMAKE_Fortran_FLAGS} ${CMAKE_Fortran_FLAGS_TESTING}")
+ELSEIF("${BUILD_TYPE}" MATCHES "RELEASE")
+  MESSAGE(STATUS "Fortran Compiler options = ${CMAKE_Fortran_FLAGS} ${CMAKE_Fortran_FLAGS_RELEASE}")
+ENDIF()
 
 
 #set MPI preprocessing defition:
@@ -291,13 +304,6 @@ ADD_DEPENDENCIES(DMFT_TOOLSLIB
   )
 
 
-# Add a distclean target to the Makefile
-ADD_CUSTOM_TARGET(distclean 
-    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_SOURCE_DIR}/distclean.cmake
-)
-
-
-
 
 SET(PERMISSION_777
   OWNER_WRITE OWNER_READ OWNER_EXECUTE
@@ -305,31 +311,27 @@ SET(PERMISSION_777
   WORLD_WRITE WORLD_READ WORLD_EXECUTE)
 
 
-#Contains the functions used in the following:
-#BUILD_ENV_MODULE
-#BUILD_CONFIGVARS
-#BUILD_PKCONFIG
-INCLUDE(${CMAKE_MODULE_PATH}/PostBuildDmftTools.cmake)
-
-#Build the dmft_tools module for environment modules
+#Build the DMFT_TOOLS module for environment modules
 FILE(REMOVE_RECURSE ${DT_TMP_ETC}/modules/)
 SET(TMP_MODULE_NAME "${FULL_VER}" CACHE PATH "Prefix prepended to install directories")
 SET(TMP_ENV_MODULE_FILE ${DT_TMP_ETC}/modules/${PROJECT_NAME}/${TMP_MODULE_NAME})
 SET(TMP_VER_MODULE_FILE ${DT_TMP_ETC}/modules/${PROJECT_NAME}/${FC_ID}/.version)
-BUILD_ENV_MODULE(${TMP_ENV_MODULE_FILE})
-BUILD_VERSION_MODULE(${TMP_VER_MODULE_FILE})
+CONFIGURE_FILE(${DT_ENV}/module.in ${TMP_ENV_MODULE_FILE} @ONLY)
+CONFIGURE_FILE(${DT_ENV}/version.in ${TMP_VER_MODULE_FILE} @ONLY)
 
-
-#Build the user config script (sourced in user shell config file, i.e. .bashrc)
-SET(TMP_CONFIGVARS_USER_FILE ${DT_TMP_BIN}/dmft_tools_config_user.sh)
-BUILD_CONFIGVARS_USER(${TMP_CONFIGVARS_USER_FILE})
-
-#Build the global config script (sourced in system shell config file, i.e. /etc/bash.bashrc)
-SET(TMP_CONFIGVARS_GLOBAL_FILE ${DT_TMP_BIN}/dmft_tools_config_global.sh)
-BUILD_CONFIGVARS_GLOBAL(${TMP_CONFIGVARS_GLOBAL_FILE})
-
+#Build the PKG-CONFIG file
 SET(TMP_PKCONFIG_FILE ${DT_TMP_ETC}/${PROJECT_NAME}.pc)
-BUILD_PKCONFIG(${TMP_PKCONFIG_FILE})
+CONFIGURE_FILE( ${DT_ETC}/${PROJECT_NAME}.pc.in ${TMP_PKCONFIG_FILE} @ONLY)
+
+#Build the user CONFIG scripts (sourced in user shell config file, i.e. .bashrc)
+SET(CONFIG_SCRIPT dmft_tools_config_user.sh)
+SET(TMP_CONFIGVARS_USER_FILE ${DT_TMP_ETC}/${CONFIG_SCRIPT})
+CONFIGURE_FILE(${DT_ETC}/dmft_tools_config_user.sh.in ${TMP_CONFIGVARS_USER_FILE} @ONLY)
+
+SET(CONFIG_SCRIPT dmft_tools_config_global.sh)
+SET(TMP_CONFIGVARS_GLOBAL_FILE ${DT_TMP_ETC}/${CONFIG_SCRIPT})
+CONFIGURE_FILE(${DT_ETC}/dmft_tools_config_global.sh.in ${TMP_CONFIGVARS_GLOBAL_FILE} @ONLY)
+
 
 FILE(WRITE  ${DT_TMP_VER}  "${VERSION}\n")
 INSTALL(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}/ DESTINATION ${DT_TARGET_INC})
@@ -367,9 +369,14 @@ $ make install
 
 Uninstall with:
 $ make uninstall
+")
 
-Add library to your OS: 
-pick ONE method below  [add it in your bash profile to make it permanent (e.g. ~/.bashrc)]:
+
+
+INSTALL(CODE "MESSAGE(
+\"
+ADD LIBRARY TO YOUR SYSTEM: 
+Pick ONE method below  [add it in your bash profile to make it permanent, e.g. ~/.bashrc]:
 ${Yellow}Method 1: use the provided ${PROJECT_NAME} environment module${ColourReset}:
    $ module use $HOME/.modules.d
    $ module load ${PROJECT_NAME}/${FC_PLAT}
@@ -379,12 +386,18 @@ ${Yellow}Method 2: source the config script${ColourReset}:
 
 ${Yellow}Method 3: use pkg-config with the provided ${PROJECT_NAME}.pc${ColourReset}:
    $ export PKG_CONFIG_PATH=${DT_TARGET_ETC}/:$PKG_CONFIG_PATH
-   $ pkg-config --cflags --libs ${PROJECT_NAME} (to get lib info)
+   $ pkg-config --cflags --libs ${PROJECT_NAME}
 
-${Yellow}Method ADMIN: Add this line to the system shell configuration file (e.g. /etc/bash.bashrc)${ColourReset}
+${Yellow}Method ADMIN: Add this line to the system shell configuration file, e.g. /etc/bash.bashrc${ColourReset}
    $ source ${DT_TARGET_BIN}dmft_tools_config_global.sh
+\")
 ")
 
+
+# Add a distclean target to the Makefile
+ADD_CUSTOM_TARGET(distclean 
+    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_SOURCE_DIR}/DistClean.cmake
+)
 
 
 
