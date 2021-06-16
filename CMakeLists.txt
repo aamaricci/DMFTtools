@@ -114,7 +114,7 @@ SET(VERSION ${GIT_TAG})    	#Update version
 if(CMAKE_Fortran_COMPILER_ID MATCHES GNU) # this is gfortran
   SET(CMAKE_Fortran_MODDIR_FLAG   "-J")
   SET(CMAKE_Fortran_FLAGS         "-cpp -ffree-line-length-none -fPIC -w ")
-   IF(CMAKE_Fortran_COMPILER_VERSION LESS 10.0.0)
+   IF(CMAKE_Fortran_COMPILER_VERSION VERSION_LESS 10.0.0)
     SET(CMAKE_Fortran_FLAGS         "${CMAKE_Fortran_FLAGS} -Wno-argument-mismatch")
   ELSE()
     SET(CMAKE_Fortran_FLAGS         "${CMAKE_Fortran_FLAGS} -fallow-argument-mismatch")
