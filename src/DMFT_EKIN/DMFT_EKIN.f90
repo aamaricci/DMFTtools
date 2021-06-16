@@ -218,37 +218,40 @@ contains
     deallocate(wm)
   end subroutine dmft_kinetic_energy_normal_Nso_main
 
-
   subroutine dmft_kinetic_energy_normal_Nso_dos(Ebands,Dbands,Hloc,Sigma,Ekin,Eloc)
-    real(8),dimension(:,:),intent(in)                           :: Ebands  ![Nspin*Norb][Lk]
-    real(8),dimension(size(Ebands,1),size(Ebands,2)),intent(in) :: Dbands  ![Nspin*Norb][Lk]
-    real(8),dimension(size(Ebands,1)),intent(in)                :: Hloc    ![Nspin*Norb]
-    complex(8),dimension(:,:,:)                                 :: Sigma   ![Nspin*Norb][Nspin*Norb][L]
-    real(8),dimension(size(Ebands,1)),optional                  :: Ekin,Eloc
+    real(8),dimension(:,:),intent(in)                :: Ebands    ![Nspin*Norb][Lk]
+    real(8),dimension(:,:),intent(in)                :: Dbands    !1. [Nspin*Norb][Lk] / 2. [1][Lk]
+    real(8),dimension(size(Ebands,1)),intent(in)     :: Hloc    ![Nspin*Norb]
+    complex(8),dimension(:,:,:)                      :: Sigma   ![Nspin*Norb][Nspin*Norb][L]
+    real(8),dimension(size(Ebands,1)),optional       :: Ekin,Eloc
     !
-    integer                                                     :: Lk,Nso,Liw
-    integer                                                     :: i,ik,iso
+    integer                                          :: Lk,Nso,Liw
+    integer                                          :: i,ik,iso
     !
-    integer                                                     :: Norb,Nporb
-    integer                                                     :: Nspin  
-    real(8)                                                     :: beta
-    real(8)                                                     :: xmu
+    integer                                          :: Norb,Nporb
+    integer                                          :: Nspin  
+    real(8)                                          :: beta
+    real(8)                                          :: xmu
     !
-    real(8),dimension(size(Ebands,1),size(Ebands,1))            :: Sigma_HF
+    real(8),dimension(size(Ebands,1),size(Ebands,1)) :: Sigma_HF
     !
-    complex(8)                                                  :: Ak,Bk,Ck,Dk
-    complex(8)                                                  :: Gk,Tk
+    complex(8)                                       :: Ak,Bk,Ck,Dk
+    complex(8)                                       :: Gk,Tk
     !
-    real(8),dimension(size(Ebands,1))                           :: Tail0,Tail1
-    real(8),dimension(size(Ebands,1))                           :: Lail0,Lail1
-    real(8)                                                     :: spin_degeneracy
+    complex(8),dimension(:,:),allocatable            :: Ak_,Bk_,Ck_,Dk_
+    complex(8),dimension(:,:),allocatable            :: Gk_,Tk_
     !
-    real(8),dimension(size(Ebands,1))                           :: H0,Hl
-    real(8),dimension(size(Ebands,1))                           :: H0tmp,Hltmp
+    real(8),dimension(size(Ebands,1))                :: Tail0,Tail1
+    real(8),dimension(size(Ebands,1))                :: Lail0,Lail1
+    real(8)                                          :: spin_degeneracy
     !
-    real(8),dimension(size(Ebands,1))                           :: Ekin_,Eloc_
+    real(8),dimension(size(Ebands,1))                :: H0,Hl
+    real(8),dimension(size(Ebands,1))                :: H0tmp,Hltmp
     !
-    real(8),dimension(:),allocatable                            :: wm
+    real(8),dimension(size(Ebands,1))                :: Ekin_,Eloc_
+    !
+    real(8),dimension(:),allocatable                 :: wm
+    logical                                          :: dos_diag !1. T / 2. F
     !
     !
     !MPI setup:
@@ -276,6 +279,11 @@ contains
     Nso = size(Ebands,1)
     Lk  = size(Ebands,2)
     Liw = size(Sigma,3)
+    !
+    !case F  => one DOS, H(e)=diag(Ebands), non-diag
+    !case T => more DOS, Ebands, diag
+    dos_diag = .not.( size(Dbands,1) < size(Ebands,1) )
+    !
     !Testing:
     if(Nso/=Norb*Nspin)stop "dmft_kinetic_energy_normal_Nso_dos: Nso != Norb*Nspin [from Hk]"
     call assert_shape(Sigma,[Nso,Nso,Liw],"dmft_kinetic_energy_normal_Nso_dos","Sigma")
@@ -294,61 +302,122 @@ contains
     Hl=0d0
     H0tmp= 0d0
     Hltmp= 0d0
-    !Get principal part: Tr[ Hk.(Gk-Tk) ]
-    do ik=1,Lk
-       do iso=1,Nso
-          Ak = Ebands(iso,ik)
-          Bk =-Ebands(iso,ik) - Sigma_HF(iso,iso) 
-          do i=1+mpi_rank,Liw,mpi_size
-             Gk = (xi*wm(i)+xmu) - Sigma(iso,iso,i) - Ebands(iso,ik) - Hloc(iso)
-             Gk = 1d0/Gk
-             Tk = 1d0/(xi*wm(i)) - Bk/(xi*wm(i))**2
-             Ck = Ak*(Gk - Tk)
-             Dk = Hloc(iso)*(Gk - Tk)
-             H0tmp(iso) = H0tmp(iso) + Dbands(iso,ik)*Ck
-             Hltmp(iso) = Hltmp(iso) + Dbands(iso,ik)*Dk
-          enddo
-       enddo
-       if(mpi_master)call eta(ik,Lk)
-    enddo
-#ifdef _MPI
-    if(check_MPI())then
-       call AllReduce_MPI(MPI_COMM_WORLD,H0tmp,H0)
-       call AllReduce_MPI(MPI_COMM_WORLD,Hltmp,Hl)
-    else
-       H0=H0tmp
-       Hl=Hltmp
-    endif
-#else
-    H0=H0tmp
-    Hl=Hltmp
-#endif
-    if(mpi_master)call stop_timer()
-    spin_degeneracy=3d0-Nspin     !2 if Nspin=1, 1 if Nspin=2
-    H0=H0/beta*2*spin_degeneracy
-    Hl=Hl/beta*2*spin_degeneracy
     !
-    !get tail subtracted contribution: Tr[ Hk.Tk ]
     Tail0=0d0
     Tail1=0d0
     Lail0=0d0
     Lail1=0d0
-    do ik=1,Lk
-       do iso=1,Nso
-          Ak = Ebands(iso,ik)
-          Bk =-Ebands(iso,ik) - Sigma_HF(iso,iso)
-          Ck= Ak*Bk
-          Dk= Hloc(iso)*Bk
-          Tail0(iso) = Tail0(iso) + 0.5d0*Dbands(iso,ik)*Ak
-          Tail1(iso) = Tail1(iso) + 0.25d0*Dbands(iso,ik)*Ck
-          Lail0(iso) = Lail0(iso) + 0.5d0*Dbands(iso,ik)*Hloc(iso)
-          Lail1(iso) = Lail1(iso) + 0.25d0*Dbands(iso,ik)*Dk
+    !
+    if(dos_diag)then
+       !Get principal part: Tr[ Hk.(Gk-Tk) ]
+       do ik=1,Lk
+          do iso=1,Nso
+             Ak = Ebands(iso,ik)
+             Bk =-Ebands(iso,ik) - Sigma_HF(iso,iso) 
+             do i=1+mpi_rank,Liw,mpi_size
+                Gk = (xi*wm(i)+xmu) - Sigma(iso,iso,i) - Ebands(iso,ik) - Hloc(iso)
+                Gk = 1d0/Gk
+                Tk = 1d0/(xi*wm(i)) - Bk/(xi*wm(i))**2
+                Ck = Ak*(Gk - Tk)
+                Dk = Hloc(iso)*(Gk - Tk)
+                H0tmp(iso) = H0tmp(iso) + Dbands(iso,ik)*Ck
+                Hltmp(iso) = Hltmp(iso) + Dbands(iso,ik)*Dk
+             enddo
+          enddo
+          if(mpi_master)call eta(ik,Lk)
        enddo
-    enddo
-    Tail0=Tail0*spin_degeneracy
-    Tail1=Tail1*beta*spin_degeneracy
-    Lail0=Lail0*spin_degeneracy
-    Lail1=Lail1*beta*spin_degeneracy
+#ifdef _MPI
+       if(check_MPI())then
+          call AllReduce_MPI(MPI_COMM_WORLD,H0tmp,H0)
+          call AllReduce_MPI(MPI_COMM_WORLD,Hltmp,Hl)
+       else
+          H0=H0tmp
+          Hl=Hltmp
+       endif
+#else
+       H0=H0tmp
+       Hl=Hltmp
+#endif
+       if(mpi_master)call stop_timer()
+       spin_degeneracy=3d0-Nspin     !2 if Nspin=1, 1 if Nspin=2
+       H0=H0/beta*2*spin_degeneracy
+       Hl=Hl/beta*2*spin_degeneracy
+       !
+       !get tail subtracted contribution: Tr[ Hk.Tk ]
+       do ik=1,Lk
+          do iso=1,Nso
+             Ak = Ebands(iso,ik)
+             Bk =-Ebands(iso,ik) - Sigma_HF(iso,iso)
+             Ck= Ak*Bk
+             Dk= Hloc(iso)*Bk
+             Tail0(iso) = Tail0(iso) + 0.5d0*Dbands(iso,ik)*Ak
+             Tail1(iso) = Tail1(iso) + 0.25d0*Dbands(iso,ik)*Ck
+             Lail0(iso) = Lail0(iso) + 0.5d0*Dbands(iso,ik)*Hloc(iso)
+             Lail1(iso) = Lail1(iso) + 0.25d0*Dbands(iso,ik)*Dk
+          enddo
+       enddo
+       Tail0=Tail0*spin_degeneracy
+       Tail1=Tail1*beta*spin_degeneracy
+       Lail0=Lail0*spin_degeneracy
+       Lail1=Lail1*beta*spin_degeneracy
+
+    else
+
+       allocate(Gk_(Nso,Nso),Tk_(Nso,Nso))
+       allocate(Ak_(Nso,Nso),Bk_(Nso,Nso),Ck_(Nso,Nso),Dk_(Nso,Nso))
+       !Get principal part: Tr[ Hk.(Gk-Tk) ]
+       !There is some change with respect to the H(k) case in handling Hloc
+       do ik=1,Lk
+          Ak_=  diag(Ebands(:,ik))
+          Bk_= -diag(Ebands(:,ik)) - Sigma_HF(:,:)
+          do i=1+mpi_rank,Liw,mpi_size
+             Gk_ = (xi*wm(i)+xmu)*eye(Nso) - Sigma(:,:,i) - diag(Ebands(:,ik)) - diag(Hloc(:))
+             call inv(Gk_)
+             Tk_ = eye(Nso)/(xi*wm(i)) - Bk_/(xi*wm(i))**2
+             Ck_ = matmul(Ak_  ,Gk_ - Tk_)
+             Dk_ = matmul(diag(Hloc),Gk_ - Tk_)
+             do iso=1,Nso
+                H0tmp(iso) = H0tmp(iso) + Dbands(1,ik)*Ck_(iso,iso)
+                Hltmp(iso) = Hltmp(iso) + Dbands(1,ik)*Dk_(iso,iso)
+             enddo
+          enddo
+          if(mpi_master)call eta(ik,Lk)
+       enddo
+#ifdef _MPI
+       if(check_MPI())then
+          call AllReduce_MPI(MPI_COMM_WORLD,H0tmp,H0)
+          call AllReduce_MPI(MPI_COMM_WORLD,Hltmp,Hl)
+       else
+          H0=H0tmp
+          Hl=Hltmp
+       endif
+#else
+       H0=H0tmp
+       Hl=Hltmp
+#endif
+       if(mpi_master)call stop_timer()
+       spin_degeneracy=3d0-Nspin     !2 if Nspin=1, 1 if Nspin=2
+       H0=H0/beta*2*spin_degeneracy
+       Hl=Hl/beta*2*spin_degeneracy
+       !
+       !get tail subtracted contribution: Tr[ Hk.Tk ]
+       do ik=1,Lk
+          Ak_ = diag(Ebands(:,ik))
+          Bk_ =-diag(Ebands(:,ik)) - Sigma_HF(:,:)
+          Ck_ = matmul(Ak_,Bk_)
+          Dk_ = matmul(diag(Hloc),Bk_)
+          do iso=1,Nso
+             Tail0(iso) = Tail0(iso) + 0.5d0*Ak_(iso,iso)*Dbands(1,ik)
+             Tail1(iso) = Tail1(iso) + 0.25d0*Ck_(iso,iso)*Dbands(1,ik)
+             Lail0(iso) = Lail0(iso) + 0.5d0*Hloc(iso)*Dbands(1,ik)
+             Lail1(iso) = Lail1(iso) + 0.25d0*Dk_(iso,iso)*Dbands(1,ik)
+          enddo
+       enddo
+       Tail0=Tail0*spin_degeneracy
+       Tail1=Tail1*beta*spin_degeneracy
+       Lail0=Lail0*spin_degeneracy
+       Lail1=Lail1*beta*spin_degeneracy
+    endif
     !
     Ekin_=H0+Tail0+Tail1
     Eloc_=Hl+Lail0+Lail1
@@ -360,7 +429,6 @@ contains
     !
     deallocate(wm)
   end subroutine dmft_kinetic_energy_normal_Nso_dos
-
 
   subroutine dmft_kinetic_energy_normal_Nso_lattice(Hk,Sigma,Ekin,Eloc)
     complex(8),dimension(:,:,:)                                     :: Hk        ! [Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lk]
@@ -1133,7 +1201,7 @@ contains
 
   subroutine dmft_kinetic_energy_normal_NN_dos(Ebands,Dbands,Hloc,Sigma,Ekin,Eloc)
     real(8),dimension(:,:)                           :: Ebands  ![Nspin*Norb][Lk]
-    real(8),dimension(size(Ebands,1),size(Ebands,2)) :: Dbands  ![Nspin*Norb][Lk]
+    real(8),dimension(:,:),intent(in)                :: Dbands    !1. [Nspin*Norb][Lk] / 2. [1][Lk]
     real(8),dimension(size(Ebands,1))                :: Hloc    ![Nspin*Norb]
     complex(8),dimension(:,:,:,:,:)                  :: Sigma  ![Nspin][Nspin][Norb][Norb][L]
     complex(8),dimension(:,:,:),allocatable          :: Sigma_ ![Nspin*Norb][Nspin*Norb][L]
