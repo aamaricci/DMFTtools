@@ -27,11 +27,19 @@ module TB_COMMON
   interface TB_reshape_array
      module procedure :: tb_reorder_vec_d,tb_reorder_vec_c
      module procedure :: tb_reorder_mat_d,tb_reorder_mat_c
+     module procedure :: tb_reorder_hk_d,tb_reorder_hk_c
   end interface TB_reshape_array
   interface TB_reorder_array
      module procedure :: tb_reorder_vec_d,tb_reorder_vec_c
      module procedure :: tb_reorder_mat_d,tb_reorder_mat_c
+     module procedure :: tb_reorder_hk_d,tb_reorder_hk_c
   end interface TB_reorder_array
+  interface TB_reshape_hk
+     module procedure :: tb_reorder_hk_d,tb_reorder_hk_c
+  end interface TB_reshape_hk
+  interface TB_reorder_hk
+     module procedure :: tb_reorder_hk_d,tb_reorder_hk_c
+  end interface TB_reorder_hk
 
   interface tb_findloc
      module procedure :: findloc_char
@@ -77,7 +85,7 @@ module TB_COMMON
   private :: findloc_char
   private :: findloc_int
   private :: indx_reorder
-  
+
 contains
 
 
@@ -209,7 +217,7 @@ contains
     integer,dimension(3)                           :: Nout
     integer                                        :: iss,jss,iuser,juser,i,Nlso
     !
-    Nlso = size(Huser)
+    Nlso = size(Huser,1)
     call assert_shape(Huser,[Nlso,Nlso],"tb_reorder_mat_c","Huser")
     !
     !Construct an index array InderOut corresponding to the Out ordering.
@@ -259,7 +267,7 @@ contains
     integer,dimension(3)                              :: Nout
     integer                                           :: iss,jss,iuser,juser,i,Nlso
     !
-    Nlso = size(Huser)
+    Nlso = size(Huser,1)
     call assert_shape(Huser,[Nlso,Nlso],"tb_reorder_mat_c","Huser")
     !
     !Construct an index array InderOut corresponding to the Out ordering.
@@ -297,6 +305,110 @@ contains
     return
   end function tb_reorder_mat_c
 
+
+
+
+  function tb_reorder_hk_d(Huser,Nin,OrderIn,OrderOut) result(Hss)
+    real(8),dimension(:,:,:)                                     :: Huser
+    integer,dimension(3)                                         :: Nin   !In sequence of Nlat,Nspin,Norb as integers
+    character(len=*),dimension(3)                                :: OrderIn  !in  sequence of Nlat,Nspin,Norb as strings
+    character(len=*),dimension(3)                                :: OrderOut !out sequence of Nlat,Nspin,Norb as strings
+    !
+    real(8),dimension(size(Huser,1),size(Huser,2),size(Huser,3)) :: Hss
+    integer,dimension(3)                                         :: Ivec,Jvec
+    integer,dimension(3)                                         :: IndexOut
+    integer,dimension(3)                                         :: Nout
+    integer                                                      :: iss,jss,iuser,juser,i,Nlso,Nk
+    !   
+    Nlso = size(Huser,1)
+    Nk   = size(Huser,3)
+    call assert_shape(Huser,[Nlso,Nlso,Nk],"tb_reorder_hk_d","Huser")
+    !
+    !Construct an index array InderOut corresponding to the Out ordering.
+    !This is a permutation of the In ordering taken as [1,2,3].
+    !For each entry in OrderIn we look for the position of the
+    !corresponding entry in OrderOut using tb_findloc.
+    !If 0 entries exist, corresponding components are not found. stop. 
+    do i=1,3     
+       IndexOut(i:i)=tb_findloc(OrderIn,OrderOut(i))
+    enddo
+    if(any(IndexOut==0))then
+       print*,"TB_Reorder_vec ERROR: wrong entry in IndexOut at: ",tb_findloc(IndexOut,0)
+       stop
+    endif
+    !
+    !From IndexOut we can re-order the dimensions array to get the User dimensions array 
+    Nout=indx_reorder(Nin,IndexOut)
+    !
+    if(any(IndexOut/=[1,2,3]))then
+       do iss=1,Nlso
+          Ivec  = i2indices(iss,Nin)           !Map iss to Ivec:(ilat,iorb,ispin) by IN ordering
+          Jvec  = indx_reorder(Ivec,IndexOut)  !Reorder according to Out ordering
+          iuser = indices2i(Jvec,Nout)         !Map back new Jvec to total index iuser by OUT ordering 
+          do jss=1,Nlso
+             Ivec  = i2indices(jss,Nin)
+             Jvec  = indx_reorder(Ivec,IndexOut)
+             juser = indices2i(Jvec,Nout)
+             !
+             Hss(iss,jss,:) = Huser(iuser,juser,:)
+          enddo
+       enddo
+    else
+       Hss = Huser
+    endif
+    return
+  end function tb_reorder_hk_d
+
+  function tb_reorder_hk_c(Huser,Nin,OrderIn,OrderOut) result(Hss)
+    complex(8),dimension(:,:,:)                                     :: Huser
+    integer,dimension(3)                                            :: Nin   !In sequence of Nlat,Nspin,Norb as integers
+    character(len=*),dimension(3)                                   :: OrderIn  !in  sequence of Nlat,Nspin,Norb as strings
+    character(len=*),dimension(3)                                   :: OrderOut !out sequence of Nlat,Nspin,Norb as strings
+    !
+    complex(8),dimension(size(Huser,1),size(Huser,2),size(Huser,3)) :: Hss
+    integer,dimension(3)                                            :: Ivec,Jvec
+    integer,dimension(3)                                            :: IndexOut
+    integer,dimension(3)                                            :: Nout
+    integer                                                         :: iss,jss,iuser,juser,i,Nlso,Nk
+    !   
+    Nlso = size(Huser,1)
+    Nk   = size(Huser,3)
+    call assert_shape(Huser,[Nlso,Nlso,Nk],"tb_reorder_hk_d","Huser")
+    !
+    !Construct an index array InderOut corresponding to the Out ordering.
+    !This is a permutation of the In ordering taken as [1,2,3].
+    !For each entry in OrderIn we look for the position of the
+    !corresponding entry in OrderOut using tb_findloc.
+    !If 0 entries exist, corresponding components are not found. stop. 
+    do i=1,3     
+       IndexOut(i:i)=tb_findloc(OrderIn,OrderOut(i))
+    enddo
+    if(any(IndexOut==0))then
+       print*,"TB_Reorder_vec ERROR: wrong entry in IndexOut at: ",tb_findloc(IndexOut,0)
+       stop
+    endif
+    !
+    !From IndexOut we can re-order the dimensions array to get the User dimensions array 
+    Nout=indx_reorder(Nin,IndexOut)
+    !
+    if(any(IndexOut/=[1,2,3]))then
+       do iss=1,Nlso
+          Ivec  = i2indices(iss,Nin)           !Map iss to Ivec:(ilat,iorb,ispin) by IN ordering
+          Jvec  = indx_reorder(Ivec,IndexOut)  !Reorder according to Out ordering
+          iuser = indices2i(Jvec,Nout)         !Map back new Jvec to total index iuser by OUT ordering 
+          do jss=1,Nlso
+             Ivec  = i2indices(jss,Nin)
+             Jvec  = indx_reorder(Ivec,IndexOut)
+             juser = indices2i(Jvec,Nout)
+             !
+             Hss(iss,jss,:) = Huser(iuser,juser,:)
+          enddo
+       enddo
+    else
+       Hss = Huser
+    endif
+    return
+  end function tb_reorder_hk_c
 
 
 

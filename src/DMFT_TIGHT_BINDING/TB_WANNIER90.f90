@@ -102,7 +102,7 @@ contains
        read(unitIO,*) Nrpts    !Number of Wigner-Seitz vectors
     else
        Len      = file_length(TB_w90%w90_file)
-       Num_wann = Nlat*Norb; if(spinor_)Num_wann=Num_wann*Nspin
+       Num_wann = Nlat*Norb; if(spinor_)Num_wann=Num_wann*Nspin_
        if( mod(len,Num_wann*Num_wann)/=0 )stop "ERROR setup_w90: no Header. Wrong Num_wann."
        Nrpts    = Len/Num_wann/Num_wann
     endif
@@ -122,10 +122,6 @@ contains
     endif
     TB_w90%Nrpts    = Nrpts
     TB_w90%Nlso     = TB_w90%Nlat*TB_w90%Norb*TB_w90%Nspin
-    TB_w90%Ndegen   = 0
-    TB_w90%Rvec     = 0
-    TB_w90%Hij      = zero
-    TB_w90%Hloc     = zero
     allocate(TB_w90%Ndegen(Nrpts))
     allocate(TB_w90%Rvec(Nrpts,3))
     allocate(TB_w90%Rgrid(Nrpts,3))
@@ -133,6 +129,10 @@ contains
     allocate(TB_w90%Hloc( TB_w90%Nlso, TB_w90%Nlso ))
     allocate(TB_w90%Zeta( TB_w90%Nlso, TB_w90%Nlso ))
     allocate(TB_w90%Self( TB_w90%Nlso, TB_w90%Nlso ))
+    TB_w90%Ndegen   = 0
+    TB_w90%Rvec     = 0
+    TB_w90%Hij      = zero
+    TB_w90%Hloc     = zero
     TB_w90%Zeta     = eye(TB_w90%Nlso )
     TB_w90%Self     = 0d0
     TB_w90%Efermi   = 0d0
