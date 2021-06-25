@@ -112,7 +112,6 @@ module DMFT_TIGHT_BINDING
   !TB_WANNIER
   interface TB_w90_setup
      module procedure :: setup_w90
-     module procedure :: setup_w90_Hij
   end interface TB_w90_setup
 
   interface TB_fix_w90file
@@ -147,9 +146,7 @@ module DMFT_TIGHT_BINDING
      module procedure :: TB_fsurf_w90_nkvec
   end interface TB_fsurface
 
-
-
-
+  
 
   abstract interface
      function w90_hk(kpoint,N)
