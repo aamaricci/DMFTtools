@@ -10,6 +10,7 @@ module SC_WEISS
   interface dmft_weiss
      module procedure :: dmft_get_weiss_normal_main
      module procedure :: dmft_get_weiss_normal_cluster
+     module procedure :: dmft_get_weiss_normal_cluster_ineq
      module procedure :: dmft_get_weiss_normal_ineq
      module procedure :: dmft_get_weiss_normal_bethe
      module procedure :: dmft_get_weiss_normal_bethe_ineq
@@ -312,6 +313,117 @@ contains
     !
   end subroutine dmft_get_weiss_normal_ineq
 
+
+  subroutine dmft_get_weiss_normal_cluster_ineq(Gloc,Smats,Weiss,Hloc)
+    complex(8),dimension(:,:,:,:,:,:,:,:),intent(in)    :: Gloc         ! [Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:,:,:,:),intent(in)    :: Smats        ! [Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:,:,:,:),intent(inout) :: Weiss        ! [Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:,:,:),intent(in)      :: Hloc         ! [Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb]
+    !aux
+    complex(8),dimension(:,:,:,:,:,:,:,:),allocatable   :: Weiss_tmp    ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:),allocatable             :: zeta_site    ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lmats]
+    complex(8),dimension(:,:,:),allocatable             :: Smats_site   ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lmats]
+    complex(8),dimension(:,:,:),allocatable             :: invGloc_site ![[Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lmats]
+    complex(8),dimension(:,:,:),allocatable             :: calG0_site   ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lmats]
+    integer                                             :: Nineq,Nlat,Nspin,Norb,Nso,Nlso,Nilso,Lmats
+    integer                                             :: i,j,iorb,jorb,ispin,jspin,iineq,ilat,jlat,io,jo,js
+    !
+    !MPI setup:
+#ifdef _MPI    
+    if(check_MPI())then
+       mpi_size  = get_size_MPI()
+       mpi_rank =  get_rank_MPI()
+       mpi_master= get_master_MPI()
+    else
+       mpi_size=1
+       mpi_rank=0
+       mpi_master=.true.
+    endif
+#else
+    mpi_size=1
+    mpi_rank=0
+    mpi_master=.true.
+#endif
+    !
+    !Retrieve parameters:
+    call get_ctrl_var(beta,"BETA")
+    call get_ctrl_var(xmu,"XMU")
+    !
+    !Testing part:
+    Nineq = size(Gloc,1)
+    Nlat  = size(Gloc,2)
+    Nspin = size(Gloc,4)
+    Norb  = size(Gloc,6)
+    Lmats = size(Gloc,8)
+    Nso   = Nspin*Norb
+    Nlso  = Nlat*Nspin*Norb
+    Nilso = Nineq*Nlat*Nspin*Norb
+    call assert_shape(Gloc,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_normal_ineq_mpi","Gloc")
+    call assert_shape(Smats,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_normal_ineq_mpi","Smats")
+    call assert_shape(Weiss,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_get_weiss_normal_ineq_mpi","Weiss")
+    call assert_shape(Hloc,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb],"dmft_get_weiss_normal_ineq_mpi","Hloc")
+    !
+    if(allocated(wm))deallocate(wm)
+    allocate(wm(Lmats))
+    allocate(Weiss_tmp(Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats))
+    allocate(zeta_site(Nlso,Nlso,Lmats))
+    allocate(Smats_site(Nlso,Nlso,Lmats))
+    allocate(invGloc_site(Nlso,Nlso,Lmats))
+    allocate(calG0_site(Nlso,Nlso,Lmats))
+    !
+    wm = pi/beta*(2*arange(1,Lmats)-1)
+    Weiss_tmp = zero
+    Weiss     = zero
+    MPIloop: do iineq=1+mpi_rank,Nineq,mpi_size
+       !Dump the Gloc and the Smats for the ilat-th site into a [Norb*Nspin]^2 matrix and create the zeta_site
+       do i=1,Lmats
+          zeta_site(:,:,i)    = (xi*wm(i)+xmu)*eye(Nlso) - &
+               nnn2lso_reshape(Hloc(iineq,:,:,:,:,:,:),Nlat,Nspin,Norb) - &
+               nnn2lso_reshape(Smats(iineq,:,:,:,:,:,:,i),Nlat,Nspin,Norb)
+          invGloc_site(:,:,i) = nnn2lso_reshape(Gloc(iineq,:,:,:,:,:,:,i),Nlat,Nspin,Norb)
+          Smats_site(:,:,i)   = nnn2lso_reshape(Smats(iineq,:,:,:,:,:,:,i),Nlat,Nspin,Norb)
+       enddo
+       !Invert the ilat-th site [Norb*Nspin]**2 Gloc block matrix 
+       do i=1,Lmats
+          call inv(invGloc_site(:,:,i))
+       enddo
+       !
+       ![calG0]_ilat = [ [Gloc]_ilat^-1 + [Smats]_ilat ]^-1
+       calG0_site(:,:,:) = invGloc_site(:,:,:) + Smats_site(:,:,:)
+       do i=1,Lmats
+          call inv(calG0_site(:,:,i))
+       enddo
+       !
+       !Dump back the [Norb*Nspin]**2 block of the ilat-th site into the 
+       !output structure of [Nlat,Nspsin,Nspin,Norb,Norb] matrix
+       do ilat=1,Nlat
+         do jlat=1,Nlat
+           do ispin=1,Nspin
+              do jspin=1,Nspin
+                 do iorb=1,Norb
+                    do jorb=1,Norb
+                       io = iorb + (ispin-1)*Norb + (ilat-1)*Nspin*Norb
+                       jo = jorb + (jspin-1)*Norb + (jlat-1)*Nspin*Norb
+                       Weiss_tmp(iineq,ilat,jlat,ispin,jspin,iorb,jorb,1:Lmats) = calG0_site(io,jo,1:Lmats)
+                    enddo
+                 enddo
+              enddo
+           enddo
+           enddo
+       enddo
+    end do MPIloop
+    !
+#ifdef _MPI    
+    if(check_MPI())then
+       call Mpi_AllReduce(Weiss_tmp, Weiss, size(Weiss), MPI_Double_Complex, MPI_Sum, MPI_COMM_WORLD, mpi_ierr)
+    else
+       Weiss=Weiss_tmp
+    endif
+#else
+    Weiss=Weiss_tmp
+#endif
+    !
+  end subroutine dmft_get_weiss_normal_cluster_ineq
 
   
 
