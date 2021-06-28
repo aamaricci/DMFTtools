@@ -537,8 +537,8 @@ contains
                do jspin=1,Nspin
                   do iorb=1,Norb
                      do jorb=1,Norb
-                        io = iorb + (ispin-1)*Norb + (ilat-1)*Nspin*Norb + (iineq-1)*Nlat*Nspin*Norb
-                        jo = jorb + (jspin-1)*Norb + (jlat-1)*Nspin*Norb + (iineq-1)*Nlat*Nspin*Norb
+                        io = iorb + (ilat-1)*Norb + (ispin-1)*Nlat*Norb + (iineq-1)*Nlat*Nspin*Norb
+                        jo = jorb + (jlat-1)*Norb + (jspin-1)*Nlat*Norb + (iineq-1)*Nlat*Nspin*Norb
                         Gktmp(iineq,ilat,jlat,ispin,jspin,iorb,jorb,i) = Gmatrix(io,jo)
                      enddo
                   enddo
@@ -624,8 +624,8 @@ contains
                do jspin=1,Nspin
                   do iorb=1,Norb
                      do jorb=1,Norb
-                        io = iorb + (ispin-1)*Norb + (ilat-1)*Nspin*Norb + (iineq-1)*Nlat*Nspin*Norb
-                        jo = jorb + (jspin-1)*Norb + (jlat-1)*Nspin*Norb + (iineq-1)*Nlat*Nspin*Norb
+                        io = iorb + (ilat-1)*Norb + (ispin-1)*Nlat*Norb + (iineq-1)*Nlat*Nspin*Norb
+                        jo = jorb + (jlat-1)*Norb + (jspin-1)*Nlat*Norb + (iineq-1)*Nlat*Nspin*Norb
                         Gktmp(iineq,ilat,jlat,ispin,jspin,iorb,jorb,i) = Gmatrix(io,jo)
                      enddo
                   enddo
@@ -876,8 +876,8 @@ contains
                do jspin=1,Nspin
                   do iorb=1,Norb
                      do jorb=1,Norb
-                        io = iorb + (ispin-1)*Norb + (ilat-1)*Nspin*Norb + (iineq-1)*Nlat*Nspin*Norb
-                        jo = jorb + (jspin-1)*Norb + (jlat-1)*Nspin*Norb + (iineq-1)*Nlat*Nspin*Norb
+                        io = iorb + (ilat-1)*Norb + (ispin-1)*Nlat*Norb + (iineq-1)*Nlat*Nspin*Norb
+                        jo = jorb + (jlat-1)*Norb + (jspin-1)*Nlat*Norb + (iineq-1)*Nlat*Nspin*Norb
                         Gktmp(iineq,ilat,jlat,ispin,jspin,iorb,jorb,i) = Gmatrix(iineq,io,jo)
                      enddo
                   enddo
@@ -967,8 +967,8 @@ contains
                do jspin=1,Nspin
                   do iorb=1,Norb
                      do jorb=1,Norb
-                        io = iorb + (ispin-1)*Norb + (ilat-1)*Nspin*Norb + (iineq-1)*Nlat*Nspin*Norb
-                        jo = jorb + (jspin-1)*Norb + (jlat-1)*Nspin*Norb + (iineq-1)*Nlat*Nspin*Norb
+                        io = iorb + (ilat-1)*Norb + (ispin-1)*Nlat*Norb + (iineq-1)*Nlat*Nspin*Norb
+                        jo = jorb + (jlat-1)*Norb + (jspin-1)*Nlat*Norb + (iineq-1)*Nlat*Nspin*Norb
                         Gktmp(iineq,ilat,jlat,ispin,jspin,iorb,jorb,i) = Gmatrix(iineq,io,jo)
                      enddo
                   enddo
