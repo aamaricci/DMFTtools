@@ -536,7 +536,7 @@ contains
     call assert_shape(Sreal,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_matsubara_normal_ineq_main_mpi',"Sreal")
     call assert_shape(Greal,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_matsubara_normal_ineq_main_mpi',"Greal")
     !
-    if(mpi_master)write(*,"(A)")"Get local Matsubara Green's function (no print)"
+    if(mpi_master)write(*,"(A)")"Get local Realaxis Green's function (no print)"
     if(mpi_master)then
        if(.not.tridiag_)then
           write(*,"(A)")"Direct Inversion algorithm:"

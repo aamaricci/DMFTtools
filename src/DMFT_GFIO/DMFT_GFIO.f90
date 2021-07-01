@@ -986,7 +986,7 @@ contains
     Nspin = size(Greal,4)
     Norb  = size(Greal,6)
     Lreal = size(Greal,8)
-    call assert_shape(Greal,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_gf_print_matsubara_ineq",reg(fname)//"_mats")
+    call assert_shape(Greal,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal],"dmft_gf_print_realaxis_ineq",reg(fname)//"_mats")
     !
     if(allocated(wr))deallocate(wr);allocate(wr(Lreal))
     wr = linspace(wini,wfin,Lreal)
