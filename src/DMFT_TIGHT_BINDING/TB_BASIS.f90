@@ -15,11 +15,11 @@
 module TB_BASIS
   USE TB_COMMON
   implicit none
-  
+
 
 contains
 
-  
+
   !This check that at least one basis is set
   !F = F.or.F, T otherwise
   function TB_basis_check() result(bool)
@@ -687,6 +687,27 @@ contains
     enddo
   end subroutine kgrid_from_path_dim
 
+  subroutine klen_from_path(kpath,Nkpath,karray)
+    real(8),dimension(:,:)                      :: kpath ![Npts][Ndim]
+    integer                                     :: Nkpath
+    real(8),dimension((size(kpath,1)-1)*Nkpath) :: karray ![(Npts-1)*Nkpath]
+    real(8),dimension(size(kpath,2))            :: kstart,kstop,kdiff
+    real(8) :: klen
+    integer                                     :: ipts,ik,ic,dim,Npts
+    Npts = size(kpath,1)
+    ic=0
+    klen=0d0  
+    do ipts=1,Npts-1
+       kstart = kpath(ipts,:)
+       kstop  = kpath(ipts+1,:)
+       kdiff  = (kstop-kstart)/dble(Nkpath)
+       do ik=1,Nkpath
+          ic=ic+1
+          karray(ic) = klen
+          klen = klen + sqrt(dot_product(kdiff,kdiff))          
+       enddo
+    enddo
+  end subroutine klen_from_path
 
 
 

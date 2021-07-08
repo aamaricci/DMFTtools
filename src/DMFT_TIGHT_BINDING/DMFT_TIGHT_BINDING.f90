@@ -17,12 +17,14 @@ module DMFT_TIGHT_BINDING
      module procedure :: build_kgrid_generic
      module procedure :: kgrid_from_path_grid
      module procedure :: kgrid_from_path_dim
+     module procedure :: klen_from_path
   end interface TB_build_kgrid
   interface TB_kgrid
      module procedure :: build_kgrid
      module procedure :: build_kgrid_generic
      module procedure :: kgrid_from_path_grid
      module procedure :: kgrid_from_path_dim
+     module procedure :: klen_from_path
   end interface TB_kgrid
 
   interface TB_build_Rgrid
