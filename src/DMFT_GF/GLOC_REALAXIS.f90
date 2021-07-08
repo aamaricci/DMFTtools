@@ -23,6 +23,7 @@ module GLOC_REALAXIS
   interface dmft_gloc_realaxis
      module procedure :: dmft_get_gloc_realaxis_normal_main
      module procedure :: dmft_get_gloc_realaxis_normal_cluster
+     module procedure :: dmft_get_gloc_realaxis_normal_cluster_ineq
      module procedure :: dmft_get_gloc_realaxis_normal_dos
      module procedure :: dmft_get_gloc_realaxis_normal_ineq
      module procedure :: dmft_get_gloc_realaxis_superc_main
@@ -482,6 +483,128 @@ contains
     end if
     if(mpi_master)call stop_timer
   end subroutine dmft_get_gloc_realaxis_normal_ineq
+  
+  
+  
+  subroutine dmft_get_gloc_realaxis_normal_cluster_ineq(Hk,Greal,Sreal,tridiag,hk_symm)
+    complex(8),dimension(:,:,:),intent(in)               :: Hk        ![Nineq*Nlat*Nspin*Norb][Nineq*Nlat*Nspin*Norb][Lk]
+    complex(8),dimension(:,:,:,:,:,:,:,:),intent(in)     :: Sreal     ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lreal]
+    complex(8),dimension(:,:,:,:,:,:,:,:),intent(inout)  :: Greal     !as Sreal
+    logical,optional                                     :: tridiag
+    logical                                              :: tridiag_
+    logical,dimension(size(Hk,3)),optional               :: hk_symm   ![Lk]
+    logical,dimension(size(Hk,3))                        :: hk_symm_  ![Lk]
+    !allocatable arrays
+    complex(8),dimension(:,:,:,:,:,:,:,:),allocatable    :: Gkmats    !as Sreal
+    complex(8),dimension(:,:,:,:,:,:,:,:),allocatable    :: Gtmp      !as Sreal
+    complex(8),dimension(:,:,:,:),allocatable            :: zeta_mats ![Nineq][Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lreal]
+    !
+    !MPI setup:
+#ifdef _MPI    
+    if(check_MPI())then
+       mpi_size  = get_size_MPI()
+       mpi_rank =  get_rank_MPI()
+       mpi_master= get_master_MPI()
+    else
+       mpi_size=1
+       mpi_rank=0
+       mpi_master=.true.
+    endif
+#else
+    mpi_size=1
+    mpi_rank=0
+    mpi_master=.true.
+#endif
+    !Retrieve parameters:
+    call get_ctrl_var(beta,"BETA")
+    call get_ctrl_var(xmu,"XMU")
+    !
+    tridiag_=.false.;if(present(tridiag))tridiag_=tridiag
+    hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
+    !
+    Nineq = size(Sreal,1)
+    Nlat  = size(Sreal,2)
+    Nspin = size(Sreal,4)
+    Norb  = size(Sreal,6)
+    Lreal = size(Sreal,8)
+    Lk    = size(Hk,3)
+    Nso   = Nspin*Norb
+    Nlso  = Nlat*Nspin*Norb
+    Nilso = Nineq*Nlat*Nspin*Norb
+    !Testing part:
+    call assert_shape(Hk,[Nilso,Nilso,Lk],'dmft_get_gloc_matsubara_normal_ineq_main_mpi',"Hk")
+    call assert_shape(Sreal,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_matsubara_normal_ineq_main_mpi',"Sreal")
+    call assert_shape(Greal,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gloc_matsubara_normal_ineq_main_mpi',"Greal")
+    !
+    if(mpi_master)write(*,"(A)")"Get local Realaxis Green's function (no print)"
+    if(mpi_master)then
+       if(.not.tridiag_)then
+          write(*,"(A)")"Direct Inversion algorithm:"
+       else
+          write(*,"(A)")"Quantum Zipper algorithm:"
+       endif
+    endif
+    !
+    allocate(Gkmats(Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
+    allocate(zeta_mats(Nineq,Nlso,Nlso,Lreal))
+    if(allocated(wr))deallocate(wr);allocate(wr(Lreal))
+    wr = linspace(wini,wfin,Lreal)
+    !
+    do iineq=1,Nineq
+       do i=1,Lreal
+          zeta_mats(iineq,:,:,i) = (wr(i)+xi*eps+xmu)*eye(Nlso)     - nnn2lso_cluster_reshape(Sreal(iineq,:,:,:,:,:,:,i),Nlat,Nspin,Norb)
+       enddo
+    enddo
+    !
+    !pass each Z_site to the routines that invert (Z-Hk) for each k-point 
+    if(mpi_master)call start_timer
+    Greal=zero
+    if(Lreal>=Lk)then
+       if(.not.tridiag_)then
+          do ik=1,Lk
+             call invert_gk_normal_cluster_ineq_mpi(zeta_mats,Hk(:,:,ik),hk_symm_(ik),Gkmats)
+             Greal = Greal + Gkmats/dble(Lk)
+             if(mpi_master)call eta(ik,Lk)
+          end do
+       else
+          do ik=1,Lk
+             call invert_gk_normal_cluster_ineq_tridiag_mpi(zeta_mats,Hk(:,:,ik),hk_symm_(ik),Gkmats)
+             Greal = Greal + Gkmats/dble(Lk)
+             if(mpi_master)call eta(ik,Lk)
+          end do
+       endif
+    else
+       allocate(Gtmp(Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal));Gtmp=zero
+       if(.not.tridiag_)then
+          do ik=1+mpi_rank,Lk,mpi_size
+             call invert_gk_normal_cluster_ineq(zeta_mats,Hk(:,:,ik),hk_symm_(ik),Gkmats)
+             Gtmp = Gtmp + Gkmats/dble(Lk)
+             if(mpi_master)call eta(ik,Lk)
+          end do
+       else
+          do ik=1+mpi_rank,Lk,mpi_size
+             call invert_gk_normal_cluster_ineq_tridiag(zeta_mats,Hk(:,:,ik),hk_symm_(ik),Gkmats)
+             Gtmp = Gtmp + Gkmats/dble(Lk)
+             if(mpi_master)call eta(ik,Lk)
+          end do
+       endif
+#ifdef _MPI    
+       if(check_MPI())then
+          Greal=zero
+          call Mpi_AllReduce(Gtmp,Greal, size(Greal), MPI_Double_Complex, MPI_Sum, MPI_COMM_WORLD, MPI_ierr)
+       else
+          Greal=Gtmp
+       endif
+#else
+       Greal=Gtmp
+#endif
+       deallocate(Gtmp)
+       !
+    end if
+    if(mpi_master)call stop_timer
+  end subroutine dmft_get_gloc_realaxis_normal_cluster_ineq
+
+
 
 
   subroutine dmft_get_gloc_realaxis_normal_gij(hk,Greal,Sreal,hk_symm)

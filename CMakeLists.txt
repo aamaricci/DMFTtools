@@ -3,7 +3,7 @@
 ##################################################
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0.0)
 PROJECT(dmft_tools Fortran)
-SET(VERSION 2.1.1)
+SET(VERSION 2.1.5)
 
 MESSAGE(STATUS "OS: ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_VERSION}")
 SET(BUILD_TYPE "RELEASE" CACHE STRING "Build type")
