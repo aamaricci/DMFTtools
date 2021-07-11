@@ -118,16 +118,24 @@ contains
 
 
   function tb_reorder_vec_d(Huser,Nin,OrderIn,OrderOut) result(Hss)
-    real(8),dimension(:)           :: Huser ![Nlat*Nspin*Norb]
-    integer,dimension(3)           :: Nin   !In sequence of Nlat,Nspin,Norb as integers
-    character(len=*),dimension(3)  :: OrderIn  !in  sequence of Nlat,Nspin,Norb as strings
-    character(len=*),dimension(3)  :: OrderOut !out sequence of Nlat,Nspin,Norb as strings
+    real(8),dimension(:)                   :: Huser ![Nlat*Nspin*Norb]
+    integer,dimension(3)                   :: Nin   !In sequence of Nlat,Nspin,Norb as integers
+    character(len=*),dimension(3)          :: OrderIn  !in  sequence of Nlat,Nspin,Norb as strings
     !
-    real(8),dimension(size(Huser)) :: Hss
-    integer,dimension(3)           :: Ivec,Jvec
-    integer,dimension(3)           :: IndexOut
-    integer,dimension(3)           :: Nout
-    integer                        :: iss,iuser,i,Nlso
+    real(8),dimension(size(Huser))         :: Hss
+    integer,dimension(3)                   :: Ivec,Jvec
+    integer,dimension(3)                   :: IndexOut
+    integer,dimension(3)                   :: Nout
+    integer                                :: iss,iuser,i,Nlso
+    !
+    character(len=*),dimension(3),optional :: OrderOut !out sequence of Nlat,Nspin,Norb as strings
+    character(len=5),dimension(3)          :: OrderOut_ !out sequence of Nlat,Nspin,Norb as strings
+    OrderOut_=[character(len=5)::"Norb","Nspin","Nlat"];
+    if(present(OrderOut))then
+       do i=1,2
+          OrderOut_(i) = trim(OrderOut(i))
+       enddo
+    endif
     !
     Nlso = size(Huser)
     !
@@ -137,7 +145,7 @@ contains
     !corresponding entry in OrderOut using tb_findloc.
     !If 0 entries exist, corresponding components are not found. stop. 
     do i=1,3     
-       IndexOut(i:i)=tb_findloc(OrderIn,OrderOut(i))
+       IndexOut(i:i)=tb_findloc(OrderIn,OrderOut_(i))
     enddo
     if(any(IndexOut==0))then
        print*,"TB_Reorder_vec ERROR: wrong entry in IndexOut at: ",tb_findloc(IndexOut,0)
@@ -162,16 +170,25 @@ contains
   end function tb_reorder_vec_d
 
   function tb_reorder_vec_c(Huser,Nin,OrderIn,OrderOut) result(Hss)
-    complex(8),dimension(:)           :: Huser ![Nlat*Nspin*Norb]
-    integer,dimension(3)              :: Nin   !In sequence of Nlat,Nspin,Norb as integers
-    character(len=*),dimension(3)     :: OrderIn  !in  sequence of Nlat,Nspin,Norb as strings
-    character(len=*),dimension(3)     :: OrderOut !out sequence of Nlat,Nspin,Norb as strings
+    complex(8),dimension(:)                :: Huser ![Nlat*Nspin*Norb]
+    integer,dimension(3)                   :: Nin   !In sequence of Nlat,Nspin,Norb as integers
+    character(len=*),dimension(3)          :: OrderIn  !in  sequence of Nlat,Nspin,Norb as strings
     !
-    complex(8),dimension(size(Huser)) :: Hss
-    integer,dimension(3)              :: Ivec,Jvec
-    integer,dimension(3)              :: IndexOut
-    integer,dimension(3)              :: Nout
-    integer                           :: iss,iuser,i,Nlso
+    complex(8),dimension(size(Huser))      :: Hss
+    integer,dimension(3)                   :: Ivec,Jvec
+    integer,dimension(3)                   :: IndexOut
+    integer,dimension(3)                   :: Nout
+    integer                                :: iss,iuser,i,Nlso
+    !
+    character(len=*),dimension(3),optional :: OrderOut !out sequence of Nlat,Nspin,Norb as strings
+    character(len=5),dimension(3)          :: OrderOut_ !out sequence of Nlat,Nspin,Norb as strings
+    !
+    OrderOut_=[character(len=5)::"Norb","Nspin","Nlat"];
+    if(present(OrderOut))then
+       do i=1,2
+          OrderOut_(i) = trim(OrderOut(i))
+       enddo
+    endif
     !
     Nlso = size(Huser)
     !
@@ -181,7 +198,7 @@ contains
     !corresponding entry in OrderOut using tb_findloc.
     !If 0 entries exist, corresponding components are not found. stop. 
     do i=1,3     
-       IndexOut(i:i)=tb_findloc(OrderIn,OrderOut(i))
+       IndexOut(i:i)=tb_findloc(OrderIn,OrderOut_(i))
     enddo
     if(any(IndexOut==0))then
        print*,"TB_Reorder_vec ERROR: wrong entry in IndexOut at: ",tb_findloc(IndexOut,0)
@@ -209,13 +226,21 @@ contains
     real(8),dimension(:,:)                         :: Huser
     integer,dimension(3)                           :: Nin   !In sequence of Nlat,Nspin,Norb as integers
     character(len=*),dimension(3)                  :: OrderIn  !in  sequence of Nlat,Nspin,Norb as strings
-    character(len=*),dimension(3)                  :: OrderOut !out sequence of Nlat,Nspin,Norb as strings
     !
     real(8),dimension(size(Huser,1),size(Huser,2)) :: Hss
     integer,dimension(3)                           :: Ivec,Jvec
     integer,dimension(3)                           :: IndexOut
     integer,dimension(3)                           :: Nout
     integer                                        :: iss,jss,iuser,juser,i,Nlso
+    character(len=*),dimension(3),optional         :: OrderOut !out sequence of Nlat,Nspin,Norb as strings
+    character(len=5),dimension(3)                  :: OrderOut_ !out sequence of Nlat,Nspin,Norb as strings
+    !
+    OrderOut_=[character(len=5)::"Norb","Nspin","Nlat"];
+    if(present(OrderOut))then
+       do i=1,2
+          OrderOut_(i) = trim(OrderOut(i))
+       enddo
+    endif
     !
     Nlso = size(Huser,1)
     call assert_shape(Huser,[Nlso,Nlso],"tb_reorder_mat_c","Huser")
@@ -226,7 +251,7 @@ contains
     !corresponding entry in OrderOut using tb_findloc.
     !If 0 entries exist, corresponding components are not found. stop. 
     do i=1,3     
-       IndexOut(i:i)=tb_findloc(OrderIn,OrderOut(i))
+       IndexOut(i:i)=tb_findloc(OrderIn,OrderOut_(i))
     enddo
     if(any(IndexOut==0))then
        print*,"TB_Reorder_vec ERROR: wrong entry in IndexOut at: ",tb_findloc(IndexOut,0)
@@ -259,14 +284,23 @@ contains
     complex(8),dimension(:,:)                         :: Huser
     integer,dimension(3)                              :: Nin   !In sequence of Nlat,Nspin,Norb as integers
     character(len=*),dimension(3)                     :: OrderIn  !in  sequence of Nlat,Nspin,Norb as strings
-    character(len=*),dimension(3)                     :: OrderOut !out sequence of Nlat,Nspin,Norb as strings
     !
     complex(8),dimension(size(Huser,1),size(Huser,2)) :: Hss
     integer,dimension(3)                              :: Ivec,Jvec
     integer,dimension(3)                              :: IndexOut
     integer,dimension(3)                              :: Nout
     integer                                           :: iss,jss,iuser,juser,i,Nlso
+    character(len=*),dimension(3),optional            :: OrderOut !out sequence of Nlat,Nspin,Norb as strings
+    character(len=5),dimension(3)                     :: OrderOut_ !out sequence of Nlat,Nspin,Norb as strings
     !
+    OrderOut_=[character(len=5)::"Norb","Nspin","Nlat"];
+    if(present(OrderOut))then
+       do i=1,2
+          OrderOut_(i) = trim(OrderOut(i))
+       enddo
+    endif
+    !
+
     Nlso = size(Huser,1)
     call assert_shape(Huser,[Nlso,Nlso],"tb_reorder_mat_c","Huser")
     !
@@ -276,7 +310,7 @@ contains
     !corresponding entry in OrderOut using tb_findloc.
     !If 0 entries exist, corresponding components are not found. stop. 
     do i=1,3     
-       IndexOut(i:i)=tb_findloc(OrderIn,OrderOut(i))
+       IndexOut(i:i)=tb_findloc(OrderIn,OrderOut_(i))
     enddo
     if(any(IndexOut==0))then
        print*,"TB_Reorder_vec ERROR: wrong entry in IndexOut at: ",tb_findloc(IndexOut,0)
@@ -312,14 +346,23 @@ contains
     real(8),dimension(:,:,:)                                     :: Huser
     integer,dimension(3)                                         :: Nin   !In sequence of Nlat,Nspin,Norb as integers
     character(len=*),dimension(3)                                :: OrderIn  !in  sequence of Nlat,Nspin,Norb as strings
-    character(len=*),dimension(3)                                :: OrderOut !out sequence of Nlat,Nspin,Norb as strings
     !
     real(8),dimension(size(Huser,1),size(Huser,2),size(Huser,3)) :: Hss
     integer,dimension(3)                                         :: Ivec,Jvec
     integer,dimension(3)                                         :: IndexOut
     integer,dimension(3)                                         :: Nout
     integer                                                      :: iss,jss,iuser,juser,i,Nlso,Nk
-    !   
+    !
+    character(len=*),dimension(3),optional                       :: OrderOut !out sequence of Nlat,Nspin,Norb as strings
+    character(len=5),dimension(3)                                :: OrderOut_ !out sequence of Nlat,Nspin,Norb as strings
+    !
+    OrderOut_=[character(len=5)::"Norb","Nspin","Nlat"];
+    if(present(OrderOut))then
+       do i=1,2
+          OrderOut_(i) = trim(OrderOut(i))
+       enddo
+    endif
+    !
     Nlso = size(Huser,1)
     Nk   = size(Huser,3)
     call assert_shape(Huser,[Nlso,Nlso,Nk],"tb_reorder_hk_d","Huser")
@@ -330,7 +373,7 @@ contains
     !corresponding entry in OrderOut using tb_findloc.
     !If 0 entries exist, corresponding components are not found. stop. 
     do i=1,3     
-       IndexOut(i:i)=tb_findloc(OrderIn,OrderOut(i))
+       IndexOut(i:i)=tb_findloc(OrderIn,OrderOut_(i))
     enddo
     if(any(IndexOut==0))then
        print*,"TB_Reorder_vec ERROR: wrong entry in IndexOut at: ",tb_findloc(IndexOut,0)
@@ -363,13 +406,21 @@ contains
     complex(8),dimension(:,:,:)                                     :: Huser
     integer,dimension(3)                                            :: Nin   !In sequence of Nlat,Nspin,Norb as integers
     character(len=*),dimension(3)                                   :: OrderIn  !in  sequence of Nlat,Nspin,Norb as strings
-    character(len=*),dimension(3)                                   :: OrderOut !out sequence of Nlat,Nspin,Norb as strings
     !
     complex(8),dimension(size(Huser,1),size(Huser,2),size(Huser,3)) :: Hss
     integer,dimension(3)                                            :: Ivec,Jvec
     integer,dimension(3)                                            :: IndexOut
     integer,dimension(3)                                            :: Nout
     integer                                                         :: iss,jss,iuser,juser,i,Nlso,Nk
+    character(len=*),dimension(3),optional                          :: OrderOut !out sequence of Nlat,Nspin,Norb as strings
+    character(len=5),dimension(3)                                   :: OrderOut_ !out sequence of Nlat,Nspin,Norb as strings
+    !
+    OrderOut_=[character(len=5)::"Norb","Nspin","Nlat"];
+    if(present(OrderOut))then
+       do i=1,2
+          OrderOut_(i) = trim(OrderOut(i))
+       enddo
+    endif
     !   
     Nlso = size(Huser,1)
     Nk   = size(Huser,3)
@@ -381,7 +432,7 @@ contains
     !corresponding entry in OrderOut using tb_findloc.
     !If 0 entries exist, corresponding components are not found. stop. 
     do i=1,3     
-       IndexOut(i:i)=tb_findloc(OrderIn,OrderOut(i))
+       IndexOut(i:i)=tb_findloc(OrderIn,OrderOut_(i))
     enddo
     if(any(IndexOut==0))then
        print*,"TB_Reorder_vec ERROR: wrong entry in IndexOut at: ",tb_findloc(IndexOut,0)

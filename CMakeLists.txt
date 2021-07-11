@@ -396,7 +396,7 @@ ${Yellow}Method ADMIN: Add this line to the system shell configuration file, e.g
 
 # Add a distclean target to the Makefile
 ADD_CUSTOM_TARGET(distclean 
-    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_SOURCE_DIR}/DistClean.cmake
+    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_MODULE_PATH}/DistClean.cmake
 )
 
 
