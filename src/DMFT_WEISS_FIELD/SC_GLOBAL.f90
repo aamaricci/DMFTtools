@@ -11,7 +11,6 @@ module SC_GLOBAL
   interface dmft_self_consistency
      module procedure :: dmft_sc_normal_main
      module procedure :: dmft_sc_normal_cluster
-     module procedure :: dmft_sc_normal_cluster_ineq
      module procedure :: dmft_sc_normal_ineq
      module procedure :: dmft_sc_normal_bethe
      module procedure :: dmft_sc_normal_bethe_ineq
@@ -69,20 +68,6 @@ contains
     end select
   end subroutine dmft_sc_normal_ineq
 
-
-  subroutine dmft_sc_normal_cluster_ineq(Gloc,Smats,Weiss,Hloc,SCtype)
-    complex(8),dimension(:,:,:,:,:,:,:,:),intent(in)    :: Gloc         ! [Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:,:,:,:,:),intent(in)    :: Smats        ! [Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:,:,:,:,:),intent(inout) :: Weiss        ! [Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:,:,:,:),intent(in)      :: Hloc         ! [Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb]
-    character(len=*)                                    :: SCtype
-    select case(SCtype)
-    case default
-       call dmft_weiss(Gloc,Smats,Weiss,Hloc)
-    case ("delta")
-       call dmft_delta(Gloc,Smats,Weiss,Hloc)
-    end select
-  end subroutine dmft_sc_normal_cluster_ineq
 
   subroutine dmft_sc_normal_bethe(Gloc,Weiss,Hloc,Wbands,SCtype)
     complex(8),dimension(:,:,:,:,:),intent(in)    :: Gloc  ! [Nspin][Nspin][Norb][Norb][Lmats]

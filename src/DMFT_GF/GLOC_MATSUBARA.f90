@@ -8,7 +8,6 @@ module GLOC_MATSUBARA
   interface get_gloc_matsubara
      module procedure :: dmft_get_gloc_matsubara_normal_main
      module procedure :: dmft_get_gloc_matsubara_normal_cluster
-     module procedure :: dmft_get_gloc_matsubara_normal_cluster_ineq
      module procedure :: dmft_get_gloc_matsubara_normal_dos
      module procedure :: dmft_get_gloc_matsubara_normal_ineq
      !
@@ -21,7 +20,6 @@ module GLOC_MATSUBARA
   interface dmft_gloc_matsubara
      module procedure :: dmft_get_gloc_matsubara_normal_main
      module procedure :: dmft_get_gloc_matsubara_normal_cluster
-     module procedure :: dmft_get_gloc_matsubara_normal_cluster_ineq
      module procedure :: dmft_get_gloc_matsubara_normal_dos
      module procedure :: dmft_get_gloc_matsubara_normal_ineq
      !
@@ -486,123 +484,7 @@ end subroutine dmft_get_gloc_matsubara_normal_dos
   end subroutine dmft_get_gloc_matsubara_normal_ineq
 
 
-  subroutine dmft_get_gloc_matsubara_normal_cluster_ineq(Hk,Gmats,Smats,tridiag,hk_symm)
-    complex(8),dimension(:,:,:),intent(in)                 :: Hk        ![Nineq*Nlat*Nspin*Norb][Nineq*Nlat*Nspin*Norb][Lk]
-    complex(8),dimension(:,:,:,:,:,:,:,:),intent(in)       :: Smats     ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
-    complex(8),dimension(:,:,:,:,:,:,:,:),intent(inout)    :: Gmats     !as Smats
-    logical,optional                                       :: tridiag
-    logical                                                :: tridiag_
-    logical,dimension(size(Hk,3)),optional                 :: hk_symm   ![Lk]
-    logical,dimension(size(Hk,3))                          :: hk_symm_  ![Lk]
-    !allocatable arrays
-    complex(8),dimension(:,:,:,:,:,:,:,:),allocatable      :: Gkmats    !as Smats
-    complex(8),dimension(:,:,:,:,:,:,:,:),allocatable      :: Gtmp      !as Smats
-    complex(8),dimension(:,:,:,:),allocatable              :: zeta_mats ![Nineq][Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lmats]
-    !
-    !MPI setup:
-#ifdef _MPI    
-    if(check_MPI())then
-       mpi_size  = get_size_MPI()
-       mpi_rank =  get_rank_MPI()
-       mpi_master= get_master_MPI()
-    else
-       mpi_size=1
-       mpi_rank=0
-       mpi_master=.true.
-    endif
-#else
-    mpi_size=1
-    mpi_rank=0
-    mpi_master=.true.
-#endif
-    !Retrieve parameters:
-    call get_ctrl_var(beta,"BETA")
-    call get_ctrl_var(xmu,"XMU")
-    !
-    tridiag_=.false.;if(present(tridiag))tridiag_=tridiag
-    hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
-    !
-    Nineq  = size(Smats,1)
-    Nlat  = size(Smats,2)
-    Nspin = size(Smats,4)
-    Norb  = size(Smats,6)
-    Lmats = size(Smats,8)
-    Lk    = size(Hk,3)
-    Nso   = Nspin*Norb
-    Nlso  = Nlat*Nspin*Norb
-    Nilso = Nineq*Nlat*Nspin*Norb
-    !Testing part:
-    call assert_shape(Hk,[Nilso,Nilso,Lk],'dmft_get_gloc_matsubara_normal_ineq_main_mpi',"Hk")
-    call assert_shape(Smats,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gloc_matsubara_normal_ineq_main_mpi',"Smats")
-    call assert_shape(Gmats,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gloc_matsubara_normal_ineq_main_mpi',"Gmats")
-    !
-    if(mpi_master)write(*,"(A)")"Get local Matsubara Green's function (no print)"
-    if(mpi_master)then
-       if(.not.tridiag_)then
-          write(*,"(A)")"Direct Inversion algorithm:"
-       else
-          write(*,"(A)")"Quantum Zipper algorithm:"
-       endif
-    endif
-    !
-    allocate(Gkmats(Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats))
-    allocate(zeta_mats(Nineq,Nlso,Nlso,Lmats))
-    if(allocated(wm))deallocate(wm);allocate(wm(Lmats))
-    wm = pi/beta*(2*arange(1,Lmats)-1)
-    !
-    do iineq=1,Nineq
-       do i=1,Lmats
-          zeta_mats(iineq,:,:,i) = (xi*wm(i)+xmu)*eye(Nlso)     - nnn2lso_cluster_reshape(Smats(iineq,:,:,:,:,:,:,i),Nlat,Nspin,Norb)
-       enddo
-    enddo
-    !
-    !pass each Z_site to the routines that invert (Z-Hk) for each k-point 
-    if(mpi_master)call start_timer
-    Gmats=zero
-    if(Lmats>=Lk)then
-       if(.not.tridiag_)then
-          do ik=1,Lk
-             call invert_gk_normal_cluster_ineq_mpi(zeta_mats,Hk(:,:,ik),hk_symm_(ik),Gkmats)
-             Gmats = Gmats + Gkmats/dble(Lk)
-             if(mpi_master)call eta(ik,Lk)
-          end do
-       else
-          do ik=1,Lk
-             call invert_gk_normal_cluster_ineq_tridiag_mpi(zeta_mats,Hk(:,:,ik),hk_symm_(ik),Gkmats)
-             Gmats = Gmats + Gkmats/dble(Lk)
-             if(mpi_master)call eta(ik,Lk)
-          end do
-       endif
-    else
-       allocate(Gtmp(Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats));Gtmp=zero
-       if(.not.tridiag_)then
-          do ik=1+mpi_rank,Lk,mpi_size
-             call invert_gk_normal_cluster_ineq(zeta_mats,Hk(:,:,ik),hk_symm_(ik),Gkmats)
-             Gtmp = Gtmp + Gkmats/dble(Lk)
-             if(mpi_master)call eta(ik,Lk)
-          end do
-       else
-          do ik=1+mpi_rank,Lk,mpi_size
-             call invert_gk_normal_cluster_ineq_tridiag(zeta_mats,Hk(:,:,ik),hk_symm_(ik),Gkmats)
-             Gtmp = Gtmp + Gkmats/dble(Lk)
-             if(mpi_master)call eta(ik,Lk)
-          end do
-       endif
-#ifdef _MPI    
-       if(check_MPI())then
-          Gmats=zero
-          call Mpi_AllReduce(Gtmp,Gmats, size(Gmats), MPI_Double_Complex, MPI_Sum, MPI_COMM_WORLD, MPI_ierr)
-       else
-          Gmats=Gtmp
-       endif
-#else
-       Gmats=Gtmp
-#endif
-       deallocate(Gtmp)
-       !
-    end if
-    if(mpi_master)call stop_timer
-  end subroutine dmft_get_gloc_matsubara_normal_cluster_ineq
+
 
 
 

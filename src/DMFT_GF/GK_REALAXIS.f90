@@ -8,7 +8,6 @@ module GK_REALAXIS
   interface get_gk_realaxis
      module procedure :: dmft_get_gk_realaxis_normal_main
      module procedure :: dmft_get_gk_realaxis_normal_cluster
-     module procedure :: dmft_get_gk_realaxis_normal_cluster_ineq
      module procedure :: dmft_get_gk_realaxis_normal_dos
      module procedure :: dmft_get_gk_realaxis_normal_ineq
      !
@@ -22,7 +21,6 @@ module GK_REALAXIS
   interface dmft_gk_realaxis
      module procedure :: dmft_get_gk_realaxis_normal_main
      module procedure :: dmft_get_gk_realaxis_normal_cluster
-     module procedure :: dmft_get_gk_realaxis_normal_cluster_ineq
      module procedure :: dmft_get_gk_realaxis_normal_dos
      module procedure :: dmft_get_gk_realaxis_normal_ineq
      !
@@ -292,80 +290,6 @@ contains
   end subroutine dmft_get_gk_realaxis_normal_ineq
 
 
-  subroutine dmft_get_gk_realaxis_normal_cluster_ineq(Hk,Gkreal,Sreal,tridiag,hk_symm)
-    complex(8),dimension(:,:),intent(in)                :: Hk        ![Nineq*Nlat*Nspin*Norb][Nineq*Nlat*Nspin*Norb]
-    complex(8),dimension(:,:,:,:,:,:,:,:),intent(in)    :: Sreal     ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lreal]
-    complex(8),dimension(:,:,:,:,:,:,:,:),intent(inout) :: Gkreal     !as Sreal
-    logical,optional                                    :: tridiag
-    logical                                             :: tridiag_
-    logical,optional                                    :: hk_symm   !
-    logical                                             :: hk_symm_  !
-    !allocatable arrays
-    complex(8),dimension(:,:,:,:,:,:,:,:),allocatable   :: Gtmp    !as Sreal
-    complex(8),dimension(:,:,:,:),allocatable           :: zeta_real ![Nineq][Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lreal]
-    !
-    !MPI setup:
-#ifdef _MPI    
-    if(check_MPI())then
-       mpi_size  = get_size_MPI()
-       mpi_rank =  get_rank_MPI()
-       mpi_master= get_master_MPI()
-    else
-       mpi_size=1
-       mpi_rank=0
-       mpi_master=.true.
-    endif
-#else
-    mpi_size=1
-    mpi_rank=0
-    mpi_master=.true.
-#endif
-    !Retrieve parameters:
-    call get_ctrl_var(beta,"BETA")
-    call get_ctrl_var(xmu,"XMU")
-    !
-    tridiag_=.false.;if(present(tridiag))tridiag_=tridiag
-    hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
-    !
-    Nineq  = size(Sreal,1)
-    Nlat  = size(Sreal,2)
-    Nspin = size(Sreal,4)
-    Norb  = size(Sreal,6)
-    Lreal = size(Sreal,8)
-    Nso   = Nspin*Norb
-    Nlso  = Nlat*Nspin*Norb
-    Nilso = Nineq*Nlat*Nspin*Norb
-    !Testing part:
-    call assert_shape(Hk,[Nilso,Nilso],'dmft_get_gk_realaxis_normal_ineq_main_mpi',"Hk")
-    call assert_shape(Sreal,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gk_mrealaxis_normal_ineq_main_mpi',"Sreal")
-    call assert_shape(Gkreal,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal],'dmft_get_gk_realaxis_normal_ineq_main_mpi',"Gkreal")
-    !
-    if(mpi_master)then
-       if(.not.tridiag_)then
-          write(*,"(A)")"Direct Inversion algorithm:"
-       else
-          write(*,"(A)")"Quantum Zipper algorithm:"
-       endif
-    endif
-    !
-    allocate(zeta_real(Nineq,Nlso,Nlso,Lreal))
-    if(allocated(wm))deallocate(wm);allocate(wm(Lreal))
-    wr = linspace(wini,wfin,Lreal)
-    !
-    do iineq=1,Nineq
-       do i=1,Lreal
-          zeta_real(iineq,:,:,i) = (wr(i)+xi*eps+xmu)*eye(Nlso)     - nnn2lso_cluster_reshape(Sreal(iineq,:,:,:,:,:,:,i),Nlat,Nspin,Norb)
-       enddo
-    enddo
-    !
-    !pass each Z_site to the routines that invert (Z-Hk) for each k-point 
-    Gkreal=zero
-    if(.not.tridiag_)then
-       call invert_gk_normal_cluster_ineq_mpi(zeta_real,Hk,hk_symm_,Gkreal)
-    else
-       call invert_gk_normal_cluster_ineq_tridiag_mpi(zeta_real,Hk,hk_symm_,Gkreal)
-    endif
-  end subroutine dmft_get_gk_realaxis_normal_cluster_ineq
 
 
 

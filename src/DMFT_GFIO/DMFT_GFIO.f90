@@ -17,55 +17,48 @@ module DMFT_GFIO
   interface write_function_matsubara
      module procedure :: dmft_gf_print_matsubara_main
      module procedure :: dmft_gf_print_matsubara_ineq
-     module procedure :: dmft_gf_print_matsubara_cluster_ineq
      module procedure :: dmft_gij_print_matsubara
   end interface write_function_matsubara
 
   interface dmft_write_function_matsubara
      module procedure :: dmft_gf_print_matsubara_main
      module procedure :: dmft_gf_print_matsubara_ineq
-     module procedure :: dmft_gf_print_matsubara_cluster_ineq
      module procedure :: dmft_gij_print_matsubara
   end interface dmft_write_function_matsubara
 
   interface write_gf_matsubara
      module procedure :: dmft_gf_print_matsubara_main
      module procedure :: dmft_gf_print_matsubara_ineq
-     module procedure :: dmft_gf_print_matsubara_cluster_ineq
      module procedure :: dmft_gij_print_matsubara
   end interface write_gf_matsubara
 
   interface dmft_write_gf_matsubara
      module procedure :: dmft_gf_print_matsubara_main
      module procedure :: dmft_gf_print_matsubara_ineq
-     module procedure :: dmft_gf_print_matsubara_cluster_ineq
+     module procedure :: dmft_gij_print_matsubara
   end interface dmft_write_gf_matsubara
 
   interface print_function_matsubara
      module procedure :: dmft_gf_print_matsubara_main
      module procedure :: dmft_gf_print_matsubara_ineq
-     module procedure :: dmft_gf_print_matsubara_cluster_ineq
      module procedure :: dmft_gij_print_matsubara
   end interface print_function_matsubara
 
   interface dmft_print_function_matsubara
      module procedure :: dmft_gf_print_matsubara_main
      module procedure :: dmft_gf_print_matsubara_ineq
-     module procedure :: dmft_gf_print_matsubara_cluster_ineq
      module procedure :: dmft_gij_print_matsubara
   end interface dmft_print_function_matsubara
 
   interface print_gf_matsubara
      module procedure :: dmft_gf_print_matsubara_main
      module procedure :: dmft_gf_print_matsubara_ineq
-     module procedure :: dmft_gf_print_matsubara_cluster_ineq
      module procedure :: dmft_gij_print_matsubara
   end interface print_gf_matsubara
 
   interface dmft_print_gf_matsubara
      module procedure :: dmft_gf_print_matsubara_main
      module procedure :: dmft_gf_print_matsubara_ineq
-     module procedure :: dmft_gf_print_matsubara_cluster_ineq
      module procedure :: dmft_gij_print_matsubara
   end interface dmft_print_gf_matsubara
 
@@ -76,56 +69,48 @@ module DMFT_GFIO
   interface write_function_realaxis
      module procedure :: dmft_gf_print_realaxis_main
      module procedure :: dmft_gf_print_realaxis_ineq
-     module procedure :: dmft_gf_print_realaxis_cluster_ineq
      module procedure :: dmft_gij_print_realaxis
   end interface write_function_realaxis
 
   interface dmft_write_function_realaxis
      module procedure :: dmft_gf_print_realaxis_main
      module procedure :: dmft_gf_print_realaxis_ineq
-     module procedure :: dmft_gf_print_realaxis_cluster_ineq
      module procedure :: dmft_gij_print_realaxis
   end interface dmft_write_function_realaxis
 
   interface write_gf_realaxis
      module procedure :: dmft_gf_print_realaxis_main
      module procedure :: dmft_gf_print_realaxis_ineq
-     module procedure :: dmft_gf_print_realaxis_cluster_ineq
      module procedure :: dmft_gij_print_realaxis
   end interface write_gf_realaxis
 
   interface dmft_write_gf_realaxis
      module procedure :: dmft_gf_print_realaxis_main
      module procedure :: dmft_gf_print_realaxis_ineq
-     module procedure :: dmft_gf_print_realaxis_cluster_ineq
      module procedure :: dmft_gij_print_realaxis
   end interface dmft_write_gf_realaxis
 
   interface print_function_realaxis
      module procedure :: dmft_gf_print_realaxis_main
      module procedure :: dmft_gf_print_realaxis_ineq
-     module procedure :: dmft_gf_print_realaxis_cluster_ineq
      module procedure :: dmft_gij_print_realaxis
   end interface print_function_realaxis
 
   interface dmft_print_function_realaxis
      module procedure :: dmft_gf_print_realaxis_main
      module procedure :: dmft_gf_print_realaxis_ineq
-     module procedure :: dmft_gf_print_realaxis_cluster_ineq
      module procedure :: dmft_gij_print_realaxis
   end interface dmft_print_function_realaxis
 
   interface print_gf_realaxis
      module procedure :: dmft_gf_print_realaxis_main
      module procedure :: dmft_gf_print_realaxis_ineq
-     module procedure :: dmft_gf_print_realaxis_cluster_ineq
      module procedure :: dmft_gij_print_realaxis
   end interface print_gf_realaxis
 
   interface dmft_print_gf_realaxis
      module procedure :: dmft_gf_print_realaxis_main
      module procedure :: dmft_gf_print_realaxis_ineq
-     module procedure :: dmft_gf_print_realaxis_cluster_ineq
      module procedure :: dmft_gij_print_realaxis
   end interface dmft_print_gf_realaxis
 
@@ -156,6 +141,9 @@ module DMFT_GFIO
      module procedure :: dmft_gf_read_matsubara_ineq
      module procedure :: dmft_gij_read_matsubara
   end interface dmft_read_gf_matsubara
+
+
+
 
 
 
@@ -225,8 +213,8 @@ module DMFT_GFIO
 
   character(len=128)               :: suffix
   character(len=128)               :: gf_suffix='.dat'
-  integer                          :: Lk,Nineq,Nlso,Nlat,Nspin,Norb,Nso,Lreal,Lmats
-  integer                          :: i,j,ik,ilat,jlat,iorb,jorb,ispin,jspin,io,jo,is,js,iineq
+  integer                          :: Lk,Nlso,Nlat,Nspin,Norb,Nso,Lreal,Lmats
+  integer                          :: i,j,ik,ilat,jlat,iorb,jorb,ispin,jspin,io,jo,is,js
   !
   real(8)                          :: beta
   real(8)                          :: wini,wfin 
@@ -476,110 +464,6 @@ contains
     endif
   end subroutine dmft_gf_print_matsubara_ineq
 
-
-
-  !> MATSUBARA: cluster + ineq sites
-  subroutine dmft_gf_print_matsubara_cluster_ineq(Gmats,fname,iprint,ineq_index,ineq_pad,itar)
-    complex(8),dimension(:,:,:,:,:,:,:,:),intent(in) :: Gmats
-    character(len=*),intent(in)                  :: fname
-    integer,intent(in)                           :: iprint
-    character(len=*),optional                    :: ineq_index
-    integer,optional                             :: ineq_pad
-    logical,optional                             :: itar
-    character(len=:),allocatable                 :: index
-    integer                                      :: pad
-    !
-    !MPI setup:
-    mpi_master=.true.
-#ifdef _MPI    
-    if(check_MPI())mpi_master= get_master_MPI()
-#endif
-    !
-    if(present(ineq_index))then
-       index=trim(adjustl(trim(ineq_index)))
-    else
-       index='indx'
-    endif
-    pad=6
-    if(present(ineq_pad))pad=ineq_pad
-    !
-    !Retrieve parameters:
-    call get_ctrl_var(beta,"BETA")
-    !    
-    !
-    Nineq = size(Gmats,1)
-    Nlat  = size(Gmats,2)
-    Nspin = size(Gmats,4)
-    Norb  = size(Gmats,6)
-    Lmats = size(Gmats,8)
-    call assert_shape(Gmats,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_gf_print_matsubara_ineq",reg(fname)//"_mats")
-    !
-    if(allocated(wm))deallocate(wm);allocate(wm(Lmats))
-    wm = pi/beta*(2*arange(1,Lmats)-1)
-    !
-    if(mpi_master)then
-       select case(iprint)
-       case(1)                  !print spin-diagonal, all orbitals 
-          write(*,"(A,1x,A)")reg(fname),"matsubara: write spin diagonal and all orbitals elements. Split."
-          do ilat=1,Nlat
-            do jlat=1,Nlat
-              do ispin=1,Nspin
-                 do iorb=1,Norb
-                    do jorb=1,Norb
-                       do iineq=1,Nineq
-                          suffix=reg(fname)//&
-                               "_i"//str(ilat)//str(jlat)//&
-                               "_l"//str(iorb)//str(jorb)//&
-                               "_s"//str(ispin)//&
-                               "_iw_"//reg(index)//str(iineq,pad)//reg(gf_suffix)
-                          call splot(reg(suffix),wm,Gmats(iineq,ilat,jlat,ispin,ispin,iorb,jorb,:))
-                       enddo
-                       suffix=reg(fname)//&
-                            "_i"//str(ilat)//str(jlat)//&
-                            "_l"//str(iorb)//str(jorb)//&
-                            "_s"//str(ispin)//&
-                            "_iw"
-                       if(present(itar).AND.itar)call file_targz(tarball=reg(suffix),&
-                            pattern=reg(suffix)//"_"//reg(index)//"*"//reg(gf_suffix))
-                    enddo
-                 enddo
-              enddo
-            enddo
-          enddo
-          !
-       case default
-          write(*,"(A,1x,A)")reg(fname),"matsubara: write all elements. Split."
-          do ilat=1,Nlat
-            do jlat=1,Nlat
-              do ispin=1,Nspin
-                 do jspin=1,Nspin
-                    do iorb=1,Norb
-                       do jorb=1,Norb
-                          do iineq=1,Nineq
-                             suffix=reg(fname)//&
-                                  "_i"//str(ilat)//str(jlat)//&
-                                  "_l"//str(iorb)//str(jorb)//&
-                                  "_s"//str(ispin)//str(jspin)//&
-                                  "_iw_"//reg(index)//str(ilat,pad)//reg(gf_suffix)
-                             call splot(reg(suffix),wm,Gmats(iineq,ilat,jlat,ispin,jspin,iorb,jorb,:))
-                          enddo
-                          suffix=reg(fname)//&
-                               "_i"//str(ilat)//str(jlat)//&
-                               "_l"//str(iorb)//str(jorb)//&
-                               "_s"//str(ispin)//str(jspin)//&
-                               "_iw"
-                          if(present(itar).AND.itar)call file_targz(tarball=reg(suffix),&
-                               pattern=reg(suffix)//"_"//reg(index)//"*"//reg(gf_suffix))
-                       enddo
-                    enddo
-                 enddo
-              enddo
-            enddo
-          enddo
-          !
-       end select
-    endif
-  end subroutine dmft_gf_print_matsubara_cluster_ineq
 
 
   !> MATSUBARA: full Gij
@@ -949,111 +833,6 @@ contains
        end select
     endif
   end subroutine dmft_gf_print_realaxis_ineq
-  
-  
-  
-  !> REAL AXIS: cluster + ineq sites
-  subroutine dmft_gf_print_realaxis_cluster_ineq(Greal,fname,iprint,ineq_index,ineq_pad,itar)
-    complex(8),dimension(:,:,:,:,:,:,:,:),intent(in) :: Greal
-    character(len=*),intent(in)                  :: fname
-    integer,intent(in)                           :: iprint
-    character(len=*),optional                    :: ineq_index
-    integer,optional                             :: ineq_pad
-    logical,optional                             :: itar
-    character(len=:),allocatable                 :: index
-    integer                                      :: pad
-    !
-    !MPI setup:
-    mpi_master=.true.
-#ifdef _MPI    
-    if(check_MPI())mpi_master= get_master_MPI()
-#endif
-    !
-    if(present(ineq_index))then
-       index=trim(adjustl(trim(ineq_index)))
-    else
-       index='indx'
-    endif
-    pad=6
-    if(present(ineq_pad))pad=ineq_pad
-    !
-    !Retrieve parameters:
-    call get_ctrl_var(beta,"BETA")
-    !    
-    !
-    Nineq = size(Greal,1)
-    Nlat  = size(Greal,2)
-    Nspin = size(Greal,4)
-    Norb  = size(Greal,6)
-    Lreal = size(Greal,8)
-    call assert_shape(Greal,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats],"dmft_gf_print_matsubara_ineq",reg(fname)//"_mats")
-    !
-    if(allocated(wr))deallocate(wr);allocate(wr(Lreal))
-    wr = linspace(wini,wfin,Lreal)
-    !
-    if(mpi_master)then
-       select case(iprint)
-       case(1)                  !print spin-diagonal, all orbitals 
-          write(*,"(A,1x,A)")reg(fname),"real: write spin diagonal and all orbitals elements. Split."
-          do ilat=1,Nlat
-            do jlat=1,Nlat
-              do ispin=1,Nspin
-                 do iorb=1,Norb
-                    do jorb=1,Norb
-                       do iineq=1,Nineq
-                          suffix=reg(fname)//&
-                               "_i"//str(ilat)//str(jlat)//&
-                               "_l"//str(iorb)//str(jorb)//&
-                               "_s"//str(ispin)//&
-                               "_realw_"//reg(index)//str(iineq,pad)//reg(gf_suffix)
-                          call splot(reg(suffix),wr,Greal(iineq,ilat,jlat,ispin,ispin,iorb,jorb,:))
-                       enddo
-                       suffix=reg(fname)//&
-                            "_i"//str(ilat)//str(jlat)//&
-                            "_l"//str(iorb)//str(jorb)//&
-                            "_s"//str(ispin)//&
-                            "_realw"
-                       if(present(itar).AND.itar)call file_targz(tarball=reg(suffix),&
-                            pattern=reg(suffix)//"_"//reg(index)//"*"//reg(gf_suffix))
-                    enddo
-                 enddo
-              enddo
-            enddo
-          enddo
-          !
-       case default
-          write(*,"(A,1x,A)")reg(fname),"matsubara: write all elements. Split."
-          do ilat=1,Nlat
-            do jlat=1,Nlat
-              do ispin=1,Nspin
-                 do jspin=1,Nspin
-                    do iorb=1,Norb
-                       do jorb=1,Norb
-                          do iineq=1,Nineq
-                             suffix=reg(fname)//&
-                                  "_i"//str(ilat)//str(jlat)//&
-                                  "_l"//str(iorb)//str(jorb)//&
-                                  "_s"//str(ispin)//str(jspin)//&
-                                  "_realw_"//reg(index)//str(ilat,pad)//reg(gf_suffix)
-                             call splot(reg(suffix),wr,Greal(iineq,ilat,jlat,ispin,jspin,iorb,jorb,:))
-                          enddo
-                          suffix=reg(fname)//&
-                               "_i"//str(ilat)//str(jlat)//&
-                               "_l"//str(iorb)//str(jorb)//&
-                               "_s"//str(ispin)//str(jspin)//&
-                               "_realw"
-                          if(present(itar).AND.itar)call file_targz(tarball=reg(suffix),&
-                               pattern=reg(suffix)//"_"//reg(index)//"*"//reg(gf_suffix))
-                       enddo
-                    enddo
-                 enddo
-              enddo
-            enddo
-          enddo
-          !
-       end select
-    endif
-  end subroutine dmft_gf_print_realaxis_cluster_ineq
 
 
   !> REALAXIS: full GF
