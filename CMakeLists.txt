@@ -207,8 +207,10 @@ ENDIF()
 
 
 SET(FULL_VER  "${FULL_VER}/${VERSION}")
+# SET(PREFIX  "${LIB_PATH}/${VERSION}" CACHE PATH "Prefix prepended to install directories")
+# SET(CMAKE_INSTALL_PREFIX "${PREFIX}" CACHE INTERNAL "Prefix prepended to install directories" FORCE)
 SET(PREFIX  "${LIB_PATH}/${VERSION}" CACHE PATH "Prefix prepended to install directories")
-SET(CMAKE_INSTALL_PREFIX "${PREFIX}" CACHE INTERNAL "Prefix prepended to install directories" FORCE)
+SET(CMAKE_INSTALL_PREFIX "${PREFIX}" CACHE INTERNAL "Prefix prepended to install directories")
 
 
 
