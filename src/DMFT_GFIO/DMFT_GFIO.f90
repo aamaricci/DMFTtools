@@ -286,8 +286,8 @@ module DMFT_GFIO
 
   character(len=128)               :: suffix
   character(len=128)               :: gf_suffix='.dat'
-  integer                          :: Lk,Nlso,Nlat,Nspin,Norb,Nso,Lreal,Lmats
-  integer                          :: i,j,ik,ilat,jlat,iorb,jorb,ispin,jspin,io,jo,is,js
+  integer                          :: Lk,Nlso,Nlat,Nspin,Norb,Nso,Lreal,Lmats,Nineq,Nilso
+  integer                          :: i,j,ik,ilat,jlat,iorb,jorb,ispin,jspin,io,jo,is,js,iineq
   !
   real(8)                          :: beta
   real(8)                          :: wini,wfin 
