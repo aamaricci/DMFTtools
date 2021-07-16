@@ -476,12 +476,11 @@ contains
     Gkout=Gktmp
 #endif
   end subroutine invert_gk_normal_ineq_mpi
-  
 
-!INVERT GK CLUSTER + REAL SPACE 
-  
-  
-    !SERIAL (OR PARALLEL ON K)
+
+  !INVERT GK CLUSTER + REAL SPACE 
+  !SERIAL (OR PARALLEL ON K)
+#if __GFORTRAN__ &&  __GNUC__ > 8
   subroutine invert_gk_normal_cluster_ineq(zeta,Hk,hk_symm,Gkout)
     complex(8),dimension(:,:,:,:),intent(in)            :: zeta    ![Nineq][Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lfreq]
     complex(8),dimension(:,:),intent(in)                :: Hk      ![Nlat*Nspin*Norb][Nlat*Nspin*Norb]
@@ -531,21 +530,21 @@ contains
        end if
        !store the diagonal blocks directly into the tmp output 
        do iineq=1,Nineq
-         do ilat=1,Nlat
-          do jlat=1,Nlat
-            do ispin=1,Nspin
-               do jspin=1,Nspin
-                  do iorb=1,Norb
-                     do jorb=1,Norb
-                        io = iorb + (ilat-1)*Norb + (ispin-1)*Nlat*Norb + (iineq-1)*Nlat*Nspin*Norb
-                        jo = jorb + (jlat-1)*Norb + (jspin-1)*Nlat*Norb + (iineq-1)*Nlat*Nspin*Norb
-                        Gktmp(iineq,ilat,jlat,ispin,jspin,iorb,jorb,i) = Gmatrix(io,jo)
-                     enddo
-                  enddo
-               enddo
-            enddo
-           enddo
-         enddo
+          do ilat=1,Nlat
+             do jlat=1,Nlat
+                do ispin=1,Nspin
+                   do jspin=1,Nspin
+                      do iorb=1,Norb
+                         do jorb=1,Norb
+                            io = iorb + (ilat-1)*Norb + (ispin-1)*Nlat*Norb + (iineq-1)*Nlat*Nspin*Norb
+                            jo = jorb + (jlat-1)*Norb + (jspin-1)*Nlat*Norb + (iineq-1)*Nlat*Nspin*Norb
+                            Gktmp(iineq,ilat,jlat,ispin,jspin,iorb,jorb,i) = Gmatrix(io,jo)
+                         enddo
+                      enddo
+                   enddo
+                enddo
+             enddo
+          enddo
        enddo
     enddo
     Gkout = Gktmp
@@ -618,21 +617,21 @@ contains
        end if
        !store the diagonal blocks directly into the tmp output 
        do iineq=1,Nineq
-         do ilat=1,Nlat
-          do jlat=1,Nlat
-            do ispin=1,Nspin
-               do jspin=1,Nspin
-                  do iorb=1,Norb
-                     do jorb=1,Norb
-                        io = iorb + (ilat-1)*Norb + (ispin-1)*Nlat*Norb + (iineq-1)*Nlat*Nspin*Norb
-                        jo = jorb + (jlat-1)*Norb + (jspin-1)*Nlat*Norb + (iineq-1)*Nlat*Nspin*Norb
-                        Gktmp(iineq,ilat,jlat,ispin,jspin,iorb,jorb,i) = Gmatrix(io,jo)
-                     enddo
-                  enddo
-               enddo
-            enddo
-           enddo
-         enddo
+          do ilat=1,Nlat
+             do jlat=1,Nlat
+                do ispin=1,Nspin
+                   do jspin=1,Nspin
+                      do iorb=1,Norb
+                         do jorb=1,Norb
+                            io = iorb + (ilat-1)*Norb + (ispin-1)*Nlat*Norb + (iineq-1)*Nlat*Nspin*Norb
+                            jo = jorb + (jlat-1)*Norb + (jspin-1)*Nlat*Norb + (iineq-1)*Nlat*Nspin*Norb
+                            Gktmp(iineq,ilat,jlat,ispin,jspin,iorb,jorb,i) = Gmatrix(io,jo)
+                         enddo
+                      enddo
+                   enddo
+                enddo
+             enddo
+          enddo
        enddo
     enddo
 #ifdef _MPI    
@@ -646,6 +645,14 @@ contains
     Gkout=Gktmp
 #endif
   end subroutine invert_gk_normal_cluster_ineq_mpi
+
+#endif
+
+
+
+
+
+
 
 
 
@@ -818,6 +825,7 @@ contains
   ! INVERT_GK_NORMAL_CLUSTER_TRIDIAG(_MPI)
   !
   !SERIAL (OR PARALLEL ON K)
+#if __GFORTRAN__ &&  __GNUC__ > 8
   subroutine invert_gk_normal_cluster_ineq_tridiag(zeta,Hk,hk_symm,Gkout)
     complex(8),dimension(:,:,:,:),intent(in)            :: zeta    ![Nineq][Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lfreq]
     complex(8),dimension(:,:),intent(in)                :: Hk      ![Nineq*Nlat*Nspin*Norb][Nineq*Nlat*Nspin*Norb]
@@ -870,21 +878,21 @@ contains
        call inv_tridiag(Nineq,Nlso,-Sub,Diag,-Over,Gmatrix)
        !store the diagonal blocks directly into the tmp output 
        do iineq=1,Nineq
-         do ilat=1,Nlat
-          do jlat=1,Nlat
-            do ispin=1,Nspin
-               do jspin=1,Nspin
-                  do iorb=1,Norb
-                     do jorb=1,Norb
-                        io = iorb + (ilat-1)*Norb + (ispin-1)*Nlat*Norb + (iineq-1)*Nlat*Nspin*Norb
-                        jo = jorb + (jlat-1)*Norb + (jspin-1)*Nlat*Norb + (iineq-1)*Nlat*Nspin*Norb
-                        Gktmp(iineq,ilat,jlat,ispin,jspin,iorb,jorb,i) = Gmatrix(iineq,io,jo)
-                     enddo
-                  enddo
-               enddo
-            enddo
-           enddo
-         enddo
+          do ilat=1,Nlat
+             do jlat=1,Nlat
+                do ispin=1,Nspin
+                   do jspin=1,Nspin
+                      do iorb=1,Norb
+                         do jorb=1,Norb
+                            io = iorb + (ilat-1)*Norb + (ispin-1)*Nlat*Norb + (iineq-1)*Nlat*Nspin*Norb
+                            jo = jorb + (jlat-1)*Norb + (jspin-1)*Nlat*Norb + (iineq-1)*Nlat*Nspin*Norb
+                            Gktmp(iineq,ilat,jlat,ispin,jspin,iorb,jorb,i) = Gmatrix(iineq,io,jo)
+                         enddo
+                      enddo
+                   enddo
+                enddo
+             enddo
+          enddo
        enddo
     enddo
     Gkout = Gktmp
@@ -961,21 +969,21 @@ contains
        call inv_tridiag(Nineq,Nlso,-Sub,Diag,-Over,Gmatrix)
        !store the diagonal blocks directly into the tmp output 
        do iineq=1,Nineq
-         do ilat=1,Nlat
-          do jlat=1,Nlat
-            do ispin=1,Nspin
-               do jspin=1,Nspin
-                  do iorb=1,Norb
-                     do jorb=1,Norb
-                        io = iorb + (ilat-1)*Norb + (ispin-1)*Nlat*Norb + (iineq-1)*Nlat*Nspin*Norb
-                        jo = jorb + (jlat-1)*Norb + (jspin-1)*Nlat*Norb + (iineq-1)*Nlat*Nspin*Norb
-                        Gktmp(iineq,ilat,jlat,ispin,jspin,iorb,jorb,i) = Gmatrix(iineq,io,jo)
-                     enddo
-                  enddo
-               enddo
-            enddo
-           enddo
-         enddo
+          do ilat=1,Nlat
+             do jlat=1,Nlat
+                do ispin=1,Nspin
+                   do jspin=1,Nspin
+                      do iorb=1,Norb
+                         do jorb=1,Norb
+                            io = iorb + (ilat-1)*Norb + (ispin-1)*Nlat*Norb + (iineq-1)*Nlat*Nspin*Norb
+                            jo = jorb + (jlat-1)*Norb + (jspin-1)*Nlat*Norb + (iineq-1)*Nlat*Nspin*Norb
+                            Gktmp(iineq,ilat,jlat,ispin,jspin,iorb,jorb,i) = Gmatrix(iineq,io,jo)
+                         enddo
+                      enddo
+                   enddo
+                enddo
+             enddo
+          enddo
        enddo
     enddo
 #ifdef _MPI    
@@ -989,7 +997,7 @@ contains
     Gkout=Gktmp
 #endif
   end subroutine invert_gk_normal_cluster_ineq_tridiag_mpi
-
+#endif
 
 
 

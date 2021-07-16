@@ -6,11 +6,12 @@ module SC_DELTA
 
 
 
-
   interface dmft_delta
      module procedure :: dmft_get_delta_normal_main
      module procedure :: dmft_get_delta_normal_cluster
+#if __GFORTRAN__ &&  __GNUC__ > 8
      module procedure :: dmft_get_delta_normal_cluster_ineq
+#endif
      module procedure :: dmft_get_delta_normal_ineq
      module procedure :: dmft_get_delta_normal_bethe
      module procedure :: dmft_get_delta_normal_bethe_ineq
@@ -294,6 +295,7 @@ contains
   end subroutine dmft_get_delta_normal_ineq
 
 
+#if __GFORTRAN__ &&  __GNUC__ > 8  
   subroutine dmft_get_delta_normal_cluster_ineq(Gloc,Smats,Delta,Hloc)
     complex(8),dimension(:,:,:,:,:,:,:,:),intent(in)    :: Gloc         ! [Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:,:,:,:),intent(in)    :: Smats        ! [Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
@@ -374,19 +376,19 @@ contains
        !Dump back the [Norb*Nspin]**2 block of the ilat-th site into the 
        !output structure of [Nineq,Nlat,Nlat,Nspsin,Nspin,Norb,Norb] matrix
        do ilat=1,Nlat
-         do jlat=1,Nlat
-           do ispin=1,Nspin
-              do jspin=1,Nspin
-                 do iorb=1,Norb
-                    do jorb=1,Norb
-                       io = iorb + (ilat-1)*Norb + (ispin-1)*Nlat*Norb
-                       jo = jorb + (jlat-1)*Norb + (jspin-1)*Nlat*Norb
-                       Delta_tmp(iineq,ilat,jlat,ispin,jspin,iorb,jorb,1:Lmats) = calG0_site(io,jo,1:Lmats)
-                    enddo
-                 enddo
-              enddo
-           enddo
-         enddo
+          do jlat=1,Nlat
+             do ispin=1,Nspin
+                do jspin=1,Nspin
+                   do iorb=1,Norb
+                      do jorb=1,Norb
+                         io = iorb + (ilat-1)*Norb + (ispin-1)*Nlat*Norb
+                         jo = jorb + (jlat-1)*Norb + (jspin-1)*Nlat*Norb
+                         Delta_tmp(iineq,ilat,jlat,ispin,jspin,iorb,jorb,1:Lmats) = calG0_site(io,jo,1:Lmats)
+                      enddo
+                   enddo
+                enddo
+             enddo
+          enddo
        enddo
     end do MPIloop
     !
@@ -401,7 +403,7 @@ contains
 #endif
     !
   end subroutine dmft_get_delta_normal_cluster_ineq
-
+#endif
 
   subroutine dmft_get_delta_normal_bethe(Gloc,Delta,Hloc,Wbands)
     complex(8),dimension(:,:,:,:,:),intent(in)    :: Gloc  ! [Nspin][Nspin][Norb][Norb][Lmats]

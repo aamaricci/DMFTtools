@@ -9,9 +9,11 @@ module GK_MATSUBARA
   interface get_gk_matsubara
      module procedure :: dmft_get_gk_matsubara_normal_main
      module procedure :: dmft_get_gk_matsubara_normal_cluster
-     module procedure :: dmft_get_gk_matsubara_normal_cluster_ineq
      module procedure :: dmft_get_gk_matsubara_normal_dos
      module procedure :: dmft_get_gk_matsubara_normal_ineq
+#if __GFORTRAN__ &&  __GNUC__ > 8
+     module procedure :: dmft_get_gk_matsubara_normal_cluster_ineq
+#endif
      !
      module procedure :: dmft_get_gk_matsubara_superc_main
      module procedure :: dmft_get_gk_matsubara_superc_dos
@@ -24,9 +26,11 @@ module GK_MATSUBARA
   interface dmft_gk_matsubara
      module procedure :: dmft_get_gk_matsubara_normal_main
      module procedure :: dmft_get_gk_matsubara_normal_cluster
-     module procedure :: dmft_get_gk_matsubara_normal_cluster_ineq
      module procedure :: dmft_get_gk_matsubara_normal_dos
      module procedure :: dmft_get_gk_matsubara_normal_ineq
+#if __GFORTRAN__ &&  __GNUC__ > 8
+     module procedure :: dmft_get_gk_matsubara_normal_cluster_ineq
+#endif
      !
      module procedure :: dmft_get_gk_matsubara_superc_main
      module procedure :: dmft_get_gk_matsubara_superc_dos
@@ -299,7 +303,7 @@ contains
   end subroutine dmft_get_gk_matsubara_normal_ineq
 
 
-
+#if __GFORTRAN__ &&  __GNUC__ > 8
   subroutine dmft_get_gk_matsubara_normal_cluster_ineq(Hk,Gkmats,Smats,tridiag,hk_symm)
     complex(8),dimension(:,:),intent(in)                :: Hk        ![Nineq*Nlat*Nspin*Norb][Nineq*Nlat*Nspin*Norb]
     complex(8),dimension(:,:,:,:,:,:,:,:),intent(in)    :: Smats     ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
@@ -374,7 +378,7 @@ contains
        call invert_gk_normal_cluster_ineq_tridiag_mpi(zeta_mats,Hk,hk_symm_,Gkmats)
     endif
   end subroutine dmft_get_gk_matsubara_normal_cluster_ineq
-
+#endif
 
 
 

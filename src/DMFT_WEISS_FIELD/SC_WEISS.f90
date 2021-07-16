@@ -10,7 +10,9 @@ module SC_WEISS
   interface dmft_weiss
      module procedure :: dmft_get_weiss_normal_main
      module procedure :: dmft_get_weiss_normal_cluster
+#if __GFORTRAN__ &&  __GNUC__ > 8    
      module procedure :: dmft_get_weiss_normal_cluster_ineq
+#endif
      module procedure :: dmft_get_weiss_normal_ineq
      module procedure :: dmft_get_weiss_normal_bethe
      module procedure :: dmft_get_weiss_normal_bethe_ineq
@@ -314,6 +316,7 @@ contains
   end subroutine dmft_get_weiss_normal_ineq
 
 
+#if __GFORTRAN__ &&  __GNUC__ > 8
   subroutine dmft_get_weiss_normal_cluster_ineq(Gloc,Smats,Weiss,Hloc)
     complex(8),dimension(:,:,:,:,:,:,:,:),intent(in)    :: Gloc         ! [Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:,:,:,:),intent(in)    :: Smats        ! [Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
@@ -397,19 +400,19 @@ contains
        !Dump back the [Norb*Nspin]**2 block of the ilat-th site into the 
        !output structure of [Nlat,Nspsin,Nspin,Norb,Norb] matrix
        do ilat=1,Nlat
-         do jlat=1,Nlat
-           do ispin=1,Nspin
-              do jspin=1,Nspin
-                 do iorb=1,Norb
-                    do jorb=1,Norb
-                       io = iorb + (ilat-1)*Norb + (ispin-1)*Nlat*Norb
-                       jo = jorb + (jlat-1)*Norb + (jspin-1)*Nlat*Norb
-                       Weiss_tmp(iineq,ilat,jlat,ispin,jspin,iorb,jorb,1:Lmats) = calG0_site(io,jo,1:Lmats)
-                    enddo
-                 enddo
-              enddo
-           enddo
-           enddo
+          do jlat=1,Nlat
+             do ispin=1,Nspin
+                do jspin=1,Nspin
+                   do iorb=1,Norb
+                      do jorb=1,Norb
+                         io = iorb + (ilat-1)*Norb + (ispin-1)*Nlat*Norb
+                         jo = jorb + (jlat-1)*Norb + (jspin-1)*Nlat*Norb
+                         Weiss_tmp(iineq,ilat,jlat,ispin,jspin,iorb,jorb,1:Lmats) = calG0_site(io,jo,1:Lmats)
+                      enddo
+                   enddo
+                enddo
+             enddo
+          enddo
        enddo
     end do MPIloop
     !
@@ -424,8 +427,9 @@ contains
 #endif
     !
   end subroutine dmft_get_weiss_normal_cluster_ineq
+#endif
 
-  
+
 
   subroutine dmft_get_weiss_normal_bethe(Gloc,Weiss,Hloc,Wbands)
     complex(8),dimension(:,:,:,:,:),intent(in)    :: Gloc  ! [Nspin][Nspin][Norb][Norb][Lmats]
@@ -559,7 +563,7 @@ contains
   end subroutine dmft_get_weiss_normal_bethe_ineq
 
 
-  
+
 
   subroutine dmft_get_weiss_superc_main(Gloc,Floc,Smats,SAmats,Weiss,aWeiss,Hloc)
     complex(8),dimension(:,:,:,:,:),intent(in)      :: Gloc         ! [Nspin][Nspin][Norb][Norb][Lmats]

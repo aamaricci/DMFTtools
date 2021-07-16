@@ -11,7 +11,9 @@ module SC_GLOBAL
   interface dmft_self_consistency
      module procedure :: dmft_sc_normal_main
      module procedure :: dmft_sc_normal_cluster
+#if __GFORTRAN__ &&  __GNUC__ > 8     
      module procedure :: dmft_sc_normal_cluster_ineq
+#endif
      module procedure :: dmft_sc_normal_ineq
      module procedure :: dmft_sc_normal_bethe
      module procedure :: dmft_sc_normal_bethe_ineq
@@ -70,6 +72,7 @@ contains
   end subroutine dmft_sc_normal_ineq
 
 
+#if __GFORTRAN__ &&  __GNUC__ > 8 
   subroutine dmft_sc_normal_cluster_ineq(Gloc,Smats,Weiss,Hloc,SCtype)
     complex(8),dimension(:,:,:,:,:,:,:,:),intent(in)    :: Gloc         ! [Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:,:,:,:),intent(in)    :: Smats        ! [Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
@@ -83,7 +86,8 @@ contains
        call dmft_delta(Gloc,Smats,Weiss,Hloc)
     end select
   end subroutine dmft_sc_normal_cluster_ineq
-
+#endif
+  
   subroutine dmft_sc_normal_bethe(Gloc,Weiss,Hloc,Wbands,SCtype)
     complex(8),dimension(:,:,:,:,:),intent(in)    :: Gloc  ! [Nspin][Nspin][Norb][Norb][Lmats]
     complex(8),dimension(:,:,:,:,:),intent(inout) :: Weiss ! [Nspin][Nspin][Norb][Norb][Lmats]

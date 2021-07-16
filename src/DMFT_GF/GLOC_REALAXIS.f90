@@ -7,8 +7,12 @@ module GLOC_REALAXIS
 
   interface get_gloc_realaxis
      module procedure :: dmft_get_gloc_realaxis_normal_main
+     module procedure :: dmft_get_gloc_realaxis_normal_cluster
      module procedure :: dmft_get_gloc_realaxis_normal_dos
      module procedure :: dmft_get_gloc_realaxis_normal_ineq
+#if __GFORTRAN__ &&  __GNUC__ > 8
+     module procedure :: dmft_get_gloc_realaxis_normal_cluster_ineq
+#endif
      module procedure :: dmft_get_gloc_realaxis_superc_main
      module procedure :: dmft_get_gloc_realaxis_superc_dos
      module procedure :: dmft_get_gloc_realaxis_superc_ineq
@@ -23,9 +27,11 @@ module GLOC_REALAXIS
   interface dmft_gloc_realaxis
      module procedure :: dmft_get_gloc_realaxis_normal_main
      module procedure :: dmft_get_gloc_realaxis_normal_cluster
-     module procedure :: dmft_get_gloc_realaxis_normal_cluster_ineq
      module procedure :: dmft_get_gloc_realaxis_normal_dos
      module procedure :: dmft_get_gloc_realaxis_normal_ineq
+#if __GFORTRAN__ &&  __GNUC__ > 8
+     module procedure :: dmft_get_gloc_realaxis_normal_cluster_ineq
+#endif
      module procedure :: dmft_get_gloc_realaxis_superc_main
      module procedure :: dmft_get_gloc_realaxis_superc_dos
      module procedure :: dmft_get_gloc_realaxis_superc_ineq
@@ -228,7 +234,7 @@ contains
 
   subroutine dmft_get_gloc_realaxis_normal_dos(Ebands,Dbands,Hloc,Greal,Sreal)
     real(8),dimension(:,:),intent(in)                           :: Ebands    ![Nspin*Norb][Lk]
-  real(8),dimension(:,:),intent(in)                             :: Dbands    !1. [Nspin*Norb][Lk] / 2. [1][Lk]
+    real(8),dimension(:,:),intent(in)                             :: Dbands    !1. [Nspin*Norb][Lk] / 2. [1][Lk]
     real(8),dimension(size(Ebands,1)),intent(in)                :: Hloc      ![Nspin*Norb]
     complex(8),dimension(:,:,:,:,:),intent(in)                  :: Sreal     ![Nspin][Nspin][Norb][Norb][Lreal]
     complex(8),dimension(:,:,:,:,:),intent(inout)               :: Greal     !as Sreal
@@ -483,9 +489,9 @@ contains
     end if
     if(mpi_master)call stop_timer
   end subroutine dmft_get_gloc_realaxis_normal_ineq
-  
-  
-  
+
+
+#if __GFORTRAN__ &&  __GNUC__ > 8
   subroutine dmft_get_gloc_realaxis_normal_cluster_ineq(Hk,Greal,Sreal,tridiag,hk_symm)
     complex(8),dimension(:,:,:),intent(in)               :: Hk        ![Nineq*Nlat*Nspin*Norb][Nineq*Nlat*Nspin*Norb][Lk]
     complex(8),dimension(:,:,:,:,:,:,:,:),intent(in)     :: Sreal     ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lreal]
@@ -603,6 +609,9 @@ contains
     end if
     if(mpi_master)call stop_timer
   end subroutine dmft_get_gloc_realaxis_normal_cluster_ineq
+#endif
+
+
 
 
 
