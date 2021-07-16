@@ -120,7 +120,7 @@ if(CMAKE_Fortran_COMPILER_ID MATCHES GNU) # this is gfortran
     SET(CMAKE_Fortran_FLAGS         "${CMAKE_Fortran_FLAGS} -fallow-argument-mismatch")
   ENDIF()
   SET(CMAKE_Fortran_FLAGS_TESTING "-O2 -funroll-loops")
-  SET(CMAKE_Fortran_FLAGS_DEBUG   "-O0 -p -g -Wsurprising -Waliasing -fwhole-file -fcheck=all -pedantic -fbacktrace -fbounds-check")
+  SET(CMAKE_Fortran_FLAGS_DEBUG   "-O0 -p -g -Wsurprising -Waliasing -fwhole-file -fcheck=all -fbacktrace -fbounds-check")
   SET(CMAKE_Fortran_FLAGS_RELEASE "-O3   -funroll-loops")   
 elseif(CMAKE_Fortran_COMPILER_ID MATCHES Intel)
   SET(CMAKE_Fortran_MODDIR_FLAG   "-module ") #remember the ending white space here 
@@ -317,9 +317,12 @@ SET(PERMISSION_777
 FILE(REMOVE_RECURSE ${DT_TMP_ETC}/modules/)
 SET(TMP_MODULE_NAME "${FULL_VER}" CACHE PATH "Prefix prepended to install directories")
 SET(TMP_ENV_MODULE_FILE ${DT_TMP_ETC}/modules/${PROJECT_NAME}/${TMP_MODULE_NAME})
-SET(TMP_VER_MODULE_FILE ${DT_TMP_ETC}/modules/${PROJECT_NAME}/${FC_ID}/.version)
 CONFIGURE_FILE(${DT_ENV}/module.in ${TMP_ENV_MODULE_FILE} @ONLY)
-CONFIGURE_FILE(${DT_ENV}/version.in ${TMP_VER_MODULE_FILE} @ONLY)
+
+IF((NOT "${CMAKE_BUILD_TYPE}" MATCHES "DEBUG") AND (GIT_BRANCH MATCHES "master"))
+  SET(TMP_VER_MODULE_FILE ${DT_TMP_ETC}/modules/${PROJECT_NAME}/${FC_ID}/.version)
+  CONFIGURE_FILE(${DT_ENV}/version.in ${TMP_VER_MODULE_FILE} @ONLY)
+ENDIF()
 
 #Build the PKG-CONFIG file
 SET(TMP_PKCONFIG_FILE ${DT_TMP_ETC}/${PROJECT_NAME}.pc)
