@@ -442,7 +442,15 @@ contains
     integer                                       :: i,iorb,jorb,ispin,jspin,io,jo
     !
     !MPI setup:
-    mpi_master= get_master_MPI(MPI_COMM_WORLD)
+#ifdef _MPI    
+    if(check_MPI())then
+       mpi_master= get_master_MPI()
+    else
+       mpi_master=.true.
+    endif
+#else
+    mpi_master=.true.
+#endif
     !
     !Retrieve parameters:
     call get_ctrl_var(beta,"BETA")

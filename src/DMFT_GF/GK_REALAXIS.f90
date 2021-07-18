@@ -223,7 +223,15 @@ contains
           enddo
        enddo
     end do
-    call Mpi_AllReduce(Gtmp,Gkreal, size(Gkreal), MPI_Double_Complex, MPI_Sum, Mpi_Comm_World, MPI_ierr)
+#ifdef _MPI
+    if(check_MPI())then
+       call Mpi_AllReduce(Gtmp,Gkreal, size(Gkreal), MPI_Double_Complex, MPI_Sum, Mpi_Comm_World, MPI_ierr)
+    else
+       Gkreal=Gtmp
+    endif
+#else
+    Gkreal=Gtmp
+#endif    
   end subroutine dmft_get_gk_realaxis_normal_dos
 
 
@@ -517,7 +525,15 @@ contains
           enddo
        enddo
     enddo
-    call Mpi_AllReduce(Gtmp,Gkreal, size(Gkreal), MPI_Double_Complex, MPI_Sum, Mpi_Comm_World, MPI_ierr)
+#ifdef _MPI    
+    if(check_MPI())then
+       call Mpi_AllReduce(Gtmp,Gkreal, size(Gkreal), MPI_Double_Complex, MPI_Sum, Mpi_Comm_World, MPI_ierr)
+    else
+       Gkreal=Gtmp
+    endif
+#else
+    Gkreal=Gtmp
+#endif
   end subroutine dmft_get_gk_realaxis_superc_dos
 
 

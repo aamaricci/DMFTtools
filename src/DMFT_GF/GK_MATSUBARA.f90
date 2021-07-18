@@ -522,7 +522,15 @@ contains
           enddo
        enddo
     enddo
-    call Mpi_AllReduce(Gtmp,Gkmats, size(Gkmats), MPI_Double_Complex, MPI_Sum, MPI_COMM_WORLD, MPI_ierr)
+#ifdef _MPI    
+    if(check_MPI())then
+       call Mpi_AllReduce(Gtmp,Gkmats, size(Gkmats), MPI_Double_Complex, MPI_Sum, MPI_COMM_WORLD, MPI_ierr)
+    else
+       Gkmats=Gtmp
+    endif
+#else
+    Gkmats=Gtmp
+#endif
   end subroutine dmft_get_gk_matsubara_superc_dos
 
 
