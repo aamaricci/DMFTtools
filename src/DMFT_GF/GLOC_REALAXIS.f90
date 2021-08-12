@@ -234,7 +234,7 @@ contains
 
   subroutine dmft_get_gloc_realaxis_normal_dos(Ebands,Dbands,Hloc,Greal,Sreal)
     real(8),dimension(:,:),intent(in)                           :: Ebands    ![Nspin*Norb][Lk]
-    real(8),dimension(:,:),intent(in)                             :: Dbands    !1. [Nspin*Norb][Lk] / 2. [1][Lk]
+    real(8),dimension(:,:),intent(in)                           :: Dbands    !1. [Nspin*Norb][Lk] / 2. [1][Lk]
     real(8),dimension(size(Ebands,1)),intent(in)                :: Hloc      ![Nspin*Norb]
     complex(8),dimension(:,:,:,:,:),intent(in)                  :: Sreal     ![Nspin][Nspin][Norb][Norb][Lreal]
     complex(8),dimension(:,:,:,:,:),intent(inout)               :: Greal     !as Sreal
@@ -315,7 +315,7 @@ contains
                    enddo
                 enddo
              enddo
-             if(mpi_master)call eta(i,Lmats)
+             if(mpi_master)call eta(i,Lreal)
           end do
        else
           do ik = 1+mpi_rank, Lk, mpi_size
@@ -341,7 +341,7 @@ contains
                 call inv(Gdos_tmp)
                 Gtmp(:,:,:,:,i) = Gtmp(:,:,:,:,i) + Dbands(1,ik)*so2nn_reshape(Gdos_tmp,Nspin,Norb)
              enddo
-             if(mpi_master)call eta(i,Lmats)
+             if(mpi_master)call eta(i,Lreal)
           end do
        else
           do ik = 1+mpi_rank, Lk, mpi_size

@@ -433,8 +433,7 @@ contains
 
 
 
-
-  subroutine write_hk_w90(file,Nkvec)
+  subroutine write_hk_w90_func(file,Nkvec)
     character(len=*)                              :: file
     integer                                       :: Nkvec(:)
     real(8),dimension(product(Nkvec),size(Nkvec)) :: kgrid ![Nk][Ndim]
@@ -483,14 +482,65 @@ contains
        close(unit)
     endif
     !
-  end subroutine write_hk_w90
+  end subroutine write_hk_w90_func
+
+  subroutine write_hk_w90_array(Hk,file,Nkvec,Nlat_,Nspin_,Norb_)
+    complex(8),dimension(:,:,:)                   :: Hk
+    character(len=*)                              :: file
+    integer                                       :: Nkvec(:)
+    integer,optional                              :: Nlat_,Nspin_,Norb_
+    real(8),dimension(product(Nkvec),size(Nkvec)) :: kgrid ![Nk][Ndim]
+    real(8),dimension(3)                          :: kvec
+    integer                                       :: Nktot,unit,Dim
+    integer                                       :: i,ik,io,jo,Nlso,Nlat,Nspin,Norb  
+
+    !
+    mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
+    !
+    if(.not.TB_w90%status)stop "read_hk_w90: TB_w90 structure not allocated. Call setup_w90 first."
+    !
+    if(.not.allocated(TB_w90%Kgrid))then
+       call build_kgrid(Nkvec,Kgrid,TB_w90%BZorigin) !check bk_1,2,3 vectors have been set
+    else
+       call assert_shape(TB_w90%Kgrid,[product(Nkvec),size(Nkvec)],"write_hk_w90","TB_w90%Kgrid")
+       Kgrid = TB_w90%Kgrid
+    endif
+    !
+    Dim   = size(Nkvec)
+    Nktot = product(Nkvec)
+    Nlat  = TB_w90%Nlat ;if(present(Nlat_))Nlat=Nlat_
+    Norb  = TB_w90%Norb ;if(present(Norb_))Norb=Norb_
+    Nspin = TB_w90%Nspin;if(present(Nspin_))Nspin=Nspin_
+    Nlso  = Nlat*Norb*Nspin
+    !
+    call assert_shape(Hk,[Nlso,Nlso,Nktot],"TB_WANNIER/write_hk_w90_array","Hk")
+    !
+    if(mpi_master)then
+       open(free_unit(unit),file=reg(file))
+       write(unit,'(4(I10,1x),F15.9)')Nktot,Nlat,Nspin,Norb,TB_w90%Efermi
+       write(unit,'(1A1,3(A12,1x))')"#",(reg(txtfy(Nkvec(ik))),ik=1,Dim)
+       do ik=1,Nktot
+          kvec=0d0 ; kvec(:Dim) = kgrid(ik,:)
+          write(unit,"(3(F15.9,1x))")(kvec(i),i=1,3) 
+          do io=1,Nlso
+             write(unit,"(1000(F15.9))")(dreal(Hk(io,jo,ik)),jo=1,Nlso)
+          enddo
+          do io=1,Nlso
+             write(unit,"(1000(F15.9))")(dimag(Hk(io,jo,ik)),jo=1,Nlso)
+          enddo
+       enddo
+       close(unit)
+    endif
+    !
+  end subroutine write_hk_w90_array
 
 
 
 
-
-
-  subroutine read_hk_w90(Hk,file,Nkvec)
+  subroutine read_hk_w90_array(Hk,file,Nkvec)
     complex(8),dimension(:,:,:),allocatable :: Hk
     character(len=*)                        :: file
     integer,intent(inout)                   :: Nkvec(:)
@@ -552,7 +602,22 @@ contains
     enddo
     close(unit)
     !
-  end subroutine read_hk_w90
+  end subroutine read_hk_w90_array
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

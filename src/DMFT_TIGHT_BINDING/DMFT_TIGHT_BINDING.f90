@@ -47,14 +47,15 @@ module DMFT_TIGHT_BINDING
 
   !TB_IO
   interface TB_write_hk
+     module procedure :: write_hk_func
+     module procedure :: write_hk_array
      module procedure :: write_hk_w90_func
      module procedure :: write_hk_w90_array
-     module procedure :: write_hk_w90
   end interface TB_write_hk
 
   interface TB_read_hk
+     module procedure :: read_hk_array
      module procedure :: read_hk_w90_array
-     module procedure :: read_hk_w90
   end interface TB_read_hk
 
   interface TB_write_Hloc
@@ -148,7 +149,7 @@ module DMFT_TIGHT_BINDING
      module procedure :: TB_fsurf_w90_nkvec
   end interface TB_fsurface
 
-  
+
 
   abstract interface
      function w90_hk(kpoint,N)

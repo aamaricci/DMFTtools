@@ -190,37 +190,35 @@ SET(USER $ENV{USER})
 STRING(TOLOWER "${CMAKE_Fortran_COMPILER_ID}" FC_ID)
 STRING(TOLOWER "${CMAKE_BUILD_TYPE}" BUILD_TYPE)
 
-#SET PREFIX:
-SET(LIB_PATH  "$ENV{HOME}/opt/${PROJECT_NAME}/${FC_ID}")
+#default prefix is $HOME/opt/<dmft_tools>/<fc_id>/[<git_branch>[/<debug>]]/<version>
+SET(PREFIX_DEF_LOC "$ENV{HOME}/opt")
+SET(PREFIX_PROJ "${PROJECT_NAME}")
+SET(PREFIX_PATH "${FC_ID}")
+#if not master branch, include simplified branch name
+IF( (NOT GIT_BRANCH MATCHES "master") )
+    SET(PREFIX_PATH  "${PREFIX_PATH}/${GIT_BRANCH}")
+ENDIF()
+
+#If DEBUG, add /debug to 
 IF("${CMAKE_BUILD_TYPE}" MATCHES "DEBUG")
-  SET(LIB_PATH  "${LIB_PATH}/${BUILD_TYPE}")
-ENDIF()
-IF(GIT_REPO)
-  IF(NOT GIT_BRANCH MATCHES "master")
-    SET(LIB_PATH  "${LIB_PATH}/${GIT_BRANCH}")
-  ENDIF()
-ENDIF()
-SET(FULL_VER  "${FULL_VER}/${VERSION}")
-SET(PREFIX  "${LIB_PATH}/${VERSION}" CACHE PATH "Prefix prepended to install directories")
-SET(CMAKE_INSTALL_PREFIX "${PREFIX}" CACHE INTERNAL "Prefix prepended to install directories")
-
-
-SET(FULL_VER "${FC_ID}")
-IF(NOT PREFIX STREQUAL "${LIB_PATH}/${VERSION}")
-  STRING(REPLACE "/" "_" USER_PREFIX ${PREFIX})
-  SET(FULL_VER  "${FULL_VER}/prefix_${USER_PREFIX}")
-ENDIF()
-IF("${CMAKE_BUILD_TYPE}" MATCHES "DEBUG")
-  SET(FULL_VER  "${FULL_VER}/${BUILD_TYPE}")
-ENDIF()
-IF(GIT_REPO)
-  IF(NOT GIT_BRANCH MATCHES "master")
-    SET(FULL_VER  "${FULL_VER}/${GIT_BRANCH}")
-  ENDIF()
+  SET(PREFIX_PATH  "${PREFIX_PATH}/${BUILD_TYPE}")
 ENDIF()
 
+#set default prefix:
+SET(FULL_VER "${PREFIX_PATH}/${VERSION}")
+SET(VERSION_PATH "${PREFIX_PROJ}/${PREFIX_PATH}")
+SET(DEFAULT_PREFIX "${PREFIX_DEF_LOC}/${PREFIX_PROJ}/${PREFIX_PATH}/${VERSION}")
+SET(PREFIX  "${DEFAULT_PREFIX}" CACHE PATH "Prefix prepended to install directories")
+SET(CMAKE_INSTALL_PREFIX "${PREFIX}" CACHE INTERNAL "Prefix prepended to install directories" FORCE)
 
-
+#Now set module name corresponding to given prefix:
+#if prefix is default nothing to be done.
+#if user defined prefix prepend
+IF(PREFIX STREQUAL "${DEFAULT_PREFIX}")
+  SET(MODULE_NAME "${PREFIX_PROJ}/${PREFIX_PATH}/${VERSION}")
+ELSE()
+  SET(MODULE_NAME "${PREFIX_PROJ}/user_prefix/${PREFIX_PATH}/${VERSION}")
+ENDIF()
 
 # Define the library name
 SET(DMFT_TOOLSLIB dmft_tools)
@@ -320,17 +318,26 @@ SET(PERMISSION_777
   GROUP_WRITE GROUP_READ GROUP_EXECUTE
   WORLD_WRITE WORLD_READ WORLD_EXECUTE)
 
+#REMOVE the entire directory before re-generating it
+FILE(REMOVE_RECURSE ${DT_TMP_ETC}/modules)
+
+#Create default .version file if following conditions are verified:
+#1. master branch
+#2. no debug
+#3. default prefix
+IF( (GIT_BRANCH MATCHES "master")
+    AND (NOT "${CMAKE_BUILD_TYPE}" MATCHES "DEBUG")
+    AND (PREFIX STREQUAL "${DEFAULT_PREFIX}")
+    ) 
+  SET(TMP_VER_MODULE_FILE ${DT_TMP_ETC}/modules/${VERSION_PATH}/.version)
+  CONFIGURE_FILE(${DT_ENV}/version.in ${TMP_VER_MODULE_FILE}  @ONLY)
+ENDIF()
 
 #Build the DMFT_TOOLS module for environment modules
-FILE(REMOVE_RECURSE ${DT_TMP_ETC}/modules/)
-SET(TMP_MODULE_NAME "${FULL_VER}" CACHE PATH "Prefix prepended to install directories")
-SET(TMP_ENV_MODULE_FILE ${DT_TMP_ETC}/modules/${PROJECT_NAME}/${TMP_MODULE_NAME})
+SET(TMP_MODULE_NAME "${MODULE_NAME}" CACHE PATH "Prefix prepended to install directories")
+SET(TMP_ENV_MODULE_FILE ${DT_TMP_ETC}/modules/${TMP_MODULE_NAME})
 CONFIGURE_FILE(${DT_ENV}/module.in ${TMP_ENV_MODULE_FILE} @ONLY)
 
-IF((NOT "${CMAKE_BUILD_TYPE}" MATCHES "DEBUG") AND (GIT_BRANCH MATCHES "master"))
-  SET(TMP_VER_MODULE_FILE ${DT_TMP_ETC}/modules/${PROJECT_NAME}/${FC_ID}/.version)
-  CONFIGURE_FILE(${DT_ENV}/version.in ${TMP_VER_MODULE_FILE} @ONLY)
-ENDIF()
 
 #Build the PKG-CONFIG file
 SET(TMP_PKCONFIG_FILE ${DT_TMP_ETC}/${PROJECT_NAME}.pc)

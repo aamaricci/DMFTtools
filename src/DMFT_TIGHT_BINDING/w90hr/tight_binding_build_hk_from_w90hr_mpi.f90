@@ -138,7 +138,7 @@ subroutine hk_from_w90_hr_mpi(MpiComm,R1,R2,R3,ham_k,ham_loc,w90_file,Nspin,Norb
   if(mpi_master)then
      write(*,'(1A)')"  H(k) produced"
      if(present(Hkfile))then
-        call write_hk_w90_array(ham_k,Hkfile,Nlat,Nspin,Norb,[Nkx,Nky,Nkz])
+        call write_hk_w90_array(ham_k,Hkfile,[Nkx,Nky,Nkz],Nlat,Nspin,Norb)
         write(*,'(2A)')"  H(k) written on: ",Hkfile
      endif
      !

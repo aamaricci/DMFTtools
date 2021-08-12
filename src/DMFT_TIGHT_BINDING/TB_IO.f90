@@ -11,7 +11,7 @@ contains
 
 
   !< read/write the Hamiltonian matrix H(k) and its local part 
-  subroutine write_hk_w90_func(hk_model,file,Nlat,Nspin,Norb,Nkvec)
+  subroutine write_hk_func(hk_model,file,Nlat,Nspin,Norb,Nkvec)
     character(len=*)                                      :: file
     integer                                               :: Nlat,Nspin,Norb,Nlso
     integer                                               :: Nkvec(:)
@@ -52,10 +52,10 @@ contains
        enddo
        close(unit)
     endif
-  end subroutine write_hk_w90_func
+  end subroutine write_hk_func
 
 
-  subroutine write_hk_w90_array(Hk,file,Nlat,Nspin,Norb,Nkvec)
+  subroutine write_hk_array(Hk,file,Nlat,Nspin,Norb,Nkvec)
     character(len=*)                                                     :: file
     integer                                                              :: Nlat,Nspin,Norb,Nlso
     integer                                                              :: Nkvec(:)
@@ -88,7 +88,7 @@ contains
        enddo
        close(unit)
     endif
-  end subroutine write_hk_w90_array
+  end subroutine write_hk_array
 
 
 
@@ -113,18 +113,19 @@ contains
 
 
 
-  subroutine read_hk_w90_array(hk,file,Nlat,Nspin,Norb,Nkvec,kgrid)
-    character(len=*)                        :: file
-    integer,intent(inout)                   :: Nlat,Nspin,Norb
-    integer,intent(inout)                   :: Nkvec(:)
-    real(8),dimension(:,:),allocatable      :: kgrid
-    complex(8),dimension(:,:,:),allocatable :: Hk
+  subroutine read_hk_array(hk,file,Nlat,Nspin,Norb,Nkvec,kgrid)
+    character(len=*)                            :: file
+    integer,intent(inout)                       :: Nlat,Nspin,Norb
+    integer,intent(inout)                       :: Nkvec(:)
+    real(8),dimension(:,:),allocatable,optional :: kgrid
+    complex(8),dimension(:,:,:),allocatable     :: Hk
     !
-    integer                                 :: Nlso,Nktot,unit,Nk(3),Dim
-    integer                                 :: ik,ix,iy,iz,io,jo
-    real(8)                                 :: kx,ky,kz,kvec(3)
-    logical                                 :: ioexist
-    character(len=1)                        :: achar
+    integer                                     :: Nlso,Nktot,unit,Nk(3),Dim
+    integer                                     :: ik,ix,iy,iz,io,jo
+    real(8)                                     :: kx,ky,kz,kvec(3)
+    logical                                     :: ioexist
+    character(len=1)                            :: achar
+    real(8),dimension(:,:),allocatable          :: kgrid_    
     !
     inquire(file=reg(file),exist=ioexist)
     if(.not.ioexist)then
@@ -142,7 +143,7 @@ contains
     Nktot  = product(Nk)
     Nlso   = Nlat*Nspin*Norb
     !
-    allocate(Kgrid(Nktot,Dim))
+    allocate(Kgrid_(Nktot,Dim))
     allocate(Hk(Nlso,Nlso,Nktot))
     !
     ik=0
@@ -152,7 +153,7 @@ contains
              ik = ik+1
              read(unit,"(3(F15.9,1x))")kx,ky,kz
              kvec = [kx,ky,kz]
-             kgrid(ik,:) = kvec(:Dim)
+             kgrid_(ik,:) = kvec(:Dim)
              do io=1,Nlso
                 read(unit,"(1000(2F15.9,1x))")(Hk(io,jo,ik),jo=1,Nlso)
              enddo
@@ -160,8 +161,12 @@ contains
        enddo
     enddo
     close(unit)
+    if(present(Kgrid))then
+       allocate(Kgrid(Nktot,Dim))
+       Kgrid = Kgrid_
+    endif
     !
-  end subroutine read_hk_w90_array
+  end subroutine read_hk_array
 
 
 
