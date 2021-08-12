@@ -20,13 +20,16 @@ module DMFT_CONVERGENCE
      module procedure i0_check_convergence_relative
      module procedure i1_check_convergence_relative
      module procedure i2_check_convergence_relative
+     module procedure i3_check_convergence_relative
      module procedure d0_check_convergence_relative_
      module procedure d0_check_convergence_relative
      module procedure d1_check_convergence_relative
      module procedure d2_check_convergence_relative
+     module procedure d3_check_convergence_relative
      module procedure z0_check_convergence_relative
      module procedure z1_check_convergence_relative
      module procedure z2_check_convergence_relative
+     module procedure z3_check_convergence_relative
   end interface check_convergence
 
 
