@@ -340,8 +340,9 @@ CONFIGURE_FILE(${DT_ENV}/module.in ${TMP_ENV_MODULE_FILE} @ONLY)
 
 
 #Build the PKG-CONFIG file
+
 SET(TMP_PKCONFIG_FILE ${DT_TMP_ETC}/${PROJECT_NAME}.pc)
-CONFIGURE_FILE( ${DT_ETC}/${PROJECT_NAME}.pc.in ${TMP_PKCONFIG_FILE} @ONLY)
+CONFIGURE_FILE(${DT_ETC}/${PROJECT_NAME}.pc.in ${TMP_PKCONFIG_FILE} @ONLY)
 
 #Build the user CONFIG scripts (sourced in user shell config file, i.e. .bashrc)
 SET(CONFIG_SCRIPT dmft_tools_config_user.sh)
