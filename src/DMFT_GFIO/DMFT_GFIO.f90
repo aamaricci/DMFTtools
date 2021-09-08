@@ -508,7 +508,7 @@ contains
                                     "_i"//str(ilat)//str(jlat)//&
                                     "_l"//str(iorb)//str(jorb)//&
                                     "_s"//str(ispin)//str(jspin)//&
-                                    str(w_suffix)//reg(index)//str(ilat,pad)//reg(gf_suffix)
+                                    str(w_suffix)//reg(index)//str(iineq,pad)//reg(gf_suffix)
                                call splot(reg(suffix),wfreq,Func(iineq,ilat,jlat,ispin,jspin,iorb,jorb,:))
                             enddo
                             suffix=reg(fname)//&
