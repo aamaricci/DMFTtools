@@ -194,6 +194,15 @@ STRING(TOLOWER "${CMAKE_BUILD_TYPE}" BUILD_TYPE)
 SET(PREFIX_DEF_LOC "$ENV{HOME}/opt")
 SET(PREFIX_PROJ "${PROJECT_NAME}")
 SET(PREFIX_PATH "${FC_ID}")
+
+#user can change the default location of the library but not the remaining naming conventions 
+SET(PREFIX  "${PREFIX_DEF_LOC}" CACHE PATH "Prefix prepended to install directories")
+
+#if prefix has not be changed use default module name conventions
+IF(PREFIX STREQUAL "${PREFIX_DEF_LOC}")
+  SET(USE_DEFAULT_MODULE_NAME TRUE)
+ENDIF()
+
 #if not master branch, include simplified branch name
 IF( (NOT GIT_BRANCH MATCHES "master") )
     SET(PREFIX_PATH  "${PREFIX_PATH}/${GIT_BRANCH}")
@@ -207,18 +216,18 @@ ENDIF()
 #set default prefix:
 SET(FULL_VER "${PREFIX_PATH}/${VERSION}")
 SET(VERSION_PATH "${PREFIX_PROJ}/${PREFIX_PATH}")
-SET(DEFAULT_PREFIX "${PREFIX_DEF_LOC}/${PREFIX_PROJ}/${PREFIX_PATH}/${VERSION}")
-SET(PREFIX  "${DEFAULT_PREFIX}" CACHE PATH "Prefix prepended to install directories")
-SET(CMAKE_INSTALL_PREFIX "${PREFIX}" CACHE INTERNAL "Prefix prepended to install directories" FORCE)
+SET(DEFAULT_PREFIX "${PREFIX}/${PREFIX_PROJ}/${PREFIX_PATH}/${VERSION}")
+SET(CMAKE_INSTALL_PREFIX "${DEFAULT_PREFIX}" CACHE INTERNAL "Prefix prepended to install directories" FORCE)
 
 #Now set module name corresponding to given prefix:
 #if prefix is default nothing to be done.
 #if user defined prefix prepend
-IF(PREFIX STREQUAL "${DEFAULT_PREFIX}")
+IF(USE_DEFAULT_MODULE_NAME)
   SET(MODULE_NAME "${PREFIX_PROJ}/${PREFIX_PATH}/${VERSION}")
 ELSE()
   SET(MODULE_NAME "${PREFIX_PROJ}/user_prefix/${PREFIX_PATH}/${VERSION}")
 ENDIF()
+
 
 # Define the library name
 SET(DMFT_TOOLSLIB dmft_tools)
@@ -337,7 +346,7 @@ ENDIF()
 SET(TMP_MODULE_NAME "${MODULE_NAME}" CACHE PATH "Prefix prepended to install directories")
 SET(TMP_ENV_MODULE_FILE ${DT_TMP_ETC}/modules/${TMP_MODULE_NAME})
 CONFIGURE_FILE(${DT_ENV}/module.in ${TMP_ENV_MODULE_FILE} @ONLY)
-
+MESSAGE(STATUS "${Red}Module file${ColourReset}: ${MODULE_NAME}")
 
 #Build the PKG-CONFIG file
 SET(TMP_PKCONFIG_FILE ${DT_TMP_ETC}/${PROJECT_NAME}.pc)
