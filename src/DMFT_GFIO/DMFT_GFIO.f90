@@ -12,8 +12,8 @@ module DMFT_GFIO
 
   implicit none
   private
-
-
+  
+  
   !AGNOSTIC INTERFACE:
   interface dmft_write_function
      module procedure :: dmft_function_print_main
@@ -130,10 +130,10 @@ module DMFT_GFIO
      module procedure :: dmft_function_print_cluster_ineq_realaxis
 #endif
   end interface dmft_print_gf_realaxis
-
-
-
-
+  
+  
+  
+  
   public :: set_gf_suffix
 
   public :: dmft_write_function
