@@ -71,10 +71,12 @@ INCLUDE(${CMAKE_MODULE_PATH}/MainConfig.cmake)
 
 
 
+
 ############################################################
 ############################################################
 ############################################################
 # DEFINE HERE THE DETAILS OF THE LIBRARY CONFIGURATION 
+
 
 # Define some directories
 SET(LIB_SRC ${CMAKE_SOURCE_DIR}/src)

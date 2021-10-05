@@ -80,6 +80,7 @@ contains
     !
     if(bool.and.mpi_master)write(*,"(A)")"TB_set_ei: using default values"
     set_eivec=.true.
+    if(mpi_master) write(*,*) set_eivec
   end subroutine TB_set_ei
 
   subroutine TB_set_bk(bkx,bky,bkz)
@@ -161,16 +162,16 @@ contains
     if(check_MPI())mpi_master= get_master_MPI()
 #endif
     !
-    if(tb_basis_check())stop "TB_get_bk ERROR: neiter ei nor bk basis are set."
+    if(.not.tb_basis_check())stop "TB_get_bk ERROR: neiter ei nor bk basis are set."
     !
     if(.not.set_bkvec)then !set_eivec==T 
        if(mpi_master)write(*,"(A)")"Building bk from ei:"
        call TB_build_bk(.true.)
     endif
     !
-    bkx = b1(1:size(bkx))
-    if(present(bky))bky = b2(1:size(bky))
-    if(present(bkz))bkz = b3(1:size(bkz))
+    bkx = bk_x(1:size(bkx))
+    if(present(bky))bky = bk_y(1:size(bky))
+    if(present(bkz))bkz = bk_z(1:size(bkz))
     !
   end subroutine TB_get_bk
 
@@ -185,7 +186,7 @@ contains
     if(check_MPI())mpi_master= get_master_MPI()
 #endif
     !
-    if(tb_basis_check())stop "TB_get_ei ERROR: neiter ei nor bk basis are set."
+    if(.not.tb_basis_check())stop "TB_get_ei ERROR: neiter ei nor bk basis are set."
     !
     if(.not.set_eivec)then  !set_bkvec==T 
        if(mpi_master)write(*,"(A)")"Building ei from bk:"
