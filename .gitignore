@@ -22,3 +22,4 @@ build_devel_laptop
 build_devel
 build_stable
 src/DMFT_GF/repo
+src/DMFT_TOOLS_VERSION.f90
