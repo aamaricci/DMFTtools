@@ -850,6 +850,10 @@ contains
     !Retrieve parameters:
     call get_ctrl_var(beta,"BETA")
     call get_ctrl_var(xmu,"XMU")
+    call get_ctrl_var(wini,"WINI")
+    call get_ctrl_var(wfin,"WFIN")
+    call get_ctrl_var(eps,"EPS")
+
     !
     Nspin = size(Sreal,2)
     Norb  = size(Sreal,4)
