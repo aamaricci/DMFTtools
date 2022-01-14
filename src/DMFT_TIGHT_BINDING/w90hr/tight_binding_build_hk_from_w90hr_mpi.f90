@@ -62,7 +62,9 @@ subroutine hk_from_w90_hr_mpi(MpiComm,R1,R2,R3,ham_k,ham_loc,w90_file,Nspin,Norb
   endif
   if(num_wann.ne.Nlat*Norb)stop "hk_from_w90_hr. Something is wrong"
   !
-  if(allocated(kpt_latt))deallocate(kpt_latt);allocate(kpt_latt(num_kpts,3))                           ;kpt_latt=0d0
+  if(present(kpt_latt)) then
+     if(allocated(kpt_latt))deallocate(kpt_latt);allocate(kpt_latt(num_kpts,3))                           ;kpt_latt=0d0
+  end if
   if(allocated(ndegen))  deallocate(ndegen)  ;allocate(ndegen(nrpts))                                  ;ndegen=0
   if(allocated(irvec))   deallocate(irvec)   ;allocate(irvec(nrpts,3))                                 ;irvec=0
   if(allocated(ham_r))   deallocate(ham_r)   ;allocate(ham_r(num_wann*Nspin,num_wann*Nspin,nrpts))     ;ham_r=zero
@@ -157,7 +159,7 @@ subroutine hk_from_w90_hr_mpi(MpiComm,R1,R2,R3,ham_k,ham_loc,w90_file,Nspin,Norb
   deallocate(irvec)
   deallocate(ham_r)
   deallocate(ham_aux)
-  if(.not.present(kpt_latt))deallocate(kpt_latt)
+  if(present(kpt_latt))deallocate(kpt_latt)
   call MPI_Barrier(MpiComm,mpi_ierr)
   !
 end subroutine hk_from_w90_hr_mpi
