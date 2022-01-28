@@ -132,7 +132,7 @@ contains
     character(len=5),dimension(3)          :: OrderOut_ !out sequence of Nlat,Nspin,Norb as strings
     OrderOut_=[character(len=5)::"Norb","Nspin","Nlat"];
     if(present(OrderOut))then
-       do i=1,2
+       do i=1,3
           OrderOut_(i) = trim(OrderOut(i))
        enddo
     endif
@@ -156,10 +156,10 @@ contains
     Nout=indx_reorder(Nin,IndexOut)
     !
     if(any(IndexOut/=[1,2,3]))then
-       do iss=1,Nlso
-          Ivec  = i2indices(iss,Nin)           !Map iss to Ivec:(ilat,iorb,ispin) by IN ordering
+       do iuser=1,Nlso
+          Ivec  = i2indices(iuser,Nin)           !Map iss to Ivec:(ilat,iorb,ispin) by IN ordering
           Jvec  = indx_reorder(Ivec,IndexOut)  !Reorder according to Out ordering
-          iuser = indices2i(Jvec,Nout)         !Map back new Jvec to total index iuser by OUT ordering 
+          iss = indices2i(Jvec,Nout)         !Map back new Jvec to total index iuser by OUT ordering 
           !
           Hss(iss) = Huser(iuser)
        enddo
@@ -185,7 +185,7 @@ contains
     !
     OrderOut_=[character(len=5)::"Norb","Nspin","Nlat"];
     if(present(OrderOut))then
-       do i=1,2
+       do i=1,3
           OrderOut_(i) = trim(OrderOut(i))
        enddo
     endif
@@ -209,10 +209,10 @@ contains
     Nout=indx_reorder(Nin,IndexOut)
     !
     if(any(IndexOut/=[1,2,3]))then
-       do iss=1,Nlso
-          Ivec  = i2indices(iss,Nin)           !Map iss to Ivec:(ilat,iorb,ispin) by IN ordering
+       do iuser=1,Nlso
+          Ivec  = i2indices(iuser,Nin)           !Map iss to Ivec:(ilat,iorb,ispin) by IN ordering
           Jvec  = indx_reorder(Ivec,IndexOut)  !Reorder according to Out ordering
-          iuser = indices2i(Jvec,Nout)         !Map back new Jvec to total index iuser by OUT ordering 
+          iss = indices2i(Jvec,Nout)         !Map back new Jvec to total index iuser by OUT ordering 
           !
           Hss(iss) = Huser(iuser)
        enddo
@@ -237,7 +237,7 @@ contains
     !
     OrderOut_=[character(len=5)::"Norb","Nspin","Nlat"];
     if(present(OrderOut))then
-       do i=1,2
+       do i=1,3
           OrderOut_(i) = trim(OrderOut(i))
        enddo
     endif
@@ -262,14 +262,14 @@ contains
     Nout=indx_reorder(Nin,IndexOut)
     !
     if(any(IndexOut/=[1,2,3]))then
-       do iss=1,Nlso
-          Ivec  = i2indices(iss,Nin)           !Map iss to Ivec:(ilat,iorb,ispin) by IN ordering
+       do iuser=1,Nlso
+          Ivec  = i2indices(iuser,Nin)           !Map iss to Ivec:(ilat,iorb,ispin) by IN ordering
           Jvec  = indx_reorder(Ivec,IndexOut)  !Reorder according to Out ordering
-          iuser = indices2i(Jvec,Nout)         !Map back new Jvec to total index iuser by OUT ordering 
-          do jss=1,Nlso
-             Ivec  = i2indices(jss,Nin)
+          iss   = indices2i(Jvec,Nout)         !Map back new Jvec to total index iuser by OUT ordering 
+          do juser=1,Nlso
+             Ivec  = i2indices(juser,Nin)
              Jvec  = indx_reorder(Ivec,IndexOut)
-             juser = indices2i(Jvec,Nout)
+             jss = indices2i(Jvec,Nout)
              !
              Hss(iss,jss) = Huser(iuser,juser)
           enddo
@@ -295,7 +295,7 @@ contains
     !
     OrderOut_=[character(len=5)::"Norb","Nspin","Nlat"];
     if(present(OrderOut))then
-       do i=1,2
+       do i=1,3
           OrderOut_(i) = trim(OrderOut(i))
        enddo
     endif
@@ -321,14 +321,14 @@ contains
     Nout=indx_reorder(Nin,IndexOut)
     !
     if(any(IndexOut/=[1,2,3]))then
-       do iss=1,Nlso
-          Ivec  = i2indices(iss,Nin)           !Map iss to Ivec:(ilat,iorb,ispin) by IN ordering
+       do iuser=1,Nlso
+          Ivec  = i2indices(iuser,Nin)           !Map iss to Ivec:(ilat,iorb,ispin) by IN ordering
           Jvec  = indx_reorder(Ivec,IndexOut)  !Reorder according to Out ordering
-          iuser = indices2i(Jvec,Nout)         !Map back new Jvec to total index iuser by OUT ordering 
-          do jss=1,Nlso
-             Ivec  = i2indices(jss,Nin)
+          iss   = indices2i(Jvec,Nout)         !Map back new Jvec to total index iuser by OUT ordering 
+          do juser=1,Nlso
+             Ivec  = i2indices(juser,Nin)
              Jvec  = indx_reorder(Ivec,IndexOut)
-             juser = indices2i(Jvec,Nout)
+             jss = indices2i(Jvec,Nout)
              !
              Hss(iss,jss) = Huser(iuser,juser)
           enddo
@@ -358,7 +358,7 @@ contains
     !
     OrderOut_=[character(len=5)::"Norb","Nspin","Nlat"];
     if(present(OrderOut))then
-       do i=1,2
+       do i=1,3
           OrderOut_(i) = trim(OrderOut(i))
        enddo
     endif
@@ -384,14 +384,14 @@ contains
     Nout=indx_reorder(Nin,IndexOut)
     !
     if(any(IndexOut/=[1,2,3]))then
-       do iss=1,Nlso
-          Ivec  = i2indices(iss,Nin)           !Map iss to Ivec:(ilat,iorb,ispin) by IN ordering
+       do iuser=1,Nlso
+          Ivec  = i2indices(iuser,Nin)           !Map iss to Ivec:(ilat,iorb,ispin) by IN ordering
           Jvec  = indx_reorder(Ivec,IndexOut)  !Reorder according to Out ordering
-          iuser = indices2i(Jvec,Nout)         !Map back new Jvec to total index iuser by OUT ordering 
-          do jss=1,Nlso
-             Ivec  = i2indices(jss,Nin)
+          iss   = indices2i(Jvec,Nout)         !Map back new Jvec to total index iuser by OUT ordering 
+          do juser=1,Nlso
+             Ivec  = i2indices(juser,Nin)
              Jvec  = indx_reorder(Ivec,IndexOut)
-             juser = indices2i(Jvec,Nout)
+             jss = indices2i(Jvec,Nout)
              !
              Hss(iss,jss,:) = Huser(iuser,juser,:)
           enddo
@@ -417,7 +417,7 @@ contains
     !
     OrderOut_=[character(len=5)::"Norb","Nspin","Nlat"];
     if(present(OrderOut))then
-       do i=1,2
+       do i=1,3
           OrderOut_(i) = trim(OrderOut(i))
        enddo
     endif
@@ -443,14 +443,14 @@ contains
     Nout=indx_reorder(Nin,IndexOut)
     !
     if(any(IndexOut/=[1,2,3]))then
-       do iss=1,Nlso
-          Ivec  = i2indices(iss,Nin)           !Map iss to Ivec:(ilat,iorb,ispin) by IN ordering
+       do iuser=1,Nlso
+          Ivec  = i2indices(iuser,Nin)           !Map iss to Ivec:(ilat,iorb,ispin) by IN ordering
           Jvec  = indx_reorder(Ivec,IndexOut)  !Reorder according to Out ordering
-          iuser = indices2i(Jvec,Nout)         !Map back new Jvec to total index iuser by OUT ordering 
-          do jss=1,Nlso
-             Ivec  = i2indices(jss,Nin)
+          iss   = indices2i(Jvec,Nout)         !Map back new Jvec to total index iuser by OUT ordering 
+          do juser=1,Nlso
+             Ivec  = i2indices(juser,Nin)
              Jvec  = indx_reorder(Ivec,IndexOut)
-             juser = indices2i(Jvec,Nout)
+             jss = indices2i(Jvec,Nout)
              !
              Hss(iss,jss,:) = Huser(iuser,juser,:)
           enddo
@@ -551,7 +551,9 @@ contains
     integer,dimension(size(Ain)) :: Index
     integer,dimension(size(Ain)) :: Aout
     integer                        :: i
-    forall(i=1:size(Ain))Aout(Index(i)) = Ain(i)
+    do i=1,size(Ain)
+       Aout(i) = Ain(Index(i))!Aout(Index(i)) = Ain(i)
+    enddo
   end function indx_reorder
 
 
