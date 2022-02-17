@@ -242,6 +242,7 @@ contains
     !
     if(TB_w90%Irenorm)then
        Hk   = Hk - TB_w90%Hloc
+       !Hk_f = Hk*outerprod(TB_w90%Zeta,TB_w90%Zeta)
        Hk_f = (TB_w90%Zeta .x. Hk) .x. TB_w90%Zeta
        Hk   = Hk_f + TB_w90%Hloc + TB_w90%Self
     endif
@@ -368,11 +369,13 @@ contains
 
 
   subroutine Hloc_w90(Hloc)
-    real(8),dimension(:,:) :: Hloc
-    integer                :: Nlso
+    complex(8),dimension(:,:) :: Hloc
+    integer                   :: Nlso
     Nlso = TB_w90%Nlso
     call assert_shape(Hloc,[Nlso,Nlso],"Hloc_w90","Hloc")
     Hloc = TB_w90%Hloc
+    if(TB_w90%Ifermi)Hloc = Hloc - TB_w90%Efermi*eye(Nlso)
+    !
   end subroutine Hloc_w90
 
   subroutine FermiLevel_w90(Nkvec,filling,Ef)
