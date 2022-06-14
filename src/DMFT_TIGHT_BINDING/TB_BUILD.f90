@@ -72,7 +72,7 @@ contains
 
 
 
-  subroutine build_hk_model_Nkvec(Hk,hk_model,Norb,Nkvec,wdos)
+  subroutine build_hk_model_Nkvec(Hk,hk_model,Norb,Nkvec,kgrid_out,wdos,iprint)
     integer,dimension(:),intent(in)                :: Nkvec
     integer                                        :: Norb
     real(8),dimension(product(Nkvec),size(Nkvec))  :: kgrid ![Nk][Ndim]
@@ -86,8 +86,14 @@ contains
          complex(8),dimension(N,N) :: hk_model
        end function hk_model
     end interface
-    logical,optional                           :: wdos
-    logical                                    :: wdos_
+    logical,optional                           :: wdos,iprint
+    logical                                    :: wdos_,iprint_
+    integer                                    :: unit_io
+    real(8),dimension(:,:),allocatable,optional,intent(out)         :: kgrid_out
+    !
+    iprint_=.false.
+    if(present(iprint)) iprint_=iprint
+    write(*,*) iprint_
     !
     !MPI setup:
 #ifdef _MPI    
@@ -125,6 +131,19 @@ contains
 #else
     Hk = Haux
 #endif
+    if(iprint_.and.mpi_master) then
+       unit_io=free_unit()
+       open(unit_io,file='kgrid.out')
+       do ik=1,Nktot
+          write(unit_io,*) kgrid(ik,:)
+       end do
+       close(unit_io)
+    end if
+    if(present(kgrid_out)) then
+       if(allocated(kgrid_out)) deallocate(kgrid_out)
+       allocate(kgrid_out(size(kgrid,1),size(kgrid,2)))
+       kgrid_out=kgrid
+    end if
   end subroutine build_hk_model_Nkvec
 
 

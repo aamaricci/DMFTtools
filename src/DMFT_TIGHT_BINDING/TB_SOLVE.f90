@@ -76,10 +76,9 @@ contains
     !
     !
     if(mpi_master)then
-       write(*,*)"Solving model along the path:"
-       write(fmt,"(A3,I0,A)")"(A,",size(kpath,2),"F7.4,A1)"
+       write(*,*)"solving model along the path:"
        do ipts=1,Npts
-          write(*,fmt)"Point"//str(ipts)//": [",(kpath(ipts,ic),ic=1,size(kpath,2)),"]"
+          write(*,*)"Point"//str(ipts)//": [",(kpath(ipts,ic),ic=1,size(kpath,2)),"]"
        enddo
     endif
     !
