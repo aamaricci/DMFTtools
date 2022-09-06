@@ -584,13 +584,14 @@ contains
 
   subroutine add_to_A2(vec,val)
     real(8),dimension(:,:),allocatable,intent(inout) :: vec
-    real(8),intent(in),dimension(size(vec,2))        :: val  
+    real(8),intent(in),dimension(:)                  :: val
     real(8),dimension(:,:),allocatable               :: tmp
     integer                                          :: n,ndim
     !
-    ndim = size(vec,2)
+    ndim = size(val)
     !
     if (allocated(vec)) then
+       if(size(vec,2)/=ndim)stop "add_to_A2 error: size(vec,2)!=ndim"
        n = size(vec,1)
        allocate(tmp(n+1,ndim))
        tmp(1:n,:) = vec
@@ -609,15 +610,17 @@ contains
 
 
   subroutine add_to_A3(vec,val)
-    real(8),dimension(:,:,:),allocatable,intent(inout)    :: vec
-    real(8),dimension(size(vec,2),size(vec,3)),intent(in) :: val  
-    real(8),dimension(:,:,:),allocatable                  :: tmp
-    integer                                               :: n,n2,n3
+    real(8),dimension(:,:,:),allocatable,intent(inout) :: vec
+    real(8),dimension(:,:),intent(in)                  :: val  
+    real(8),dimension(:,:,:),allocatable               :: tmp
+    integer                                            :: n,n2,n3
     !
-    n2 = size(vec,2)
-    n3 = size(vec,3)
+    n2 = size(val,1)
+    n3 = size(val,2)
     !
     if (allocated(vec)) then
+       if(n2/=size(vec,2))stop "add_to_A3 error: size(vec,2)!=n2"
+       if(n3/=size(vec,3))stop "add_to_A3 error: size(vec,3)!=n3"
        n = size(vec,1)
        allocate(tmp(n+1,n2,n3))
        tmp(1:n,:,:) = vec

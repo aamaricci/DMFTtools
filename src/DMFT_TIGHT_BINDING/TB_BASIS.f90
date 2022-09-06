@@ -339,23 +339,26 @@ contains
 
 
 
-  subroutine build_kgrid(Nkvec,kgrid,origin)
+  subroutine build_kgrid(Nkvec,kgrid,origin,width)
     integer,dimension(:)                    :: Nkvec
     real(8),dimension(:,:)                  :: kgrid ![Nk][Ndim]
     real(8),dimension(size(Nkvec)),optional :: origin
+    real(8),dimension(size(Nkvec)),optional :: width
     real(8),dimension(size(Nkvec))          :: kvec
     real(8),dimension(:),allocatable        :: grid_x,grid_y,grid_z
     integer                                 :: ik,Ivec(3),Nk(3),ndim,Nktot,i
-    real(8),dimension(3)                    :: ktmp
+    real(8),dimension(3)                    :: ktmp,wtmp
     !
     if(.not.set_bkvec)stop "TB_build_grid ERROR: bk vectors not set"
     !
     Nktot = product(Nkvec)
     Ndim  = size(Nkvec)          !dimension of the grid to be built
+    wtmp      = 1d0
+    BZ_origin = 0d0
     call assert_shape(kgrid,[Nktot,Ndim],"build_kgrid","kgrid")
     !
     if(present(origin))BZ_origin(:Ndim)=origin
-    !
+    if(present(width))wtmp(1:ndim)=width
     Nk=1
     do ik=1,Ndim
        Nk(ik)=Nkvec(ik)
@@ -368,9 +371,9 @@ contains
     allocate(grid_y(Nk(2)))   
     allocate(grid_z(Nk(3)))
     !
-    grid_x = linspace(0d0,1d0,Nk(1),iend=.false.) + BZ_origin(1)
-    grid_y = linspace(0d0,1d0,Nk(2),iend=.false.) + BZ_origin(2)
-    grid_z = linspace(0d0,1d0,Nk(3),iend=.false.) + BZ_origin(3)
+    grid_x = linspace(0d0,wtmp(1),Nk(1),iend=.false.) + BZ_origin(1)
+    grid_y = linspace(0d0,wtmp(2),Nk(2),iend=.false.) + BZ_origin(2)
+    grid_z = linspace(0d0,wtmp(3),Nk(3),iend=.false.) + BZ_origin(3)
     !
     do ik=1,Nktot
        ivec = i2indices(ik,Nk)
@@ -378,6 +381,116 @@ contains
        kgrid(ik,:) = ktmp(1)*bk_x(:ndim) + ktmp(2)*bk_y(:ndim) + ktmp(3)*bk_z(:ndim)
     end do
   end subroutine build_kgrid
+
+  subroutine refine_kgrid(kgridIN,Nkvec,kcenters,lambda,kgrid)
+    real(8),dimension(:,:)                :: kgridIN
+    integer,dimension(:)                  :: Nkvec
+    real(8),dimension(:,:)                :: kcenters
+    real(8),dimension(size(Nkvec))        :: lambda
+    real(8),dimension(:,:),allocatable    :: kgrid
+    !
+    real(8),dimension(size(Nkvec))        :: kvec
+    real(8),dimension(:),allocatable      :: grid_x,grid_y,grid_z
+    integer                               :: ik,Ivec(3),Nk(3),ndim,Nktot,i,Ncntr,NkIN,icntr,jcntr
+    real(8),dimension(3)                  :: ktmp,wtmp
+    real(8),dimension(3,3)                :: bk_grid
+    real(8),dimension(size(kcenters,1),3) :: kstart
+    real(8),dimension(3)                  :: Lb,Dk,Kpt
+    logical                               :: boolBZ
+    logical,dimension(size(kcenters,1))   :: cond_Lvec
+    !
+    if(.not.set_bkvec)stop "TB_build_grid ERROR: bk vectors not set"
+    !
+    mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
+    !
+    !
+    Ndim  = size(kgridIN,2)
+    Ncntr = size(kcenters,1)
+    if(Ndim /= size(Nkvec))stop "refine_kgrid error: Nkvec has bad dimension"
+    call assert_shape(kcenters,[Ncntr,Ndim],"refine_kgrid","kcenters")
+    !
+    Nk=1
+    do ik=1,Ndim
+       Nk(ik)=Nkvec(ik)
+    enddo
+    if(product(Nk)/=product(Nkvec))stop "refine_grid error: product(Nkvec) != product(Nk)"
+    Nktot = product(Nk)
+    !
+    !< get a local copy of the basis vectors:
+    call TB_get_bk(bk_grid(1,:),bk_grid(2,:),bk_grid(3,:))
+    do i=1,3
+       Lb(i) = sqrt(dot_product(bk_grid(i,:),bk_grid(i,:)))
+    enddo
+    !
+    Dk     = 0d0
+    kstart = 0d0
+    !
+    Dk(:Ndim) = lambda
+    do icntr=1,Ncntr
+       kstart(icntr,:Ndim) = kcenters(icntr,:Ndim)/Lb(:Ndim) - Dk(:Ndim)/2
+    enddo
+    !
+    !Check if, for every center, Ktmp is in the patch. If not add it to the actual grid
+    do ik=1,size(kgridIN,1)
+       ktmp=0d0;ktmp(:Ndim) = KgridIN(ik,:)/Lb(:Ndim)
+       forall(icntr=1:Ncntr)cond_Lvec(icntr) = in_rectangle(kstart(icntr,:Ndim),Dk(:Ndim),Ktmp(:Ndim),.false.)
+       if(any(cond_Lvec))cycle
+       call add_to(kgrid,kgridIN(ik,:))
+    enddo
+    !
+    !Now refine the grid:
+    do icntr=1,Ncntr
+       !
+       grid_x = linspace(0d0,Dk(1),Nk(1),iend=.false.) + kstart(icntr,1)
+       grid_y = linspace(0d0,Dk(2),Nk(2),iend=.false.) + kstart(icntr,2)
+       grid_z = linspace(0d0,Dk(3),Nk(3),iend=.false.) + kstart(icntr,3)
+       !
+       do ik=1,Nktot
+          ivec = i2indices(ik,Nk)
+          Kpt  = [grid_x(ivec(1)), grid_y(ivec(2)), grid_z(ivec(3))]
+          !
+          !if the point is not in the BZ cycle
+          boolBZ = in_rectangle(BZ_origin(:Ndim),dble(ones(Ndim)),Kpt(:Ndim),.true.)
+          if(.not.boolBZ)cycle
+          !
+          !if the point is in any other patch: cycle
+          if(icntr>1)then
+             forall(jcntr=icntr-1:1:-1)&
+                  cond_Lvec(jcntr) = in_rectangle(kstart(jcntr,:Ndim),Dk(:Ndim),Kpt(:Ndim),.false.)
+             if(any(cond_Lvec(icntr-1:1:-1)))cycle
+          endif
+          !
+          forall(i=1:Ndim)kvec(i) = dot_product(Kpt,bk_grid(:,i))
+          call add_to(kgrid,kvec)
+       end do
+    enddo
+    !
+  contains
+    !
+    pure function in_rectangle(o,L,p,equal) result(bool)
+      real(8),dimension(:),intent(in)       :: o
+      real(8),dimension(size(o)),intent(in) :: L
+      real(8),dimension(size(o)),intent(in) :: p
+      logical,intent(in)                    :: equal
+      logical                               :: bool
+      integer                               :: idim
+      if(equal)then
+         bool = p(1)>=o(1) .AND. p(1)<=o(1)+L(1)
+         do idim=2,size(o)
+            bool = bool .AND. p(idim)>=o(idim) .AND. p(idim)<=o(idim)+L(idim)
+         enddo
+      else
+         bool = p(1)>o(1) .AND. p(1)<o(1)+L(1)
+         do idim=2,size(o)
+            bool = bool .AND. p(idim)>o(idim) .AND. p(idim)<o(idim)+L(idim)
+         enddo
+      endif
+    end function in_rectangle
+    !
+  end subroutine refine_kgrid
 
 
   subroutine build_kgrid_generic(Nkvec,kgrid_x,kgrid_y,kgrid_z)

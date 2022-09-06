@@ -14,6 +14,7 @@ module DMFT_TIGHT_BINDING
   !TB_BASIS
   interface TB_build_kgrid
      module procedure :: build_kgrid
+     module procedure :: refine_kgrid
      module procedure :: build_kgrid_generic
      module procedure :: kgrid_from_path_grid
      module procedure :: kgrid_from_path_dim
@@ -21,6 +22,7 @@ module DMFT_TIGHT_BINDING
   end interface TB_build_kgrid
   interface TB_kgrid
      module procedure :: build_kgrid
+     module procedure :: refine_kgrid
      module procedure :: build_kgrid_generic
      module procedure :: kgrid_from_path_grid
      module procedure :: kgrid_from_path_dim
