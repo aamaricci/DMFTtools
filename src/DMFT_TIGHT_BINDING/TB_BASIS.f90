@@ -454,7 +454,9 @@ contains
           !
           !if the point is not in the BZ cycle
           boolBZ = in_rectangle(BZ_origin(:Ndim),dble(ones(Ndim)),Kpt(:Ndim),.true.)
-          if(.not.boolBZ)cycle
+          if(.not.boolBZ)then !cycle
+             where(Kpt(:Ndim)<0d0)Kpt(:Ndim)=Kpt(:Ndim)+1d0
+          endif
           !
           !if the point is in any other patch: cycle
           if(icntr>1)then
