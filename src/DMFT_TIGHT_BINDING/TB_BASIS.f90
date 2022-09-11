@@ -382,16 +382,18 @@ contains
     end do
   end subroutine build_kgrid
 
-  subroutine refine_kgrid(kgridIN,Nkvec,kcenters,lambda,kgrid)
+  
+  subroutine refine_kgrid(kgridIN,Nkvec,kcenters,lambda,KgridOut,WkOut)
     real(8),dimension(:,:)                :: kgridIN
     integer,dimension(:)                  :: Nkvec
     real(8),dimension(:,:)                :: kcenters
     real(8),dimension(size(Nkvec))        :: lambda
-    real(8),dimension(:,:),allocatable    :: kgrid
+    real(8),dimension(:,:),allocatable    :: KgridOut
+    integer,dimension(:),allocatable      :: WkOut
     !
     real(8),dimension(size(Nkvec))        :: kvec
     real(8),dimension(:),allocatable      :: grid_x,grid_y,grid_z
-    integer                               :: ik,Ivec(3),Nk(3),ndim,Nktot,i,Ncntr,NkIN,icntr,jcntr
+    integer                               :: ik,Ivec(3),Nk(3),ndim,Nktot,i,Ncntr,NkIN,icntr,jcntr,NkClean,NkRefined,NkOut
     real(8),dimension(3)                  :: ktmp,wtmp
     real(8),dimension(3,3)                :: bk_grid
     real(8),dimension(size(kcenters,1),3) :: kstart
@@ -436,10 +438,13 @@ contains
     !Check if, for every center, Ktmp is in the patch. If not add it to the actual grid
     do ik=1,size(kgridIN,1)
        ktmp=0d0;ktmp(:Ndim) = KgridIN(ik,:)/Lb(:Ndim)
-       forall(icntr=1:Ncntr)cond_Lvec(icntr) = in_rectangle(kstart(icntr,:Ndim),Dk(:Ndim),Ktmp(:Ndim),.false.)
+       do icntr=1,Ncntr
+          cond_Lvec(icntr) = in_rectangle(kstart(icntr,:Ndim),Dk(:Ndim),Ktmp(:Ndim),.true.)
+       enddo
        if(any(cond_Lvec))cycle
-       call add_to(kgrid,kgridIN(ik,:))
+       call add_to(kgridOut,kgridIN(ik,:))
     enddo
+    NkClean = size(KgridOut,1)
     !
     !Now refine the grid:
     do icntr=1,Ncntr
@@ -451,44 +456,115 @@ contains
        do ik=1,Nktot
           ivec = i2indices(ik,Nk)
           Kpt  = [grid_x(ivec(1)), grid_y(ivec(2)), grid_z(ivec(3))]
+          where(Kpt(:Ndim)<0d0)Kpt(:Ndim)=Kpt(:Ndim)+1d0
           !
           !if the point is not in the BZ cycle
           boolBZ = in_rectangle(BZ_origin(:Ndim),dble(ones(Ndim)),Kpt(:Ndim),.true.)
-          if(.not.boolBZ)then !cycle
-             where(Kpt(:Ndim)<0d0)Kpt(:Ndim)=Kpt(:Ndim)+1d0
-          endif
           !
           !if the point is in any other patch: cycle
           if(icntr>1)then
-             forall(jcntr=icntr-1:1:-1)&
-                  cond_Lvec(jcntr) = in_rectangle(kstart(jcntr,:Ndim),Dk(:Ndim),Kpt(:Ndim),.false.)
+             do jcntr=icntr-1,1,-1
+                cond_Lvec(jcntr) = in_rectangle(kstart(jcntr,:Ndim),Dk(:Ndim),Kpt(:Ndim),.false.)
+             enddo
              if(any(cond_Lvec(icntr-1:1:-1)))cycle
           endif
           !
           forall(i=1:Ndim)kvec(i) = dot_product(Kpt,bk_grid(:,i))
-          call add_to(kgrid,kvec)
+          call add_to(KgridOut,kvec)
        end do
     enddo
+    NkOut     = size(KgridOut,1)
+    NkRefined = NkOut-NkClean
+    allocate(WkOut(Nkout))
+    WkOut(1:NkClean) = NkClean
+    WkOut(NkClean+1:)= NkRefined
     !
   contains
     !
-    pure function in_rectangle(o,L,p,equal) result(bool)
+    function in_rectangle(o,L,p,equal) result(bool)
       real(8),dimension(:),intent(in)       :: o
       real(8),dimension(size(o)),intent(in) :: L
       real(8),dimension(size(o)),intent(in) :: p
+      real(8),dimension(size(o))            :: a,b
       logical,intent(in)                    :: equal
       logical                               :: bool
-      integer                               :: idim
+      integer                               :: idim,icase
+      if(any(L>1d0))stop "in_rectangle error: L>1 c`mon! "
+      !Ensure a < b
+      a = o
+      b = o+L
+      !check point p is in [0:1)
+      if(any(p<0d0))stop "in_rectangle error: any(p<0d0)"
+      if(any(p>1d0))stop "in_rectangle error: any(p>1d0)"
+      !check different case with respect to [0:1) periodicity:
+      !Case 1: 0<a_i<1, 0<b_i<1 DEFAULT
+      icase = 1
+      !Case 2: a_i < 0 + b=a+L < 1
+      if(any(a<0d0).AND.any(b<1d0))icase = 2
+      !Case 3: b_i > 1 + a=b-L < 1 
+      if(any(b>1d0).AND.any(a<1d0))icase = 3
+      !Case 4: a < b < 0
+      if(any(a<0d0).AND.any(b<0d0))icase = 4
+      !Case 5: b > a > 1
+      if(any(a>1d0).AND.any(b>1d0))icase = 5
+      !
+      !p in [0:1)
       if(equal)then
-         bool = p(1)>=o(1) .AND. p(1)<=o(1)+L(1)
-         do idim=2,size(o)
-            bool = bool .AND. p(idim)>=o(idim) .AND. p(idim)<=o(idim)+L(idim)
-         enddo
+         select case(icase)
+         case default           ! 0 < a_i <= p_i <= b_i < 1
+            bool = p(1)>=a(1) .AND. p(1)<=b(1)
+            do idim=2,size(o)
+               bool = bool .AND. (p(idim)>=a(idim) .AND. p(idim)<=b(idim))
+            enddo
+         case(2)                ! 0 < a_i+1 <= p_i || p_i <= b_i < 1
+            bool = p(1)>=(a(1)+1d0) .OR. p(1)<=b(1)
+            do idim=2,size(o)
+               bool = bool .AND. (p(idim)>=(a(idim)+1d0) .OR. p(idim)<=b(idim))
+            enddo
+         case(3)                ! 0 < a_i <= p_i || p_i < b_i-1 < 1
+            bool = p(1)>=a(1) .OR. p(1)<=(b(1)-1d0)
+            do idim=2,size(o)
+               bool = bool .AND. (p(idim)>=a(idim) .OR. p(idim)<=(b(idim)-1d0))
+            enddo
+         case(4)                ! 0 < a_i+1 < p_i && p_i < b_i+1 < 1
+            bool = p(1)>=(a(1)+1d0) .AND. p(1)<=(b(1)+1d0)
+            do idim=2,size(o)
+               bool = bool .AND. (p(idim)>=(a(idim)+1d0) .AND. p(idim)<=(b(idim)+1d0))
+            enddo
+         case(5)                ! 0 < a_i-1 < p_i && p_i < b_i-1 < 1
+            bool = p(1)>=(a(1)-1d0) .AND. p(1)<=(b(1)-1d0)
+            do idim=2,size(o)
+               bool = bool .AND. (p(idim)>=(a(idim)-1d0) .AND. p(idim)<=(b(idim)-1d0))
+            enddo
+         end select
       else
-         bool = p(1)>o(1) .AND. p(1)<o(1)+L(1)
-         do idim=2,size(o)
-            bool = bool .AND. p(idim)>o(idim) .AND. p(idim)<o(idim)+L(idim)
-         enddo
+         select case(icase)
+         case default           ! 0 < a_i < p_i < b_i < 1
+            bool = p(1)>a(1) .AND. p(1)<b(1)
+            do idim=2,size(o)
+               bool = bool .AND. (p(idim)>a(idim) .AND. p(idim)<b(idim))
+            enddo
+         case(2)                ! 0 < a_i+1 < p_i || p_i < b_i < 1
+            bool = p(1)>(a(1)+1d0) .OR. p(1)<b(1)
+            do idim=2,size(o)
+               bool = bool .AND. (p(idim)>(a(idim)+1d0) .OR. p(idim)<b(idim))
+            enddo
+         case(3)                ! 0 < a_i < p_i || p_i < b_i-1 < 1
+            bool = p(1)>a(1) .OR. p(1)<(b(1)-1d0)
+            do idim=2,size(o)
+               bool = bool .AND. (p(idim)>a(idim) .OR. p(idim)<(b(idim)-1d0))
+            enddo
+         case(4)                ! 0 < a_i+1 < p_i && p_i < b_i+1 < 1
+            bool = p(1)>(a(1)+1d0) .AND. p(1)<(b(1)+1d0)
+            do idim=2,size(o)
+               bool = bool .AND. (p(idim)>(a(idim)+1d0) .AND. p(idim)<(b(idim)+1d0))
+            enddo
+         case(5)                ! 0 < a_i-1 < p_i && p_i < b_i-1 < 1
+            bool = p(1)>(a(1)-1d0) .AND. p(1)<(b(1)-1d0)
+            do idim=2,size(o)
+               bool = bool .AND. (p(idim)>(a(idim)-1d0) .AND. p(idim)<(b(idim)-1d0))
+            enddo
+         end select
       endif
     end function in_rectangle
     !
