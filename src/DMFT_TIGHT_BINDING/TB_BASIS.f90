@@ -382,14 +382,14 @@ contains
     end do
   end subroutine build_kgrid
 
-  
+
   subroutine refine_kgrid(kgridIN,Nkvec,kcenters,lambda,KgridOut,WkOut)
     real(8),dimension(:,:)                :: kgridIN
     integer,dimension(:)                  :: Nkvec
     real(8),dimension(:,:)                :: kcenters
     real(8),dimension(size(Nkvec))        :: lambda
     real(8),dimension(:,:),allocatable    :: KgridOut
-    integer,dimension(:),allocatable      :: WkOut
+    real(8),dimension(:),allocatable      :: WkOut
     !
     real(8),dimension(size(Nkvec))        :: kvec
     real(8),dimension(:),allocatable      :: grid_x,grid_y,grid_z
@@ -409,6 +409,7 @@ contains
 #endif
     !
     !
+    NkIN  = size(kgridIN,1)
     Ndim  = size(kgridIN,2)
     Ncntr = size(kcenters,1)
     if(Ndim /= size(Nkvec))stop "refine_kgrid error: Nkvec has bad dimension"
@@ -476,8 +477,8 @@ contains
     NkOut     = size(KgridOut,1)
     NkRefined = NkOut-NkClean
     allocate(WkOut(Nkout))
-    WkOut(1:NkClean) = NkClean
-    WkOut(NkClean+1:)= NkRefined
+    WkOut(1:NkClean) = (1d0-product(lambda))/NkClean
+    WkOut(NkClean+1:)= product(lambda)/NkRefined
     !
   contains
     !
