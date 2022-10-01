@@ -1,85 +1,87 @@
-# DMFTtools
-This is a collection of fortran modules and procedures to support quantum many-body, specifically Dynamical Mean-Field THeory, calculations. 
+# DMFTtools  
+This is a collection of fortran modules and routines to support quantum many-body calculations, with a strong focus on Dynamical Mean-Field Theory.
 
-There are large portions of useful software missing. Anyone is welcome to contribute or to test the software. 
+There are still many useful features missing. Anyone is welcome to contribute or to test the software. 
 
 
 ### Dependencies
 
-* gfortran > 5.0 **OR** ifort  > 13.0
-* cmake > 3.0.0    
-* scifor  ( https://github.com/QcmPlab/SciFortran )   
-* MPI ( https://github.com/open-mpi/ompi )  [optional, recommended]
+* [GNU Fortran (`gfortran`)](https://gcc.gnu.org/fortran/) > 5.0 **OR** [Intel Fortran Compiler Classic (`ifort`)](https://www.intel.com/content/www/us/en/developer/tools/oneapi/fortran-compiler.html)  > 13.0
+* [CMake](https://cmake.org/) ≥ 3.0 [> 3.16 for ninja support] 
+* [Make](https://www.gnu.org/software/make/) **OR** [Ninja](https://ninja-build.org/) ≥ 1.10 
+* [SciFortran](https://github.com/QcmPlab/SciFortran), our scientific fortran library
+* [MPI](https://github.com/open-mpi/ompi)  [optional, recommended]
+* [ScaLAPACK](https://github.com/Reference-ScaLAPACK/scalapack)  [optional, recommended] 
 
-The `scifor` library must be installed and loaded in the system. Info are contained in the linked repository. 
-
+If any of the required libraries is not available in your system, or the version requirement is not satisfied, please install/upgrade them. Except for SciFortran (for which you should follow the installation instructions reported in the linked README), we generally advice for pre-packaged versions, as provided by either [`apt`](https://en.wikipedia.org/wiki/APT_(software)), [`pip`](https://pypi.org/project/pip/), [`brew`](https://formulae.brew.sh/), [`conda`](https://docs.conda.io/en/latest/) or [`spack`](https://spack.io/). The latter may provide the best options for HPC environments (trivial installation without sudo, easy management of interdependent multiple versions, automatic generation of environment modules, etc.), but choose freely according to your needs.
 
 ## BUILD
 
-Installation is available using CMake. 
-Clone the repo:
+Our build system relies on CMake. Clone the repo:
 
 `git clone https://github.com/QcmPlab/DMFTtools dmft_tools`
 
-### Make
-From the repository directory (`cd dmft_tools`) make a standard out-of-source CMake-Make compilation:
+<details>
+<summary> Using <tt>make</tt> (click to expand) </summary>
+Default CMake workflow, with widest version support (CMake > 3.0).
 
-`mkdir build`  
-`cd build`  
-`cmake ..`      (*)  
-`make`     
-`make install`   
+```
+mkdir build 
+cd build  
+cmake .. 
+make
+```      
 
+</details>
 
-### Ninja
+<details>
+<summary> Using <tt>ninja</tt> (click to expand)</summary>
 
-If `ninja` ( https://ninja-build.org ) be available in your system, you can use it to build and install the library. 
+If a fortran-capable[^3] version of `ninja` ( https://ninja-build.org ) is available in your system (and CMake can[^4] take advantage of it), you can use it to build the library at lightning, multi-threaded, speed. 
 
-From the repository directory (`cd dmft_tools`) make a standard out-of-source CMake-Ninja compilation:
+```
+mkdir build    
+cd build  
+cmake -GNinja ..  
+ninja
+```       
 
-`mkdir build`  
-`cd build`  
-`cmake -GNinja ..`      (*)  
-`ninja`     
-`ninja install`   
+</details>
 
+[^3]: Ninja did not support fortran before version 1.10, although Kitware has long mantained a fortran-capable fork, which might be obtained easily as a [Spack package](https://packages.spack.io/package.html?name=ninja-fortran). Nevertheless we note that as of fall 2022 `pip install ninja --user` [ships Ninja v1.10.2](https://pypi.org/project/ninja/), hence obtaining a suitable official Ninja release should be trivial.
 
-(*) *In some cases CMake fails to find the MPI Fortran compiler, even if it is effectively installed and loaded into the system. An easy fix is to setup and export the `FC=mpif90` environment variable before invoking `cmake`.* 
-
+[^4]: This depends on your CMake version. Comparing [this](https://cmake.org/cmake/help/v3.16/generator/Ninja.html#fortran-support) to [this](https://cmake.org/cmake/help/v3.17/generator/Ninja.html#fortran-support) would suggest that CMake started supporting Ninja's fortran features only after v3.17 but we have verified that at least v3.16.3 (current version shipped by `apt` on Ubuntu 20.04 LTS) does indeed work. For more information you can take a look to a [related SciFortran issue](https://github.com/QcmPlab/SciFortran/issues/16). 
 
 ## INSTALL
 
-Installation is completed after the build step using either: 
+System-wide installation is completed after the build step using either: 
 
-`make install`  
+```
+make install
+```  
 
 or   
 
-`ninja install`  
+```
+ninja install
+```  
  
-To complete the installation you should follow the instructions printed on the screen, which suggest different ways to load the library in your system.
+To actually link the library we provide some alternatives: 
 
+* A generated [pkg-config](https://github.com/freedesktop/pkg-config) file to, installed to `~/.pkgconfig.d/dmft_tools.pc`  
+* A generated [environment module](https://github.com/cea-hpc/modules), installed to `~/.modules.d/dmft_tools/<PLAT>/<VERSION>`  
+* Two generated `bash` scripts at `<PREFIX>/bin/`, to be sourced for permanent loading (user or global).
 
-The `CMake` compilation can be controlled using the following additional variables, default values between `< >`:   
-
-* `-DPREFIX=prefix directory <~/opt/scifor>` 
-
-* `-DUSE_MPI=<yes>/no`  
-
-* `-DVERBOSE=yes/<no> `  
-
-* `-DBUILD_TYPE=<RELEASE>/TESTING/DEBUG`  
-
+which you can choose among by following the instructions printed on screen.
 
 ## UNINSTALL
 
-`Cmake` does not officially provide uninstall procedure in the generate Makefile. Yet, it is possible to construct one such uninstall mode in a simple way. SCIFOR provides a way to uninstall the files generated inside any out-of-source compilation calling: 
-`make uninstall`  
+CMake does not officially provide uninstall procedures in the generated Make/Ninja files. Hence DMFTtools supplies a homebrew method to remove the generated files by calling (from the relevant build folder): `make uninstall` / `ninja uninstall`. 
 
 
 ### CONTACT
 
-For any information contact the author as:  
+If you encounter bugs or difficulties, please [file an issue](https://github.com/QcmPlab/DMFTtools/issues/new/choose). For any other communication, please reach out to:    
 adriano DOT amaricci @ gmail DOT com
 
 --

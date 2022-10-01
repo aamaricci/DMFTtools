@@ -11,3 +11,4 @@ build*/
 *.inc
 src/DMFT_GF/repo
 src/DMFT_TOOLS_VERSION.f90
+**/*.mod

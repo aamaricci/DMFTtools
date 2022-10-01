@@ -56,18 +56,18 @@ INSTALL(FILES ${LIB_TARGET_ETC}/${PROJECT_NAME}.pc DESTINATION $ENV{HOME}/.pkgco
 
 INSTALL(DIRECTORY ${LIB_TARGET_ETC}/modules/ DESTINATION $ENV{HOME}/.modules.d)
 
-
+get_filename_component(BARE_MAKE_PROGRAM ${CMAKE_MAKE_PROGRAM} NAME)
 MESSAGE( STATUS "${Red}Library version:${ColourReset} ${VERSION}")
 MESSAGE( STATUS "${Red}Library will be installed in:${ColourReset} ${CMAKE_INSTALL_PREFIX}")
 MESSAGE( STATUS "
 >> ${Red}TO CONCLUDE INSTALLATION${ColourReset} <<
 Compile with:
-$ make
+$ ${BARE_MAKE_PROGRAM}
 Install with:
-$ make install
+$ ${BARE_MAKE_PROGRAM} install
 
 Uninstall with:
-$ make uninstall
+$ ${BARE_MAKE_PROGRAM} uninstall
 ")
 
 INSTALL(CODE "MESSAGE(
@@ -75,18 +75,18 @@ INSTALL(CODE "MESSAGE(
 ADD LIBRARY TO YOUR SYSTEM: 
 Pick ONE method below [or add it in your bash profile, e.g. ~/.bashrc]:
 ${Yellow}Method 1: use the provided ${PROJECT_NAME} environment module${ColourReset}:
-   $ module use $HOME/.modules.d
-   $ module load ${PROJECT_NAME}/${FC_PLAT}
+  $ module use $HOME/.modules.d
+  $ module load ${TMP_MODULE_NAME} 
 
-${Yellow}Method 2: source the config script${ColourReset}:
-   $ source ${LIB_TARGET_BIN}/${USER_CONFIG_FILE}
+  ${Yellow}Method 2: source the config script${ColourReset}:
+  $ source ${LIB_TARGET_BIN}/${PROJECT_NAME}_config_user.sh
 
-${Yellow}Method 3: use pkg-config with the provided ${PROJECT_NAME}.pc${ColourReset}:
-   $ export PKG_CONFIG_PATH=${LIB_TARGET_ETC}/:$PKG_CONFIG_PATH
-   $ pkg-config --cflags --libs ${PROJECT_NAME}
+  ${Yellow}Method 3: use pkg-config with the provided ${PROJECT_NAME}.pc${ColourReset}:
+  $ export PKG_CONFIG_PATH=${LIB_TARGET_ETC}/:$PKG_CONFIG_PATH
+  $ pkg-config --cflags --libs ${PROJECT_NAME}
 
-${Yellow}Method ADMIN: Add this line to the system shell configuration file, e.g. /etc/bash.bashrc${ColourReset}
-   $ source ${LIB_TARGET_BIN}/${GLOBAL_CONFIG_FILE}
+  ${Yellow}Method ADMIN: Add this line to the system shell configuration file, e.g. /etc/bash.bashrc${ColourReset}
+  $ source ${LIB_TARGET_BIN}/${PROJECT_NAME}_config_global.sh
 \")
 ")
 
