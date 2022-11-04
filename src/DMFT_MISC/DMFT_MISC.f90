@@ -47,7 +47,7 @@ contains
     loop_name="main-loop";if(present(name))loop_name=name
     unit_    =6          ;if(present(unit))unit_=unit
     id_      =0          ;if(present(id))id_=id
-    write(unit_,*)
+    if(mpi_master)write(unit_,*)
     if(.not.present(max))then
        if(mpi_master)write(unit_,"(A,I5)")"-----"//trim(adjustl(trim(loop_name))),loop,"-----"
     else

@@ -14,15 +14,19 @@ module DMFT_TIGHT_BINDING
   !TB_BASIS
   interface TB_build_kgrid
      module procedure :: build_kgrid
+     module procedure :: refine_kgrid
      module procedure :: build_kgrid_generic
      module procedure :: kgrid_from_path_grid
      module procedure :: kgrid_from_path_dim
+     module procedure :: klen_from_path
   end interface TB_build_kgrid
   interface TB_kgrid
      module procedure :: build_kgrid
+     module procedure :: refine_kgrid
      module procedure :: build_kgrid_generic
      module procedure :: kgrid_from_path_grid
      module procedure :: kgrid_from_path_dim
+     module procedure :: klen_from_path
   end interface TB_kgrid
 
   interface TB_build_Rgrid
@@ -45,14 +49,15 @@ module DMFT_TIGHT_BINDING
 
   !TB_IO
   interface TB_write_hk
+     module procedure :: write_hk_func
+     module procedure :: write_hk_array
      module procedure :: write_hk_w90_func
      module procedure :: write_hk_w90_array
-     module procedure :: write_hk_w90
   end interface TB_write_hk
 
   interface TB_read_hk
+     module procedure :: read_hk_array
      module procedure :: read_hk_w90_array
-     module procedure :: read_hk_w90
   end interface TB_read_hk
 
   interface TB_write_Hloc
@@ -112,7 +117,6 @@ module DMFT_TIGHT_BINDING
   !TB_WANNIER
   interface TB_w90_setup
      module procedure :: setup_w90
-     module procedure :: setup_w90_Hij
   end interface TB_w90_setup
 
   interface TB_fix_w90file
@@ -146,8 +150,6 @@ module DMFT_TIGHT_BINDING
      module procedure :: TB_fsurf_nkvec
      module procedure :: TB_fsurf_w90_nkvec
   end interface TB_fsurface
-
-
 
 
 
@@ -220,6 +222,10 @@ module DMFT_TIGHT_BINDING
   public :: TB_hr_to_hk
 
   public :: TB_slo2lso_model
+  public :: TB_reshape_array
+  public :: TB_reorder_array
+  public :: TB_reshape_hk
+  public :: TB_reorder_hk
   !
   public :: kpoint_gamma
   public :: kpoint_x1

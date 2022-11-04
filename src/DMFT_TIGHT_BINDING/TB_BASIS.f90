@@ -15,11 +15,11 @@
 module TB_BASIS
   USE TB_COMMON
   implicit none
-  
+
 
 contains
 
-  
+
   !This check that at least one basis is set
   !F = F.or.F, T otherwise
   function TB_basis_check() result(bool)
@@ -80,6 +80,7 @@ contains
     !
     if(bool.and.mpi_master)write(*,"(A)")"TB_set_ei: using default values"
     set_eivec=.true.
+    if(mpi_master) write(*,*) set_eivec
   end subroutine TB_set_ei
 
   subroutine TB_set_bk(bkx,bky,bkz)
@@ -161,16 +162,16 @@ contains
     if(check_MPI())mpi_master= get_master_MPI()
 #endif
     !
-    if(tb_basis_check())stop "TB_get_bk ERROR: neiter ei nor bk basis are set."
+    if(.not.tb_basis_check())stop "TB_get_bk ERROR: neiter ei nor bk basis are set."
     !
     if(.not.set_bkvec)then !set_eivec==T 
        if(mpi_master)write(*,"(A)")"Building bk from ei:"
        call TB_build_bk(.true.)
     endif
     !
-    bkx = b1(1:size(bkx))
-    if(present(bky))bky = b2(1:size(bky))
-    if(present(bkz))bkz = b3(1:size(bkz))
+    bkx = bk_x(1:size(bkx))
+    if(present(bky))bky = bk_y(1:size(bky))
+    if(present(bkz))bkz = bk_z(1:size(bkz))
     !
   end subroutine TB_get_bk
 
@@ -185,7 +186,7 @@ contains
     if(check_MPI())mpi_master= get_master_MPI()
 #endif
     !
-    if(tb_basis_check())stop "TB_get_ei ERROR: neiter ei nor bk basis are set."
+    if(.not.tb_basis_check())stop "TB_get_ei ERROR: neiter ei nor bk basis are set."
     !
     if(.not.set_eivec)then  !set_bkvec==T 
        if(mpi_master)write(*,"(A)")"Building ei from bk:"
@@ -338,23 +339,26 @@ contains
 
 
 
-  subroutine build_kgrid(Nkvec,kgrid,origin)
+  subroutine build_kgrid(Nkvec,kgrid,origin,width)
     integer,dimension(:)                    :: Nkvec
     real(8),dimension(:,:)                  :: kgrid ![Nk][Ndim]
     real(8),dimension(size(Nkvec)),optional :: origin
+    real(8),dimension(size(Nkvec)),optional :: width
     real(8),dimension(size(Nkvec))          :: kvec
     real(8),dimension(:),allocatable        :: grid_x,grid_y,grid_z
     integer                                 :: ik,Ivec(3),Nk(3),ndim,Nktot,i
-    real(8),dimension(3)                    :: ktmp
+    real(8),dimension(3)                    :: ktmp,wtmp
     !
     if(.not.set_bkvec)stop "TB_build_grid ERROR: bk vectors not set"
     !
     Nktot = product(Nkvec)
     Ndim  = size(Nkvec)          !dimension of the grid to be built
+    wtmp      = 1d0
+    BZ_origin = 0d0
     call assert_shape(kgrid,[Nktot,Ndim],"build_kgrid","kgrid")
     !
     if(present(origin))BZ_origin(:Ndim)=origin
-    !
+    if(present(width))wtmp(1:ndim)=width
     Nk=1
     do ik=1,Ndim
        Nk(ik)=Nkvec(ik)
@@ -367,9 +371,9 @@ contains
     allocate(grid_y(Nk(2)))   
     allocate(grid_z(Nk(3)))
     !
-    grid_x = linspace(0d0,1d0,Nk(1),iend=.false.) + BZ_origin(1)
-    grid_y = linspace(0d0,1d0,Nk(2),iend=.false.) + BZ_origin(2)
-    grid_z = linspace(0d0,1d0,Nk(3),iend=.false.) + BZ_origin(3)
+    grid_x = linspace(0d0,wtmp(1),Nk(1),iend=.false.) + BZ_origin(1)
+    grid_y = linspace(0d0,wtmp(2),Nk(2),iend=.false.) + BZ_origin(2)
+    grid_z = linspace(0d0,wtmp(3),Nk(3),iend=.false.) + BZ_origin(3)
     !
     do ik=1,Nktot
        ivec = i2indices(ik,Nk)
@@ -377,6 +381,195 @@ contains
        kgrid(ik,:) = ktmp(1)*bk_x(:ndim) + ktmp(2)*bk_y(:ndim) + ktmp(3)*bk_z(:ndim)
     end do
   end subroutine build_kgrid
+
+
+  subroutine refine_kgrid(kgridIN,Nkvec,kcenters,lambda,KgridOut,WkOut)
+    real(8),dimension(:,:)                :: kgridIN
+    integer,dimension(:)                  :: Nkvec
+    real(8),dimension(:,:)                :: kcenters
+    real(8),dimension(size(Nkvec))        :: lambda
+    real(8),dimension(:,:),allocatable    :: KgridOut
+    real(8),dimension(:),allocatable      :: WkOut
+    !
+    real(8),dimension(size(Nkvec))        :: kvec
+    real(8),dimension(:),allocatable      :: grid_x,grid_y,grid_z
+    integer                               :: ik,Ivec(3),Nk(3),ndim,Nktot,i,Ncntr,NkIN,icntr,jcntr,NkClean,NkRefined,NkOut
+    real(8),dimension(3)                  :: ktmp,wtmp
+    real(8),dimension(3,3)                :: bk_grid
+    real(8),dimension(size(kcenters,1),3) :: kstart
+    real(8),dimension(3)                  :: Lb,Dk,Kpt
+    logical                               :: boolBZ
+    logical,dimension(size(kcenters,1))   :: cond_Lvec
+    !
+    if(.not.set_bkvec)stop "TB_build_grid ERROR: bk vectors not set"
+    !
+    mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
+    !
+    !
+    NkIN  = size(kgridIN,1)
+    Ndim  = size(kgridIN,2)
+    Ncntr = size(kcenters,1)
+    if(Ndim /= size(Nkvec))stop "refine_kgrid error: Nkvec has bad dimension"
+    call assert_shape(kcenters,[Ncntr,Ndim],"refine_kgrid","kcenters")
+    !
+    Nk=1
+    do ik=1,Ndim
+       Nk(ik)=Nkvec(ik)
+    enddo
+    if(product(Nk)/=product(Nkvec))stop "refine_grid error: product(Nkvec) != product(Nk)"
+    Nktot = product(Nk)
+    !
+    !< get a local copy of the basis vectors:
+    call TB_get_bk(bk_grid(1,:),bk_grid(2,:),bk_grid(3,:))
+    do i=1,3
+       Lb(i) = sqrt(dot_product(bk_grid(i,:),bk_grid(i,:)))
+    enddo
+    !
+    Dk     = 0d0
+    kstart = 0d0
+    !
+    Dk(:Ndim) = lambda
+    do icntr=1,Ncntr
+       kstart(icntr,:Ndim) = kcenters(icntr,:Ndim)/Lb(:Ndim) - Dk(:Ndim)/2
+    enddo
+    !
+    !Check if, for every center, Ktmp is in the patch. If not add it to the actual grid
+    do ik=1,size(kgridIN,1)
+       ktmp=0d0;ktmp(:Ndim) = KgridIN(ik,:)/Lb(:Ndim)
+       do icntr=1,Ncntr
+          cond_Lvec(icntr) = in_rectangle(kstart(icntr,:Ndim),Dk(:Ndim),Ktmp(:Ndim),.true.)
+       enddo
+       if(any(cond_Lvec))cycle
+       call add_to(kgridOut,kgridIN(ik,:))
+    enddo
+    NkClean = size(KgridOut,1)
+    !
+    !Now refine the grid:
+    do icntr=1,Ncntr
+       !
+       grid_x = linspace(0d0,Dk(1),Nk(1),iend=.false.) + kstart(icntr,1)
+       grid_y = linspace(0d0,Dk(2),Nk(2),iend=.false.) + kstart(icntr,2)
+       grid_z = linspace(0d0,Dk(3),Nk(3),iend=.false.) + kstart(icntr,3)
+       !
+       do ik=1,Nktot
+          ivec = i2indices(ik,Nk)
+          Kpt  = [grid_x(ivec(1)), grid_y(ivec(2)), grid_z(ivec(3))]
+          where(Kpt(:Ndim)<0d0)Kpt(:Ndim)=Kpt(:Ndim)+1d0
+          !
+          !if the point is not in the BZ cycle
+          boolBZ = in_rectangle(BZ_origin(:Ndim),dble(ones(Ndim)),Kpt(:Ndim),.true.)
+          !
+          !if the point is in any other patch: cycle
+          if(icntr>1)then
+             do jcntr=icntr-1,1,-1
+                cond_Lvec(jcntr) = in_rectangle(kstart(jcntr,:Ndim),Dk(:Ndim),Kpt(:Ndim),.false.)
+             enddo
+             if(any(cond_Lvec(icntr-1:1:-1)))cycle
+          endif
+          !
+          forall(i=1:Ndim)kvec(i) = dot_product(Kpt,bk_grid(:,i))
+          call add_to(KgridOut,kvec)
+       end do
+    enddo
+    NkOut     = size(KgridOut,1)
+    NkRefined = NkOut-NkClean
+    allocate(WkOut(Nkout))
+    WkOut(1:NkClean) = (1d0-product(lambda))/NkClean
+    WkOut(NkClean+1:)= product(lambda)/NkRefined
+    !
+  contains
+    !
+    function in_rectangle(o,L,p,equal) result(bool)
+      real(8),dimension(:),intent(in)       :: o
+      real(8),dimension(size(o)),intent(in) :: L
+      real(8),dimension(size(o)),intent(in) :: p
+      real(8),dimension(size(o))            :: a,b
+      logical,intent(in)                    :: equal
+      logical                               :: bool
+      integer                               :: idim,icase
+      if(any(L>1d0))stop "in_rectangle error: L>1 c`mon! "
+      !Ensure a < b
+      a = o
+      b = o+L
+      !check point p is in [0:1)
+      if(any(p<0d0))stop "in_rectangle error: any(p<0d0)"
+      if(any(p>1d0))stop "in_rectangle error: any(p>1d0)"
+      !check different case with respect to [0:1) periodicity:
+      !Case 1: 0<a_i<1, 0<b_i<1 DEFAULT
+      icase = 1
+      !Case 2: a_i < 0 + b=a+L < 1
+      if(any(a<0d0).AND.any(b<1d0))icase = 2
+      !Case 3: b_i > 1 + a=b-L < 1 
+      if(any(b>1d0).AND.any(a<1d0))icase = 3
+      !Case 4: a < b < 0
+      if(any(a<0d0).AND.any(b<0d0))icase = 4
+      !Case 5: b > a > 1
+      if(any(a>1d0).AND.any(b>1d0))icase = 5
+      !
+      !p in [0:1)
+      if(equal)then
+         select case(icase)
+         case default           ! 0 < a_i <= p_i <= b_i < 1
+            bool = p(1)>=a(1) .AND. p(1)<=b(1)
+            do idim=2,size(o)
+               bool = bool .AND. (p(idim)>=a(idim) .AND. p(idim)<=b(idim))
+            enddo
+         case(2)                ! 0 < a_i+1 <= p_i || p_i <= b_i < 1
+            bool = p(1)>=(a(1)+1d0) .OR. p(1)<=b(1)
+            do idim=2,size(o)
+               bool = bool .AND. (p(idim)>=(a(idim)+1d0) .OR. p(idim)<=b(idim))
+            enddo
+         case(3)                ! 0 < a_i <= p_i || p_i < b_i-1 < 1
+            bool = p(1)>=a(1) .OR. p(1)<=(b(1)-1d0)
+            do idim=2,size(o)
+               bool = bool .AND. (p(idim)>=a(idim) .OR. p(idim)<=(b(idim)-1d0))
+            enddo
+         case(4)                ! 0 < a_i+1 < p_i && p_i < b_i+1 < 1
+            bool = p(1)>=(a(1)+1d0) .AND. p(1)<=(b(1)+1d0)
+            do idim=2,size(o)
+               bool = bool .AND. (p(idim)>=(a(idim)+1d0) .AND. p(idim)<=(b(idim)+1d0))
+            enddo
+         case(5)                ! 0 < a_i-1 < p_i && p_i < b_i-1 < 1
+            bool = p(1)>=(a(1)-1d0) .AND. p(1)<=(b(1)-1d0)
+            do idim=2,size(o)
+               bool = bool .AND. (p(idim)>=(a(idim)-1d0) .AND. p(idim)<=(b(idim)-1d0))
+            enddo
+         end select
+      else
+         select case(icase)
+         case default           ! 0 < a_i < p_i < b_i < 1
+            bool = p(1)>a(1) .AND. p(1)<b(1)
+            do idim=2,size(o)
+               bool = bool .AND. (p(idim)>a(idim) .AND. p(idim)<b(idim))
+            enddo
+         case(2)                ! 0 < a_i+1 < p_i || p_i < b_i < 1
+            bool = p(1)>(a(1)+1d0) .OR. p(1)<b(1)
+            do idim=2,size(o)
+               bool = bool .AND. (p(idim)>(a(idim)+1d0) .OR. p(idim)<b(idim))
+            enddo
+         case(3)                ! 0 < a_i < p_i || p_i < b_i-1 < 1
+            bool = p(1)>a(1) .OR. p(1)<(b(1)-1d0)
+            do idim=2,size(o)
+               bool = bool .AND. (p(idim)>a(idim) .OR. p(idim)<(b(idim)-1d0))
+            enddo
+         case(4)                ! 0 < a_i+1 < p_i && p_i < b_i+1 < 1
+            bool = p(1)>(a(1)+1d0) .AND. p(1)<(b(1)+1d0)
+            do idim=2,size(o)
+               bool = bool .AND. (p(idim)>(a(idim)+1d0) .AND. p(idim)<(b(idim)+1d0))
+            enddo
+         case(5)                ! 0 < a_i-1 < p_i && p_i < b_i-1 < 1
+            bool = p(1)>(a(1)-1d0) .AND. p(1)<(b(1)-1d0)
+            do idim=2,size(o)
+               bool = bool .AND. (p(idim)>(a(idim)-1d0) .AND. p(idim)<(b(idim)-1d0))
+            enddo
+         end select
+      endif
+    end function in_rectangle
+    !
+  end subroutine refine_kgrid
 
 
   subroutine build_kgrid_generic(Nkvec,kgrid_x,kgrid_y,kgrid_z)
@@ -687,6 +880,27 @@ contains
     enddo
   end subroutine kgrid_from_path_dim
 
+  subroutine klen_from_path(kpath,Nkpath,karray)
+    real(8),dimension(:,:)                      :: kpath ![Npts][Ndim]
+    integer                                     :: Nkpath
+    real(8),dimension((size(kpath,1)-1)*Nkpath) :: karray ![(Npts-1)*Nkpath]
+    real(8),dimension(size(kpath,2))            :: kstart,kstop,kdiff
+    real(8) :: klen
+    integer                                     :: ipts,ik,ic,dim,Npts
+    Npts = size(kpath,1)
+    ic=0
+    klen=0d0  
+    do ipts=1,Npts-1
+       kstart = kpath(ipts,:)
+       kstop  = kpath(ipts+1,:)
+       kdiff  = (kstop-kstart)/dble(Nkpath)
+       do ik=1,Nkpath
+          ic=ic+1
+          karray(ic) = klen
+          klen = klen + sqrt(dot_product(kdiff,kdiff))          
+       enddo
+    enddo
+  end subroutine klen_from_path
 
 
 

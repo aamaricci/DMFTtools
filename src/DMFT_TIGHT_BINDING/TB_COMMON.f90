@@ -17,8 +17,6 @@ module TB_COMMON
   implicit none
 
 
-
-
   interface add_to
      module procedure :: add_to_A1
      module procedure :: add_to_A2
@@ -26,129 +24,69 @@ module TB_COMMON
   end interface add_to
 
 
+  interface TB_reshape_array
+     module procedure :: tb_reorder_vec_d,tb_reorder_vec_c
+     module procedure :: tb_reorder_mat_d,tb_reorder_mat_c
+     module procedure :: tb_reorder_hk_d,tb_reorder_hk_c
+  end interface TB_reshape_array
+  interface TB_reorder_array
+     module procedure :: tb_reorder_vec_d,tb_reorder_vec_c
+     module procedure :: tb_reorder_mat_d,tb_reorder_mat_c
+     module procedure :: tb_reorder_hk_d,tb_reorder_hk_c
+  end interface TB_reorder_array
+  interface TB_reshape_hk
+     module procedure :: tb_reorder_hk_d,tb_reorder_hk_c
+  end interface TB_reshape_hk
+  interface TB_reorder_hk
+     module procedure :: tb_reorder_hk_d,tb_reorder_hk_c
+  end interface TB_reorder_hk
+
+  interface tb_findloc
+     module procedure :: findloc_char
+     module procedure :: findloc_int
+  end interface tb_findloc
+
 
   !Some special points in the BZ:
   !we do everything in 3d.
-  real(8),dimension(3),public,parameter         :: kpoint_gamma=[0,0,0]*pi
-  real(8),dimension(3),public,parameter         :: kpoint_x1=[1,0,0]*pi
-  real(8),dimension(3),public,parameter         :: kpoint_x2=[0,1,0]*pi
-  real(8),dimension(3),public,parameter         :: kpoint_x3=[0,0,1]*pi
-  real(8),dimension(3),public,parameter         :: kpoint_m1=[1,1,0]*pi
-  real(8),dimension(3),public,parameter         :: kpoint_m2=[0,1,1]*pi
-  real(8),dimension(3),public,parameter         :: kpoint_m3=[1,0,1]*pi
-  real(8),dimension(3),public,parameter         :: kpoint_r=[1,1,1]*pi
+  real(8),dimension(3),parameter :: kpoint_gamma=[0,0,0]*pi
+  real(8),dimension(3),parameter :: kpoint_x1=[1,0,0]*pi
+  real(8),dimension(3),parameter :: kpoint_x2=[0,1,0]*pi
+  real(8),dimension(3),parameter :: kpoint_x3=[0,0,1]*pi
+  real(8),dimension(3),parameter :: kpoint_m1=[1,1,0]*pi
+  real(8),dimension(3),parameter :: kpoint_m2=[0,1,1]*pi
+  real(8),dimension(3),parameter :: kpoint_m3=[1,0,1]*pi
+  real(8),dimension(3),parameter :: kpoint_r=[1,1,1]*pi
 
 
-  real(8),dimension(3),save                     :: ei_x=[1d0,0d0,0d0]
-  real(8),dimension(3),save                     :: ei_y=[0d0,1d0,0d0]
-  real(8),dimension(3),save                     :: ei_z=[0d0,0d0,1d0]
+  real(8),dimension(3),save      :: ei_x=[1d0,0d0,0d0]
+  real(8),dimension(3),save      :: ei_y=[0d0,1d0,0d0]
+  real(8),dimension(3),save      :: ei_z=[0d0,0d0,1d0]
 
-  real(8),dimension(3),save                     :: bk_x=[1d0,0d0,0d0]*pi2
-  real(8),dimension(3),save                     :: bk_y=[0d0,1d0,0d0]*pi2
-  real(8),dimension(3),save                     :: bk_z=[0d0,0d0,1d0]*pi2
-  real(8),dimension(3),save                     :: BZ_origin=[0d0,0d0,0d0]
+  real(8),dimension(3),save      :: bk_x=[1d0,0d0,0d0]*pi2
+  real(8),dimension(3),save      :: bk_y=[0d0,1d0,0d0]*pi2
+  real(8),dimension(3),save      :: bk_z=[0d0,0d0,1d0]*pi2
+  real(8),dimension(3),save      :: BZ_origin=[0d0,0d0,0d0]
 
-  logical,save                                  :: io_eivec=.false.
-  logical,save                                  :: io_bkvec=.false.
-  logical,save                                  :: set_eivec=.false.
-  logical,save                                  :: set_bkvec=.false.
+  logical,save                   :: io_eivec=.false.
+  logical,save                   :: io_bkvec=.false.
+  logical,save                   :: set_eivec=.false.
+  logical,save                   :: set_bkvec=.false.
 
+  integer                        :: mpi_ierr
+  integer                        :: mpi_rank
+  integer                        :: mpi_size
+  logical                        :: mpi_master
 
-  integer                                       :: mpi_ierr
-  integer                                       :: mpi_rank
-  integer                                       :: mpi_size
-  logical                                       :: mpi_master
-
+  private :: tb_findloc
+  private :: add_to_A1,add_to_A2,add_to_A3
+  private :: tb_reorder_vec_d,tb_reorder_vec_c
+  private :: tb_reorder_mat_d,tb_reorder_mat_c
+  private :: findloc_char
+  private :: findloc_int
+  private :: indx_reorder
 
 contains
-
-
-
-
-
-
-
-
-  subroutine add_to_A1(vec,val)
-    real(8),dimension(:),allocatable,intent(inout) :: vec
-    real(8),intent(in)                             :: val  
-    real(8),dimension(:),allocatable               :: tmp
-    integer                                        :: n
-    !
-    if (allocated(vec)) then
-       n = size(vec)
-       allocate(tmp(n+1))
-       tmp(:n) = vec
-       call move_alloc(tmp,vec)
-       n = n + 1
-    else
-       n = 1
-       allocate(vec(n))
-    end if
-    !
-    !Put val as last entry:
-    vec(n) = val
-    !
-    if(allocated(tmp))deallocate(tmp)
-  end subroutine add_to_A1
-
-
-
-  subroutine add_to_A2(vec,val)
-    real(8),dimension(:,:),allocatable,intent(inout) :: vec
-    real(8),intent(in),dimension(size(vec,2))        :: val  
-    real(8),dimension(:,:),allocatable               :: tmp
-    integer                                          :: n,ndim
-    !
-    ndim = size(vec,2)
-    !
-    if (allocated(vec)) then
-       n = size(vec,1)
-       allocate(tmp(n+1,ndim))
-       tmp(1:n,:) = vec
-       call move_alloc(tmp,vec)
-       n = n + 1
-    else
-       n = 1
-       allocate(vec(n,ndim))
-    end if
-    !
-    !Put val as last entry:
-    vec(n,:) = val
-    !
-    if(allocated(tmp))deallocate(tmp)
-  end subroutine add_to_A2
-
-
-  subroutine add_to_A3(vec,val)
-    real(8),dimension(:,:,:),allocatable,intent(inout)    :: vec
-    real(8),dimension(size(vec,2),size(vec,3)),intent(in) :: val  
-    real(8),dimension(:,:,:),allocatable                  :: tmp
-    integer                                               :: n,n2,n3
-    !
-    n2 = size(vec,2)
-    n3 = size(vec,3)
-    !
-    if (allocated(vec)) then
-       n = size(vec,1)
-       allocate(tmp(n+1,n2,n3))
-       tmp(1:n,:,:) = vec
-       call move_alloc(tmp,vec)
-       n = n + 1
-    else
-       n = 1
-       allocate(vec(n,n2,n3))
-    end if
-    !
-    !Put val as last entry:
-    vec(n,:,:) = val
-    !
-    if(allocated(tmp))deallocate(tmp)
-  end subroutine add_to_A3
-
-
-
-
 
 
   function indices2i(ivec,Nvec) result(istate)
@@ -160,7 +98,6 @@ contains
        istate = istate + (ivec(i)-1)*product(Nvec(1:i-1))
     enddo
   end function indices2i
-
 
   function i2indices(istate,Nvec) result(ivec)
     integer                       :: istate
@@ -174,6 +111,357 @@ contains
        count   = count/Nvec(i)
     enddo
   end function i2indices
+
+
+
+
+
+
+  function tb_reorder_vec_d(Huser,Nin,OrderIn,OrderOut) result(Hss)
+    real(8),dimension(:)                   :: Huser ![Nlat*Nspin*Norb]
+    integer,dimension(3)                   :: Nin   !In sequence of Nlat,Nspin,Norb as integers
+    character(len=*),dimension(3)          :: OrderIn  !in  sequence of Nlat,Nspin,Norb as strings
+    !
+    real(8),dimension(size(Huser))         :: Hss
+    integer,dimension(3)                   :: Ivec,Jvec
+    integer,dimension(3)                   :: IndexOut
+    integer,dimension(3)                   :: Nout
+    integer                                :: iss,iuser,i,Nlso
+    !
+    character(len=*),dimension(3),optional :: OrderOut !out sequence of Nlat,Nspin,Norb as strings
+    character(len=5),dimension(3)          :: OrderOut_ !out sequence of Nlat,Nspin,Norb as strings
+    OrderOut_=[character(len=5)::"Norb","Nspin","Nlat"];
+    if(present(OrderOut))then
+       do i=1,3
+          OrderOut_(i) = trim(OrderOut(i))
+       enddo
+    endif
+    !
+    Nlso = size(Huser)
+    !
+    !Construct an index array InderOut corresponding to the Out ordering.
+    !This is a permutation of the In ordering taken as [1,2,3].
+    !For each entry in OrderIn we look for the position of the
+    !corresponding entry in OrderOut using tb_findloc.
+    !If 0 entries exist, corresponding components are not found. stop. 
+    do i=1,3     
+       IndexOut(i:i)=tb_findloc(OrderIn,OrderOut_(i))
+    enddo
+    if(any(IndexOut==0))then
+       print*,"TB_Reorder_vec ERROR: wrong entry in IndexOut at: ",tb_findloc(IndexOut,0)
+       stop
+    endif
+    !
+    !From IndexOut we can re-order the dimensions array to get the User dimensions array 
+    Nout=indx_reorder(Nin,IndexOut)
+    !
+    if(any(IndexOut/=[1,2,3]))then
+       do iuser=1,Nlso
+          Ivec  = i2indices(iuser,Nin)           !Map iss to Ivec:(ilat,iorb,ispin) by IN ordering
+          Jvec  = indx_reorder(Ivec,IndexOut)  !Reorder according to Out ordering
+          iss = indices2i(Jvec,Nout)         !Map back new Jvec to total index iuser by OUT ordering 
+          !
+          Hss(iss) = Huser(iuser)
+       enddo
+    else
+       Hss = Huser
+    endif
+    return
+  end function tb_reorder_vec_d
+
+  function tb_reorder_vec_c(Huser,Nin,OrderIn,OrderOut) result(Hss)
+    complex(8),dimension(:)                :: Huser ![Nlat*Nspin*Norb]
+    integer,dimension(3)                   :: Nin   !In sequence of Nlat,Nspin,Norb as integers
+    character(len=*),dimension(3)          :: OrderIn  !in  sequence of Nlat,Nspin,Norb as strings
+    !
+    complex(8),dimension(size(Huser))      :: Hss
+    integer,dimension(3)                   :: Ivec,Jvec
+    integer,dimension(3)                   :: IndexOut
+    integer,dimension(3)                   :: Nout
+    integer                                :: iss,iuser,i,Nlso
+    !
+    character(len=*),dimension(3),optional :: OrderOut !out sequence of Nlat,Nspin,Norb as strings
+    character(len=5),dimension(3)          :: OrderOut_ !out sequence of Nlat,Nspin,Norb as strings
+    !
+    OrderOut_=[character(len=5)::"Norb","Nspin","Nlat"];
+    if(present(OrderOut))then
+       do i=1,3
+          OrderOut_(i) = trim(OrderOut(i))
+       enddo
+    endif
+    !
+    Nlso = size(Huser)
+    !
+    !Construct an index array InderOut corresponding to the Out ordering.
+    !This is a permutation of the In ordering taken as [1,2,3].
+    !For each entry in OrderIn we look for the position of the
+    !corresponding entry in OrderOut using tb_findloc.
+    !If 0 entries exist, corresponding components are not found. stop. 
+    do i=1,3     
+       IndexOut(i:i)=tb_findloc(OrderIn,OrderOut_(i))
+    enddo
+    if(any(IndexOut==0))then
+       print*,"TB_Reorder_vec ERROR: wrong entry in IndexOut at: ",tb_findloc(IndexOut,0)
+       stop
+    endif
+    !
+    !From IndexOut we can re-order the dimensions array to get the User dimensions array 
+    Nout=indx_reorder(Nin,IndexOut)
+    !
+    if(any(IndexOut/=[1,2,3]))then
+       do iuser=1,Nlso
+          Ivec  = i2indices(iuser,Nin)           !Map iss to Ivec:(ilat,iorb,ispin) by IN ordering
+          Jvec  = indx_reorder(Ivec,IndexOut)  !Reorder according to Out ordering
+          iss = indices2i(Jvec,Nout)         !Map back new Jvec to total index iuser by OUT ordering 
+          !
+          Hss(iss) = Huser(iuser)
+       enddo
+    else
+       Hss = Huser
+    endif
+    return
+  end function tb_reorder_vec_c
+
+  function tb_reorder_mat_d(Huser,Nin,OrderIn,OrderOut) result(Hss)
+    real(8),dimension(:,:)                         :: Huser
+    integer,dimension(3)                           :: Nin   !In sequence of Nlat,Nspin,Norb as integers
+    character(len=*),dimension(3)                  :: OrderIn  !in  sequence of Nlat,Nspin,Norb as strings
+    !
+    real(8),dimension(size(Huser,1),size(Huser,2)) :: Hss
+    integer,dimension(3)                           :: Ivec,Jvec
+    integer,dimension(3)                           :: IndexOut
+    integer,dimension(3)                           :: Nout
+    integer                                        :: iss,jss,iuser,juser,i,Nlso
+    character(len=*),dimension(3),optional         :: OrderOut !out sequence of Nlat,Nspin,Norb as strings
+    character(len=5),dimension(3)                  :: OrderOut_ !out sequence of Nlat,Nspin,Norb as strings
+    !
+    OrderOut_=[character(len=5)::"Norb","Nspin","Nlat"];
+    if(present(OrderOut))then
+       do i=1,3
+          OrderOut_(i) = trim(OrderOut(i))
+       enddo
+    endif
+    !
+    Nlso = size(Huser,1)
+    call assert_shape(Huser,[Nlso,Nlso],"tb_reorder_mat_c","Huser")
+    !
+    !Construct an index array InderOut corresponding to the Out ordering.
+    !This is a permutation of the In ordering taken as [1,2,3].
+    !For each entry in OrderIn we look for the position of the
+    !corresponding entry in OrderOut using tb_findloc.
+    !If 0 entries exist, corresponding components are not found. stop. 
+    do i=1,3     
+       IndexOut(i:i)=tb_findloc(OrderIn,OrderOut_(i))
+    enddo
+    if(any(IndexOut==0))then
+       print*,"TB_Reorder_vec ERROR: wrong entry in IndexOut at: ",tb_findloc(IndexOut,0)
+       stop
+    endif
+    !
+    !From IndexOut we can re-order the dimensions array to get the User dimensions array 
+    Nout=indx_reorder(Nin,IndexOut)
+    !
+    if(any(IndexOut/=[1,2,3]))then
+       do iuser=1,Nlso
+          Ivec  = i2indices(iuser,Nin)           !Map iss to Ivec:(ilat,iorb,ispin) by IN ordering
+          Jvec  = indx_reorder(Ivec,IndexOut)  !Reorder according to Out ordering
+          iss   = indices2i(Jvec,Nout)         !Map back new Jvec to total index iuser by OUT ordering 
+          do juser=1,Nlso
+             Ivec  = i2indices(juser,Nin)
+             Jvec  = indx_reorder(Ivec,IndexOut)
+             jss = indices2i(Jvec,Nout)
+             !
+             Hss(iss,jss) = Huser(iuser,juser)
+          enddo
+       enddo
+    else
+       Hss = Huser
+    endif
+    return
+  end function tb_reorder_mat_d
+
+  function tb_reorder_mat_c(Huser,Nin,OrderIn,OrderOut) result(Hss)
+    complex(8),dimension(:,:)                         :: Huser
+    integer,dimension(3)                              :: Nin   !In sequence of Nlat,Nspin,Norb as integers
+    character(len=*),dimension(3)                     :: OrderIn  !in  sequence of Nlat,Nspin,Norb as strings
+    !
+    complex(8),dimension(size(Huser,1),size(Huser,2)) :: Hss
+    integer,dimension(3)                              :: Ivec,Jvec
+    integer,dimension(3)                              :: IndexOut
+    integer,dimension(3)                              :: Nout
+    integer                                           :: iss,jss,iuser,juser,i,Nlso
+    character(len=*),dimension(3),optional            :: OrderOut !out sequence of Nlat,Nspin,Norb as strings
+    character(len=5),dimension(3)                     :: OrderOut_ !out sequence of Nlat,Nspin,Norb as strings
+    !
+    OrderOut_=[character(len=5)::"Norb","Nspin","Nlat"];
+    if(present(OrderOut))then
+       do i=1,3
+          OrderOut_(i) = trim(OrderOut(i))
+       enddo
+    endif
+    !
+
+    Nlso = size(Huser,1)
+    call assert_shape(Huser,[Nlso,Nlso],"tb_reorder_mat_c","Huser")
+    !
+    !Construct an index array InderOut corresponding to the Out ordering.
+    !This is a permutation of the In ordering taken as [1,2,3].
+    !For each entry in OrderIn we look for the position of the
+    !corresponding entry in OrderOut using tb_findloc.
+    !If 0 entries exist, corresponding components are not found. stop. 
+    do i=1,3     
+       IndexOut(i:i)=tb_findloc(OrderIn,OrderOut_(i))
+    enddo
+    if(any(IndexOut==0))then
+       print*,"TB_Reorder_vec ERROR: wrong entry in IndexOut at: ",tb_findloc(IndexOut,0)
+       stop
+    endif
+    !
+    !From IndexOut we can re-order the dimensions array to get the User dimensions array 
+    Nout=indx_reorder(Nin,IndexOut)
+    !
+    if(any(IndexOut/=[1,2,3]))then
+       do iuser=1,Nlso
+          Ivec  = i2indices(iuser,Nin)           !Map iss to Ivec:(ilat,iorb,ispin) by IN ordering
+          Jvec  = indx_reorder(Ivec,IndexOut)  !Reorder according to Out ordering
+          iss   = indices2i(Jvec,Nout)         !Map back new Jvec to total index iuser by OUT ordering 
+          do juser=1,Nlso
+             Ivec  = i2indices(juser,Nin)
+             Jvec  = indx_reorder(Ivec,IndexOut)
+             jss = indices2i(Jvec,Nout)
+             !
+             Hss(iss,jss) = Huser(iuser,juser)
+          enddo
+       enddo
+    else
+       Hss = Huser
+    endif
+    return
+  end function tb_reorder_mat_c
+
+
+
+
+  function tb_reorder_hk_d(Huser,Nin,OrderIn,OrderOut) result(Hss)
+    real(8),dimension(:,:,:)                                     :: Huser
+    integer,dimension(3)                                         :: Nin   !In sequence of Nlat,Nspin,Norb as integers
+    character(len=*),dimension(3)                                :: OrderIn  !in  sequence of Nlat,Nspin,Norb as strings
+    !
+    real(8),dimension(size(Huser,1),size(Huser,2),size(Huser,3)) :: Hss
+    integer,dimension(3)                                         :: Ivec,Jvec
+    integer,dimension(3)                                         :: IndexOut
+    integer,dimension(3)                                         :: Nout
+    integer                                                      :: iss,jss,iuser,juser,i,Nlso,Nk
+    !
+    character(len=*),dimension(3),optional                       :: OrderOut !out sequence of Nlat,Nspin,Norb as strings
+    character(len=5),dimension(3)                                :: OrderOut_ !out sequence of Nlat,Nspin,Norb as strings
+    !
+    OrderOut_=[character(len=5)::"Norb","Nspin","Nlat"];
+    if(present(OrderOut))then
+       do i=1,3
+          OrderOut_(i) = trim(OrderOut(i))
+       enddo
+    endif
+    !
+    Nlso = size(Huser,1)
+    Nk   = size(Huser,3)
+    call assert_shape(Huser,[Nlso,Nlso,Nk],"tb_reorder_hk_d","Huser")
+    !
+    !Construct an index array InderOut corresponding to the Out ordering.
+    !This is a permutation of the In ordering taken as [1,2,3].
+    !For each entry in OrderIn we look for the position of the
+    !corresponding entry in OrderOut using tb_findloc.
+    !If 0 entries exist, corresponding components are not found. stop. 
+    do i=1,3     
+       IndexOut(i:i)=tb_findloc(OrderIn,OrderOut_(i))
+    enddo
+    if(any(IndexOut==0))then
+       print*,"TB_Reorder_vec ERROR: wrong entry in IndexOut at: ",tb_findloc(IndexOut,0)
+       stop
+    endif
+    !
+    !From IndexOut we can re-order the dimensions array to get the User dimensions array 
+    Nout=indx_reorder(Nin,IndexOut)
+    !
+    if(any(IndexOut/=[1,2,3]))then
+       do iuser=1,Nlso
+          Ivec  = i2indices(iuser,Nin)           !Map iss to Ivec:(ilat,iorb,ispin) by IN ordering
+          Jvec  = indx_reorder(Ivec,IndexOut)  !Reorder according to Out ordering
+          iss   = indices2i(Jvec,Nout)         !Map back new Jvec to total index iuser by OUT ordering 
+          do juser=1,Nlso
+             Ivec  = i2indices(juser,Nin)
+             Jvec  = indx_reorder(Ivec,IndexOut)
+             jss = indices2i(Jvec,Nout)
+             !
+             Hss(iss,jss,:) = Huser(iuser,juser,:)
+          enddo
+       enddo
+    else
+       Hss = Huser
+    endif
+    return
+  end function tb_reorder_hk_d
+
+  function tb_reorder_hk_c(Huser,Nin,OrderIn,OrderOut) result(Hss)
+    complex(8),dimension(:,:,:)                                     :: Huser
+    integer,dimension(3)                                            :: Nin   !In sequence of Nlat,Nspin,Norb as integers
+    character(len=*),dimension(3)                                   :: OrderIn  !in  sequence of Nlat,Nspin,Norb as strings
+    !
+    complex(8),dimension(size(Huser,1),size(Huser,2),size(Huser,3)) :: Hss
+    integer,dimension(3)                                            :: Ivec,Jvec
+    integer,dimension(3)                                            :: IndexOut
+    integer,dimension(3)                                            :: Nout
+    integer                                                         :: iss,jss,iuser,juser,i,Nlso,Nk
+    character(len=*),dimension(3),optional                          :: OrderOut !out sequence of Nlat,Nspin,Norb as strings
+    character(len=5),dimension(3)                                   :: OrderOut_ !out sequence of Nlat,Nspin,Norb as strings
+    !
+    OrderOut_=[character(len=5)::"Norb","Nspin","Nlat"];
+    if(present(OrderOut))then
+       do i=1,3
+          OrderOut_(i) = trim(OrderOut(i))
+       enddo
+    endif
+    !   
+    Nlso = size(Huser,1)
+    Nk   = size(Huser,3)
+    call assert_shape(Huser,[Nlso,Nlso,Nk],"tb_reorder_hk_d","Huser")
+    !
+    !Construct an index array InderOut corresponding to the Out ordering.
+    !This is a permutation of the In ordering taken as [1,2,3].
+    !For each entry in OrderIn we look for the position of the
+    !corresponding entry in OrderOut using tb_findloc.
+    !If 0 entries exist, corresponding components are not found. stop. 
+    do i=1,3     
+       IndexOut(i:i)=tb_findloc(OrderIn,OrderOut_(i))
+    enddo
+    if(any(IndexOut==0))then
+       print*,"TB_Reorder_vec ERROR: wrong entry in IndexOut at: ",tb_findloc(IndexOut,0)
+       stop
+    endif
+    !
+    !From IndexOut we can re-order the dimensions array to get the User dimensions array 
+    Nout=indx_reorder(Nin,IndexOut)
+    !
+    if(any(IndexOut/=[1,2,3]))then
+       do iuser=1,Nlso
+          Ivec  = i2indices(iuser,Nin)           !Map iss to Ivec:(ilat,iorb,ispin) by IN ordering
+          Jvec  = indx_reorder(Ivec,IndexOut)  !Reorder according to Out ordering
+          iss   = indices2i(Jvec,Nout)         !Map back new Jvec to total index iuser by OUT ordering 
+          do juser=1,Nlso
+             Ivec  = i2indices(juser,Nin)
+             Jvec  = indx_reorder(Ivec,IndexOut)
+             jss = indices2i(Jvec,Nout)
+             !
+             Hss(iss,jss,:) = Huser(iuser,juser,:)
+          enddo
+       enddo
+    else
+       Hss = Huser
+    endif
+    return
+  end function tb_reorder_hk_c
+
+
 
 
 
@@ -254,6 +542,139 @@ contains
        enddo
     enddo
   end function lso2slo
+
+
+
+
+  function indx_reorder(Ain,Index)  result(Aout)
+    integer,dimension(:)         :: Ain
+    integer,dimension(size(Ain)) :: Index
+    integer,dimension(size(Ain)) :: Aout
+    integer                        :: i
+    do i=1,size(Ain)
+       Aout(i) = Ain(Index(i))!Aout(Index(i)) = Ain(i)
+    enddo
+  end function indx_reorder
+
+
+  subroutine add_to_A1(vec,val)
+    real(8),dimension(:),allocatable,intent(inout) :: vec
+    real(8),intent(in)                             :: val  
+    real(8),dimension(:),allocatable               :: tmp
+    integer                                        :: n
+    !
+    if (allocated(vec)) then
+       n = size(vec)
+       allocate(tmp(n+1))
+       tmp(:n) = vec
+       call move_alloc(tmp,vec)
+       n = n + 1
+    else
+       n = 1
+       allocate(vec(n))
+    end if
+    !
+    !Put val as last entry:
+    vec(n) = val
+    !
+    if(allocated(tmp))deallocate(tmp)
+  end subroutine add_to_A1
+
+
+
+  subroutine add_to_A2(vec,val)
+    real(8),dimension(:,:),allocatable,intent(inout) :: vec
+    real(8),intent(in),dimension(:)                  :: val
+    real(8),dimension(:,:),allocatable               :: tmp
+    integer                                          :: n,ndim
+    !
+    ndim = size(val)
+    !
+    if (allocated(vec)) then
+       if(size(vec,2)/=ndim)stop "add_to_A2 error: size(vec,2)!=ndim"
+       n = size(vec,1)
+       allocate(tmp(n+1,ndim))
+       tmp(1:n,:) = vec
+       call move_alloc(tmp,vec)
+       n = n + 1
+    else
+       n = 1
+       allocate(vec(n,ndim))
+    end if
+    !
+    !Put val as last entry:
+    vec(n,:) = val
+    !
+    if(allocated(tmp))deallocate(tmp)
+  end subroutine add_to_A2
+
+
+  subroutine add_to_A3(vec,val)
+    real(8),dimension(:,:,:),allocatable,intent(inout) :: vec
+    real(8),dimension(:,:),intent(in)                  :: val  
+    real(8),dimension(:,:,:),allocatable               :: tmp
+    integer                                            :: n,n2,n3
+    !
+    n2 = size(val,1)
+    n3 = size(val,2)
+    !
+    if (allocated(vec)) then
+       if(n2/=size(vec,2))stop "add_to_A3 error: size(vec,2)!=n2"
+       if(n3/=size(vec,3))stop "add_to_A3 error: size(vec,3)!=n3"
+       n = size(vec,1)
+       allocate(tmp(n+1,n2,n3))
+       tmp(1:n,:,:) = vec
+       call move_alloc(tmp,vec)
+       n = n + 1
+    else
+       n = 1
+       allocate(vec(n,n2,n3))
+    end if
+    !
+    !Put val as last entry:
+    vec(n,:,:) = val
+    !
+    if(allocated(tmp))deallocate(tmp)
+  end subroutine add_to_A3
+
+
+
+
+
+
+
+
+
+  function findloc_char(array,val) result(pos)
+    character(len=*),dimension(:) :: array
+    character(len=*)              :: val
+    integer                       :: pos,i
+    pos=0
+    do i=1,size(array)
+       if(array(i)==val)then
+          pos = i
+          exit
+       endif
+    enddo
+    return
+  end function findloc_char
+
+  function findloc_int(array,val) result(pos)
+    integer,dimension(:) :: array
+    integer              :: val
+    integer              :: pos,i
+    pos=0
+    do i=1,size(array)
+       if(array(i)==val)then
+          pos = i
+          exit
+       endif
+    enddo
+    return
+  end function findloc_int
+
+
+
 
 END MODULE TB_COMMON
 

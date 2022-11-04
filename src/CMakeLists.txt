@@ -1,4 +1,7 @@
 # DMFT_TOOLS library
+#Generate version module:
+CONFIGURE_FILE(${LIB_SRC}/dmft_tools_version.in ${LIB_SRC}/DMFT_TOOLS_VERSION.f90 @ONLY)
+
 file(GLOB DMFT_TOOLS_LOCAL_SRC
   DMFT_TOOLS_VERSION.f90
   DMFT_TOOLS.f90 

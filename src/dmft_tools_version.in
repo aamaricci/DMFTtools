@@ -1,6 +1,8 @@
 MODULE DMFT_VERSION
   implicit none
-  include "dmft_tools_version_current_sha1.inc"
+  
+  !GIT VERSION
+  character(len=41),parameter,public :: dmft_tools_version_sha1 = "@GIT_SHA1@"
 
 contains
 

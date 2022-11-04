@@ -5,19 +5,10 @@ gnu_debug
 .DS_Store
 all_plats.sh
 list_plat
-_install/src/dmft_tools_version.inc
 install.log
 .# *Minibuf-1*
-build
-build_gnu_mpi_jarvis
-build_gnu_mpi_laptop
-build_gnu_mpi/
-../src/dmft_tools_current_sha1.inc
-../src/dmft_tools_version_current_sha1.inc
-build_laptop
-build_debug_laptop/
-../build_devel_laptop
-../build_laptop
-build_devel_laptop
-build_devel
-build_stable
+build*/
+*.inc
+src/DMFT_GF/repo
+src/DMFT_TOOLS_VERSION.f90
+**/*.mod

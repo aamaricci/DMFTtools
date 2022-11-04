@@ -11,6 +11,9 @@ module GK_MATSUBARA
      module procedure :: dmft_get_gk_matsubara_normal_cluster
      module procedure :: dmft_get_gk_matsubara_normal_dos
      module procedure :: dmft_get_gk_matsubara_normal_ineq
+#if __GFORTRAN__ &&  __GNUC__ > 8
+     module procedure :: dmft_get_gk_matsubara_normal_cluster_ineq
+#endif
      !
      module procedure :: dmft_get_gk_matsubara_superc_main
      module procedure :: dmft_get_gk_matsubara_superc_dos
@@ -25,6 +28,9 @@ module GK_MATSUBARA
      module procedure :: dmft_get_gk_matsubara_normal_cluster
      module procedure :: dmft_get_gk_matsubara_normal_dos
      module procedure :: dmft_get_gk_matsubara_normal_ineq
+#if __GFORTRAN__ &&  __GNUC__ > 8
+     module procedure :: dmft_get_gk_matsubara_normal_cluster_ineq
+#endif
      !
      module procedure :: dmft_get_gk_matsubara_superc_main
      module procedure :: dmft_get_gk_matsubara_superc_dos
@@ -297,7 +303,82 @@ contains
   end subroutine dmft_get_gk_matsubara_normal_ineq
 
 
-
+#if __GFORTRAN__ &&  __GNUC__ > 8
+  subroutine dmft_get_gk_matsubara_normal_cluster_ineq(Hk,Gkmats,Smats,tridiag,hk_symm)
+    complex(8),dimension(:,:),intent(in)                :: Hk        ![Nineq*Nlat*Nspin*Norb][Nineq*Nlat*Nspin*Norb]
+    complex(8),dimension(:,:,:,:,:,:,:,:),intent(in)    :: Smats     ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:,:,:,:),intent(inout) :: Gkmats     !as Smats
+    logical,optional                                    :: tridiag
+    logical                                             :: tridiag_
+    logical,optional                                    :: hk_symm   !
+    logical                                             :: hk_symm_  !
+    !allocatable arrays
+    complex(8),dimension(:,:,:,:,:,:,:,:),allocatable   :: Gtmp    !as Smats
+    complex(8),dimension(:,:,:,:),allocatable           :: zeta_mats ![Nineq][Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lmats]
+    !
+    !MPI setup:
+#ifdef _MPI    
+    if(check_MPI())then
+       mpi_size  = get_size_MPI()
+       mpi_rank =  get_rank_MPI()
+       mpi_master= get_master_MPI()
+    else
+       mpi_size=1
+       mpi_rank=0
+       mpi_master=.true.
+    endif
+#else
+    mpi_size=1
+    mpi_rank=0
+    mpi_master=.true.
+#endif
+    !Retrieve parameters:
+    call get_ctrl_var(beta,"BETA")
+    call get_ctrl_var(xmu,"XMU")
+    !
+    tridiag_=.false.;if(present(tridiag))tridiag_=tridiag
+    hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
+    !
+    Nineq  = size(Smats,1)
+    Nlat  = size(Smats,2)
+    Nspin = size(Smats,4)
+    Norb  = size(Smats,6)
+    Lmats = size(Smats,8)
+    Nso   = Nspin*Norb
+    Nlso  = Nlat*Nspin*Norb
+    Nilso = Nineq*Nlat*Nspin*Norb
+    !Testing part:
+    call assert_shape(Hk,[Nilso,Nilso],'dmft_get_gk_matsubara_normal_ineq_main_mpi',"Hk")
+    call assert_shape(Smats,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gk_matsubara_normal_ineq_main_mpi',"Smats")
+    call assert_shape(Gkmats,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats],'dmft_get_gk_matsubara_normal_ineq_main_mpi',"Gkmats")
+    !
+    if(mpi_master)then
+       if(.not.tridiag_)then
+          write(*,"(A)")"Direct Inversion algorithm:"
+       else
+          write(*,"(A)")"Quantum Zipper algorithm:"
+       endif
+    endif
+    !
+    allocate(zeta_mats(Nineq,Nlso,Nlso,Lmats))
+    if(allocated(wm))deallocate(wm);allocate(wm(Lmats))
+    wm = pi/beta*(2*arange(1,Lmats)-1)
+    !
+    do iineq=1,Nineq
+       do i=1,Lmats
+          zeta_mats(iineq,:,:,i) = (xi*wm(i)+xmu)*eye(Nlso)     - nnn2lso_cluster_reshape(Smats(iineq,:,:,:,:,:,:,i),Nlat,Nspin,Norb)
+       enddo
+    enddo
+    !
+    !pass each Z_site to the routines that invert (Z-Hk) for each k-point 
+    Gkmats=zero
+    if(.not.tridiag_)then
+       call invert_gk_normal_cluster_ineq_mpi(zeta_mats,Hk,hk_symm_,Gkmats)
+    else
+       call invert_gk_normal_cluster_ineq_tridiag_mpi(zeta_mats,Hk,hk_symm_,Gkmats)
+    endif
+  end subroutine dmft_get_gk_matsubara_normal_cluster_ineq
+#endif
 
 
 
@@ -441,7 +522,15 @@ contains
           enddo
        enddo
     enddo
-    call Mpi_AllReduce(Gtmp,Gkmats, size(Gkmats), MPI_Double_Complex, MPI_Sum, MPI_COMM_WORLD, MPI_ierr)
+#ifdef _MPI    
+    if(check_MPI())then
+       call Mpi_AllReduce(Gtmp,Gkmats, size(Gkmats), MPI_Double_Complex, MPI_Sum, MPI_COMM_WORLD, MPI_ierr)
+    else
+       Gkmats=Gtmp
+    endif
+#else
+    Gkmats=Gtmp
+#endif
   end subroutine dmft_get_gk_matsubara_superc_dos
 
 
