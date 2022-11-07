@@ -337,10 +337,6 @@ contains
        end if
        ! non diagonal case   
     else
-<<<<<<< HEAD
-       write(*,*)"Non-Diagonal Gloc"
-=======
->>>>>>> f3efb0c4b9f3eccc8f13dad297aa0ac9830e3707
        allocate(Gdos_tmp(Nso,Nso)) ;Gdos_tmp=zero
        if(Lmats>=Lk)then
           do i = 1+mpi_rank, Lmats, mpi_size                                 !MPI loop over Matsubara frequencies
@@ -374,11 +370,7 @@ contains
 #endif
     if(mpi_master)call stop_timer
   end subroutine dmft_get_gloc_matsubara_normal_dos
-<<<<<<< HEAD
-=======
 
-
->>>>>>> f3efb0c4b9f3eccc8f13dad297aa0ac9830e3707
 
   
   
