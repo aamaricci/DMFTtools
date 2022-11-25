@@ -12,11 +12,12 @@ module TB_WANNIER90
      integer                                    :: Num_wann=0 !Number of Wannier Orbitals
      integer                                    :: Nrpts=0    !Number of Wigner-Seitz cells
      character(len=20)                          :: DegFmt='(15I5)' !Ndegen format
-     integer,allocatable,dimension(:)           :: Ndegen          !
-     integer                                    :: Nlat=0          !Number of sites in the unit cell
-     integer                                    :: Norb=0          !Number of physical orbitals in the UC
+     integer                                    :: Ncomp=0         !Number of components on Nlat and Norb
+     integer,allocatable,dimension(:)           :: Nlat            !Number of sites per elementin the UC
+     integer,allocatable,dimension(:)           :: Norb            !Number of orbitals per element in the UC
      integer                                    :: Nspin=0         !Number of spin channels (1,2)
-     integer                                    :: Nlso=0 !LSO does not correspond to the actual ordering
+     integer                                    :: Nlso=0          !LSO does not correspond to the actual ordering
+     integer,allocatable,dimension(:)           :: Ndegen          !
      integer,allocatable,dimension(:,:)         :: Rvec   !Store the direct lattice basis
      real(8),allocatable,dimension(:,:)         :: Rgrid  !The real lattice grid 
      complex(8),allocatable,dimension(:,:,:)    :: Hij    !The H(Ri,Rj) Hamiltonian
@@ -47,8 +48,8 @@ contains
   !< Setup the default_w90 structure with information coming from specified w90_file
   subroutine setup_w90(w90_file,nlat,norb,nspin,origin,spinor,header,verbose,Hcheck)
     character(len=*),intent(in) :: w90_file
-    integer                     :: Nlat
-    integer                     :: Norb
+    integer                     :: Nlat(:)
+    integer                     :: Norb(size(Nlat))
     integer,optional            :: Nspin
     real(8),optional            :: origin(:)
     logical,optional            :: spinor,verbose,Hcheck,header
@@ -56,7 +57,7 @@ contains
     logical                     :: spin_blocks
     integer                     :: unitIO
     integer                     :: Num_wann
-    integer                     :: Nrpts,Len,Nspin_
+    integer                     :: Nrpts,Len,Nspin_,Ncomp
     integer                     :: i,j,ir,a,b
     integer                     :: rx,ry,rz
     real(8)                     :: re,im,origin_(3)
@@ -64,7 +65,7 @@ contains
     nspin_   = 1       ;if(present(nspin))nspin_    = nspin
     origin_  = 0d0     ;if(present(origin))origin_(:size(origin))=origin
     spinor_  = .false. ;if(present(spinor))spinor_  = spinor
-    header_ = .true.  ;if(present(header))header_   = header
+    header_ = .true.   ;if(present(header))header_   = header
     verbose_ = .false. ;if(present(verbose))verbose_= verbose
     hcheck_  = .true.  ;if(present(hcheck))hcheck_  = hcheck
     !
@@ -101,12 +102,17 @@ contains
        read(unitIO,*) Num_wann !Number of Wannier orbitals
        read(unitIO,*) Nrpts    !Number of Wigner-Seitz vectors
     else
-       Len      = file_length(TB_w90%w90_file)
-       Num_wann = Nlat*Norb; if(spinor_)Num_wann=Num_wann*Nspin_
+       Len      = file_length(TB_w90%w90_file)       
+       Num_wann = sum(Nlat*Norb) !Nlat(1)*Norb(1) + ... + Nlat(Nineq)*Norb(Nineq)
+       if(spinor_)Num_wann=Num_wann*Nspin_
        if( mod(len,Num_wann*Num_wann)/=0 )stop "ERROR setup_w90: no Header. Wrong Num_wann."
        Nrpts    = Len/Num_wann/Num_wann
     endif
     !
+    !
+    Ncomp = size(Nlat)
+    allocate(TB_w90%Nlat(Ncomp))
+    allocate(TB_w90%Norb(Ncomp))
     !
     !Setting structure data:
     !Spinor=F AND Nspin=2: build H(k) in the two spin-blocks. We assume Num_wann=Nlat*Norb as spinor=F. 
@@ -116,12 +122,12 @@ contains
     TB_w90%Nspin    = Nspin_
     TB_w90%Num_wann = Num_wann
     if(spinor_)then
-       if(Num_wann /= TB_w90%Nlat*TB_w90%Norb*TB_w90%Nspin)stop "setup_w90: Num_wann != Nlat*Norb*Nspin"
+       if(Num_wann /= sum(TB_w90%Nlat*TB_w90%Norb)*TB_w90%Nspin)stop "setup_w90: Num_wann != sum(Nlat*Norb)*Nspin"
     else
-       if(Num_wann /= TB_w90%Nlat*TB_w90%Norb)stop "setup_w90: Num_wann != Nlat*Norb"
+       if(Num_wann /= sum(TB_w90%Nlat*TB_w90%Norb))stop "setup_w90: Num_wann != sum(Nlat*Norb)"
     endif
     TB_w90%Nrpts    = Nrpts
-    TB_w90%Nlso     = TB_w90%Nlat*TB_w90%Norb*TB_w90%Nspin
+    TB_w90%Nlso     = sum(TB_w90%Nlat*TB_w90%Norb)*TB_w90%Nspin
     allocate(TB_w90%Ndegen(Nrpts))
     allocate(TB_w90%Rvec(Nrpts,3))
     allocate(TB_w90%Rgrid(Nrpts,3))
@@ -190,14 +196,14 @@ contains
     TB_w90%Num_wann =0
     TB_w90%Nrpts    =0
     TB_w90%DegFmt   =''
-    TB_w90%Nlat     =0
-    TB_w90%Norb     =0
     TB_w90%Nspin    =0
     TB_w90%Nlso     =0
     TB_w90%Efermi   =0d0
     TB_w90%verbose  =.false.
     TB_w90%spinor   =.false.
     TB_w90%header   =.false.
+    deallocate(TB_w90%Nlat)
+    deallocate(TB_w90%Norb)
     deallocate(TB_w90%w90_file)
     deallocate(TB_w90%Ndegen)
     deallocate(TB_w90%Rvec)
@@ -216,15 +222,14 @@ contains
     integer                   :: N
     complex(8),dimension(N,N) :: Hk,Hk_f
     complex(8)                :: kExp
-    integer                   :: nDim,Nlso
+    integer                   :: nDim
     integer                   :: i,j,ir
     real(8)                   :: rvec(size(kvec)),rdotk,WSdeg
     !
     if(.not.TB_w90%status)stop "w90_hk_model: TB_w90 was not setup"
     !
     nDim = size(kvec)
-    Nlso  = TB_w90%Nlso
-    if(Nlso /= N )stop "w90_hk_model: Nlso != N"
+    if(TB_w90%Nlso /= N )stop "w90_hk_model: Nlso != N"
     Hk = zero
     do ir=1,TB_w90%Nrpts
        Rvec  = TB_w90%Rgrid(ir,:nDim)
@@ -242,7 +247,6 @@ contains
     !
     if(TB_w90%Irenorm)then
        Hk   = Hk - TB_w90%Hloc
-       !Hk_f = Hk*outerprod(TB_w90%Zeta,TB_w90%Zeta)
        Hk_f = (TB_w90%Zeta .x. Hk) .x. TB_w90%Zeta
        Hk   = Hk_f + TB_w90%Hloc + TB_w90%Self
     endif
@@ -250,14 +254,13 @@ contains
   end function w90_hk_model
 
 
-  subroutine build_hk_w90(Hk,Nlso,Nkvec,Kpts_grid,wdos)
-    integer                                                :: Nlso
+
+
+  subroutine build_hk_w90(Hk,N,Nkvec,Kpts_grid)
+    integer                                                :: N
     integer,dimension(:),intent(in)                        :: Nkvec
-    complex(8),dimension(Nlso,Nlso,product(Nkvec))         :: Hk,haux
-    !
+    complex(8),dimension(N,N,product(Nkvec))               :: Hk,haux
     real(8),dimension(product(Nkvec),size(Nkvec)),optional :: Kpts_grid ![Nk][Ndim]
-    logical,optional                                       :: wdos
-    logical                                                :: wdos_
     !
     real(8),dimension(product(Nkvec),size(Nkvec))          :: kgrid ![Nk][Ndim]
     integer                                                :: Nk
@@ -281,12 +284,10 @@ contains
     mpi_master=.true.
 #endif
     !
-    wdos_=.false.
-    !
     Nk =product(Nkvec)
     !
     if(.not.TB_w90%status)stop "ERROR build_hk_w90: TB_w90 structure not allocated. Call setup_w90 first."
-    if(Nlso/=TB_w90%Nlso)stop "ERROR build_hk_w90: incorrect Nlso."
+    if(N/=TB_w90%Nlso)stop "ERROR build_hk_w90: incorrect N."
     !
     if(allocated(TB_w90%Kgrid))deallocate(TB_w90%Kgrid)
     allocate(TB_w90%Kgrid(Nk,size(Nkvec)))
@@ -296,7 +297,7 @@ contains
     !
     Haux=zero
     do ik=1+mpi_rank,Nk,mpi_size
-       haux(:,:,ik) = w90_hk_model(Kgrid(ik,:),Nlso)
+       haux(:,:,ik) = w90_hk_model(Kgrid(ik,:),N)
     enddo
 #ifdef _MPI
     if(check_MPI())then
@@ -312,12 +313,14 @@ contains
   end subroutine build_hk_w90
 
 
-  subroutine build_hk_w90_path(Hk,Nlso,Kpath,Nkpath)
-    integer                                                   :: Nlso
+
+
+  subroutine build_hk_w90_path(Hk,N,Kpath,Nkpath)
+    integer                                                   :: N
     real(8),dimension(:,:)                                    :: kpath ![Npts][Ndim]
     integer                                                   :: Nkpath
     integer                                                   :: Npts,Nktot
-    complex(8),dimension(Nlso,Nlso,(size(kpath,1)-1)*Nkpath)  :: Hk,haux
+    complex(8),dimension(N,N,(size(kpath,1)-1)*Nkpath)        :: Hk,haux
     !
     real(8),dimension((size(kpath,1)-1)*Nkpath,size(kpath,2)) :: kgrid
     integer                                                   :: Nk
@@ -342,7 +345,7 @@ contains
 #endif
     !
     if(.not.TB_w90%status)stop "ERROR build_hk_w90_path: TB_w90 structure not allocated. Call setup_w90 first."
-    if(Nlso/=TB_w90%Nlso)stop "ERROR build_hk_w90_path: incorrect Nlso."
+    if(N/=TB_w90%Nlso)stop "ERROR build_hk_w90_path: incorrect N."
     !
     Npts  =  size(kpath,1)          !# of k-points along the path
     Nktot = (Npts-1)*Nkpath
@@ -351,7 +354,7 @@ contains
     !
     Haux=zero
     do ik=1+mpi_rank,Nktot,mpi_size
-       haux(:,:,ik) = w90_hk_model(Kgrid(ik,:),Nlso)
+       haux(:,:,ik) = w90_hk_model(Kgrid(ik,:),N)
     enddo
 #ifdef _MPI
     if(check_MPI())then
@@ -370,11 +373,9 @@ contains
 
   subroutine Hloc_w90(Hloc)
     complex(8),dimension(:,:) :: Hloc
-    integer                   :: Nlso
-    Nlso = TB_w90%Nlso
-    call assert_shape(Hloc,[Nlso,Nlso],"Hloc_w90","Hloc")
+    call assert_shape(Hloc,[TB_w90%Nlso,TB_w90%Nlso],"Hloc_w90","Hloc")
     Hloc = TB_w90%Hloc
-    if(TB_w90%Ifermi)Hloc = Hloc - TB_w90%Efermi*eye(Nlso)
+    if(TB_w90%Ifermi)Hloc = Hloc - TB_w90%Efermi*eye(TB_w90%Nlso)
     !
   end subroutine Hloc_w90
 
@@ -383,12 +384,11 @@ contains
     real(8)                                  :: filling,Efermi
     real(8),optional                         :: Ef
     complex(8),dimension(:,:,:),allocatable  :: Hk
-    integer                                  :: Nlso,Nk
+    integer                                  :: Nk
     if(TB_w90%Ifermi)return
-    Nlso = TB_w90%Nlso
     Nk   = product(Nkvec)
-    allocate(Hk(Nlso,Nlso,Nk))
-    call build_hk_w90(Hk,Nlso,Nkvec)
+    allocate(Hk(TB_w90%Nlso,TB_w90%Nlso,Nk))
+    call build_hk_w90(Hk,TB_w90%Nlso,Nkvec)
     call TB_FermiLevel(Hk,filling,Efermi,TB_w90%Nspin,TB_w90%verbose)
     TB_w90%Efermi = Efermi
     if(present(Ef))Ef=Efermi
@@ -398,9 +398,7 @@ contains
   subroutine Zeta_w90_vector(zeta)
     real(8),dimension(:)          :: zeta
     real(8),dimension(size(zeta)) :: sq_zeta
-    integer                       :: Nlso
-    Nlso        = TB_w90%Nlso
-    call assert_shape(zeta,[Nlso],"Zeta_w90","zeta")
+    call assert_shape(zeta,[TB_w90%Nlso],"Zeta_w90","zeta")
     sq_zeta     = sqrt(zeta)
     TB_w90%zeta = diag(sq_zeta)
     TB_w90%Irenorm=.true.
@@ -408,18 +406,15 @@ contains
 
   subroutine Zeta_w90_matrix(zeta)
     real(8),dimension(:,:) :: zeta
-    integer                :: Nlso
-    Nlso        = TB_w90%Nlso
-    call assert_shape(zeta,[Nlso,Nlso],"Zeta_w90","zeta")  
+    call assert_shape(zeta,[TB_w90%Nlso,TB_w90%Nlso],"Zeta_w90","zeta")  
     TB_w90%zeta = sqrt(zeta)
     TB_w90%Irenorm=.true.
   end subroutine Zeta_w90_matrix
 
+
   subroutine Self0_w90(Self0)
     real(8),dimension(:,:) :: self0
-    integer                :: Nlso
-    Nlso        = TB_w90%Nlso
-    call assert_shape(self0,[Nlso,Nlso],"Self0_w90","Self0")  
+    call assert_shape(self0,[TB_w90%Nlso,TB_w90%Nlso],"Self0_w90","Self0")  
     TB_w90%Self = Self0
     TB_w90%Irenorm=.true.
   end subroutine Self0_w90
@@ -427,10 +422,7 @@ contains
 
 
 
-
-
-
-
+  
 
 
 
@@ -442,7 +434,7 @@ contains
     real(8),dimension(product(Nkvec),size(Nkvec)) :: kgrid ![Nk][Ndim]
     real(8),dimension(3)                          :: kvec
     integer                                       :: Nktot,unit,Dim
-    integer                                       :: i,ik,io,jo,Nlso,Nlat,Nspin,Norb  
+    integer                                       :: i,ik,io,jo
     complex(8),dimension(:,:),allocatable         :: hk
     !
     mpi_master=.true.
@@ -461,25 +453,21 @@ contains
     !
     Dim   = size(Nkvec)
     Nktot = product(Nkvec)
-    Nlso  = TB_w90%Nlat*TB_w90%Norb*TB_w90%Nspin
-    Nlat  = TB_w90%Nlat
-    Norb  = TB_w90%Norb
-    Nspin = TB_w90%Nspin
     !
     if(mpi_master)then
        open(free_unit(unit),file=reg(file))
-       write(unit,'(4(I10,1x),F15.9)')Nktot,Nlat,Nspin,Norb,TB_w90%Efermi
+       write(unit,'('//str(2+2*TB_w90%Ncomp)//'(I10,1x),F15.9)')Nktot,TB_w90%Nlat,TB_w90%Nspin,TB_w90%Norb,TB_w90%Efermi
        write(unit,'(1A1,3(A12,1x))')"#",(reg(txtfy(Nkvec(ik))),ik=1,Dim)
-       allocate(Hk(Nlso,Nlso))
+       allocate(Hk(TB_w90%Nlso,TB_w90%Nlso))
        do ik=1,Nktot
-          Hk(:,:) = w90_hk_model(Kgrid(ik,:),Nlso)
+          Hk(:,:) = w90_hk_model(Kgrid(ik,:),TB_w90%Nlso)
           kvec=0d0 ; kvec(:Dim) = kgrid(ik,:)
           write(unit,"(3(F15.9,1x))")(kvec(i),i=1,3) 
-          do io=1,Nlso
-             write(unit,"(1000(F15.9))")(dreal(Hk(io,jo)),jo=1,Nlso)
+          do io=1,TB_w90%Nlso
+             write(unit,"(1000(F15.9))")(dreal(Hk(io,jo)),jo=1,TB_w90%Nlso)
           enddo
-          do io=1,Nlso
-             write(unit,"(1000(F15.9))")(dimag(Hk(io,jo)),jo=1,Nlso)
+          do io=1,TB_w90%Nlso
+             write(unit,"(1000(F15.9))")(dimag(Hk(io,jo)),jo=1,TB_w90%Nlso)
           enddo
        enddo
        close(unit)
@@ -487,15 +475,14 @@ contains
     !
   end subroutine write_hk_w90_func
 
-  subroutine write_hk_w90_array(Hk,file,Nkvec,Nlat_,Nspin_,Norb_)
+  subroutine write_hk_w90_array(Hk,file,Nkvec)
     complex(8),dimension(:,:,:)                   :: Hk
     character(len=*)                              :: file
     integer                                       :: Nkvec(:)
-    integer,optional                              :: Nlat_,Nspin_,Norb_
     real(8),dimension(product(Nkvec),size(Nkvec)) :: kgrid ![Nk][Ndim]
     real(8),dimension(3)                          :: kvec
     integer                                       :: Nktot,unit,Dim
-    integer                                       :: i,ik,io,jo,Nlso,Nlat,Nspin,Norb  
+    integer                                       :: i,ik,io,jo  
 
     !
     mpi_master=.true.
@@ -514,25 +501,21 @@ contains
     !
     Dim   = size(Nkvec)
     Nktot = product(Nkvec)
-    Nlat  = TB_w90%Nlat ;if(present(Nlat_))Nlat=Nlat_
-    Norb  = TB_w90%Norb ;if(present(Norb_))Norb=Norb_
-    Nspin = TB_w90%Nspin;if(present(Nspin_))Nspin=Nspin_
-    Nlso  = Nlat*Norb*Nspin
     !
-    call assert_shape(Hk,[Nlso,Nlso,Nktot],"TB_WANNIER/write_hk_w90_array","Hk")
+    call assert_shape(Hk,[TB_w90%Nlso,TB_w90%Nlso,Nktot],"TB_WANNIER/write_hk_w90_array","Hk")
     !
     if(mpi_master)then
        open(free_unit(unit),file=reg(file))
-       write(unit,'(4(I10,1x),F15.9)')Nktot,Nlat,Nspin,Norb,TB_w90%Efermi
+       write(unit,'('//str(2+2*TB_w90%Ncomp)//'(I10,1x),F15.9)')Nktot,TB_w90%Nlat,TB_w90%Nspin,TB_w90%Norb,TB_w90%Efermi
        write(unit,'(1A1,3(A12,1x))')"#",(reg(txtfy(Nkvec(ik))),ik=1,Dim)
        do ik=1,Nktot
           kvec=0d0 ; kvec(:Dim) = kgrid(ik,:)
           write(unit,"(3(F15.9,1x))")(kvec(i),i=1,3) 
-          do io=1,Nlso
-             write(unit,"(1000(F15.9))")(dreal(Hk(io,jo,ik)),jo=1,Nlso)
+          do io=1,TB_w90%Nlso
+             write(unit,"(1000(F15.9))")(dreal(Hk(io,jo,ik)),jo=1,TB_w90%Nlso)
           enddo
-          do io=1,Nlso
-             write(unit,"(1000(F15.9))")(dimag(Hk(io,jo,ik)),jo=1,Nlso)
+          do io=1,TB_w90%Nlso
+             write(unit,"(1000(F15.9))")(dimag(Hk(io,jo,ik)),jo=1,TB_w90%Nlso)
           enddo
        enddo
        close(unit)
@@ -550,7 +533,6 @@ contains
     real(8),dimension(:,:),allocatable      :: kgrid
     real(8),dimension(3)                    :: kvec
     integer                                 :: Nktot,unit,Nk(3),Dim
-    integer                                 :: Nlso,Nlat,Nspin,Norb
     integer                                 :: i,ik,ix,iy,iz,io,jo
     real(8)                                 :: kx,ky,kz,Ef
     logical                                 :: ioexist
@@ -566,24 +548,18 @@ contains
     endif
     !
     open(free_unit(unit),file=reg(file))
-    read(unit,'(4(I10,1x),F15.9)')Nktot,Nlat,Nspin,Norb,Ef
+    read(unit,'('//str(2+2*TB_w90%Ncomp)//'(I10,1x),F15.9)')Nktot,TB_w90%Nlat,TB_w90%Nspin,TB_w90%Norb,TB_w90%Efermi
     read(unit,'(1A1,3(I12,1x))')achar,( Nk(ik),ik=1,3 )
-    !
-    TB_w90%Nlat  = Nlat
-    TB_w90%Norb  = Norb
-    TB_w90%Nspin = Nspin
-    TB_w90%Efermi = Ef
     TB_w90%Ifermi =.true.
     !
     Dim    = size(Nkvec)
     Nkvec  = Nk(:Dim)
     if(Nktot  /= product(Nk))stop "read_hk_w90: Nktot != product(Nk)"
     Nktot  = product(Nk)
-    Nlso   = Nlat*Nspin*Norb
     !
     allocate(Kgrid(Nktot,Dim))
-    allocate(Hk(Nlso,Nlso,Nktot))
-    allocate(reH(Nlso,Nlso),imH(Nlso,Nlso))
+    allocate(Hk(TB_w90%Nlso,TB_w90%Nlso,Nktot))
+    allocate(reH(TB_w90%Nlso,TB_w90%Nlso),imH(TB_w90%Nlso,TB_w90%Nlso))
     !
     ik=0
     do iz=1,Nk(3)
@@ -593,11 +569,11 @@ contains
              read(unit,"(3(F15.9,1x))")kx,ky,kz
              kvec = [kx,ky,kz]
              kgrid(ik,:) = kvec(:Dim)
-             do io=1,Nlso
-                read(unit,"(1000(F15.9))")(reH(io,jo),jo=1,Nlso)
+             do io=1,TB_w90%Nlso
+                read(unit,"(1000(F15.9))")(reH(io,jo),jo=1,TB_w90%Nlso)
              enddo
-             do io=1,Nlso
-                read(unit,"(1000(F15.9))")(imH(io,jo),jo=1,Nlso)
+             do io=1,TB_w90%Nlso
+                read(unit,"(1000(F15.9))")(imH(io,jo),jo=1,TB_w90%Nlso)
              enddo
              Hk(:,:,ik) = dcmplx(reH,imH)
           enddo
