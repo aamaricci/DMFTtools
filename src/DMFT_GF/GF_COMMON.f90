@@ -1,7 +1,7 @@
 module GF_COMMON
   USE SF_TIMER
   USE SF_CONSTANTS, only: one,xi,zero,pi
-  USE SF_IOTOOLS,   only: reg,txtfy,splot,file_gzip
+  USE SF_IOTOOLS,   only: reg,txtfy,splot,file_gzip,str
   USE SF_LINALG,    only: eye,inv,inv_sym,inv_tridiag,get_tridiag,diag
   USE SF_ARRAYS,    only: linspace,arange
   USE SF_MISC,      only: assert_shape
@@ -59,8 +59,6 @@ module GF_COMMON
   end interface nn2so_reshape
 
 
-  real(8),dimension(:),allocatable          :: wm !Matsubara frequencies
-  real(8),dimension(:),allocatable          :: wr !Real frequencies
   complex(8),dimension(:,:,:),allocatable   :: lattice_Gamma_mats ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lmats]
   complex(8),dimension(:,:,:,:),allocatable :: local_Gamma_mats   ![Nlat][Nspin*Norb][Nspin*Norb][Lmats]
   complex(8),dimension(:,:,:),allocatable   :: lattice_Gamma_real ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lmats]
@@ -76,11 +74,53 @@ module GF_COMMON
   real(8)                                   :: beta
   real(8)                                   :: xmu,eps
   real(8)                                   :: wini,wfin 
-
+  !
+  real(8),dimension(:),allocatable          :: wm !Matsubara frequencies
+  real(8),dimension(:),allocatable          :: wr !Real frequencies
+  integer                                   :: Lfreq
+  complex(8),dimension(:),allocatable       :: wfreq
 
 
 
 contains
+
+  !TO BE MOVED DOWN:
+  subroutine dmft_gf_push_zeta(zeta)
+    complex(8),dimension(:) :: zeta
+    Lfreq=size(zeta)
+    if(allocated(wfreq))deallocate(wfreq)
+    allocate(wfreq(Lfreq))
+    wfreq=zeta
+  end subroutine dmft_gf_push_zeta
+
+  subroutine build_frequency_array(axis,zeta)
+    character(len=*)                 :: axis
+    complex(8),dimension(:),optional :: zeta
+    if(present(zeta))then
+       call dmft_gf_push_zeta(zeta)
+    else
+       if(allocated(wfreq))then
+          if(size(wfreq)/=Lfreq)stop "dmft_gfio_build_frequency_array ERROR: pushed wfreq has wrong size"
+       else
+          allocate(wfreq(Lfreq))
+          select case(axis)
+          case default;
+             stop "dmft_gfio_build_frequency_array ERROR: axis undefined. axis=[matsubara,realaxis]"
+          case("matsubara","mats")
+             call get_ctrl_var(beta,"BETA")
+             wfreq = dcmplx(0d0,pi/beta*(2*arange(1,Lfreq)-1))
+          case("realaxis","real")
+             call get_ctrl_var(wini,"WINI")
+             call get_ctrl_var(wfin,"WFIN")
+             call get_ctrl_var(eps,"EPS")
+             wfreq = dcmplx(linspace(wini,wfin,Lfreq),eps)
+          end select
+       endif
+    endif
+    return
+  end subroutine build_frequency_array
+
+
 
 
 
@@ -1717,6 +1757,9 @@ contains
   !####################################################################
   !                    COMPUTATIONAL ROUTINES
   !####################################################################
+
+
+
   !--------------------------------------------------------------------!
   !PURPOSE:
   ! Bcast/Reduce a vector of Blocks [Nlat][Nso][Nso] onto a matrix [Nlat*Nso][Nlat*Nso]

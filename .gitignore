@@ -1,14 +1,5 @@
-intel
-intel_debug
-gnu
-gnu_debug
 .DS_Store
-all_plats.sh
-list_plat
 install.log
-.# *Minibuf-1*
 build*/
 *.inc
-src/DMFT_GF/repo
-src/DMFT_TOOLS_VERSION.f90
-**/*.mod
+repo

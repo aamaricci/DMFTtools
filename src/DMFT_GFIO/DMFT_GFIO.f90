@@ -16,6 +16,7 @@ module DMFT_GFIO
   
   !AGNOSTIC INTERFACE:
   interface dmft_write_function
+     module procedure :: dmft_gf_push_zeta
      module procedure :: dmft_function_print_main
      module procedure :: dmft_function_print_ineq
      module procedure :: dmft_gij_print
@@ -25,6 +26,7 @@ module DMFT_GFIO
   end interface dmft_write_function
 
   interface dmft_print_function
+     module procedure :: dmft_gf_push_zeta
      module procedure :: dmft_function_print_main
      module procedure :: dmft_function_print_ineq
      module procedure :: dmft_gij_print
@@ -34,6 +36,7 @@ module DMFT_GFIO
   end interface dmft_print_function
 
   interface dmft_write_gf
+     module procedure :: dmft_gf_push_zeta
      module procedure :: dmft_function_print_main
      module procedure :: dmft_function_print_ineq
      module procedure :: dmft_gij_print
@@ -43,6 +46,7 @@ module DMFT_GFIO
   end interface dmft_write_gf
 
   interface dmft_print_gf
+     module procedure :: dmft_gf_push_zeta
      module procedure :: dmft_function_print_main
      module procedure :: dmft_function_print_ineq
      module procedure :: dmft_gij_print
