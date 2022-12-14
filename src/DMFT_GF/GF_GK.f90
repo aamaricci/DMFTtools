@@ -4,175 +4,44 @@ module GF_GK
   private
 
 
-  !##################################################################
-  interface get_gk
-     module procedure :: dmft_gf_push_zeta
-     module procedure :: dmft_get_gk_normal_main
-     module procedure :: dmft_get_gk_normal_dos
-     module procedure :: dmft_get_gk_normal_ineq
-     module procedure :: dmft_get_gk_normal_cluster
-#if __GFORTRAN__ &&  __GNUC__ > 8
-     module procedure :: dmft_get_gk_normal_cluster_ineq
-#endif
-     !
-     module procedure :: dmft_get_gk_superc_main
-     module procedure :: dmft_get_gk_superc_dos
-     module procedure :: dmft_get_gk_superc_ineq
-  end interface get_gk
-
-  interface get_gk_matsubara
-     module procedure :: dmft_get_gk_matsubara_normal_main
-     module procedure :: dmft_get_gk_matsubara_normal_dos
-     module procedure :: dmft_get_gk_matsubara_normal_ineq
-     module procedure :: dmft_get_gk_matsubara_normal_cluster
-#if __GFORTRAN__ &&  __GNUC__ > 8
-     module procedure :: dmft_get_gk_matsubara_normal_cluster_ineq
-#endif
-     !
-     module procedure :: dmft_get_gk_matsubara_superc_main
-     module procedure :: dmft_get_gk_matsubara_superc_dos
-     module procedure :: dmft_get_gk_matsubara_superc_ineq
-  end interface get_gk_matsubara
-
-  interface get_gk_realaxis
-     module procedure :: dmft_get_gk_realaxis_normal_main
-     module procedure :: dmft_get_gk_realaxis_normal_dos
-     module procedure :: dmft_get_gk_realaxis_normal_ineq
-     module procedure :: dmft_get_gk_realaxis_normal_cluster
-#if __GFORTRAN__ &&  __GNUC__ > 8
-     module procedure :: dmft_get_gk_realaxis_normal_cluster_ineq
-#endif
-     module procedure :: dmft_get_gk_realaxis_superc_main
-     module procedure :: dmft_get_gk_realaxis_superc_dos
-     module procedure :: dmft_get_gk_realaxis_superc_ineq
-  end interface get_gk_realaxis
+  public :: get_gk_normal_main
+  public :: get_gk_normal_tridiag
+  public :: get_gk_normal_dos
+  !
+  public :: get_gk_superc_main
+  public :: get_gk_superc_dos
+  !
+  public :: get_gk_normal_hk_rank4
+  public :: get_gk_normal_dos_rank4
+  public :: get_gk_normal_hk_rank5
+  public :: get_gk_normal_tridiag_rank5
+  public :: get_gk_normal_hk_rank5_6
+  public :: get_gk_normal_hk_rank6
+  public :: get_gk_normal_hk_rank7
+  public :: get_gk_normal_tridiag_rank7
+  !
+  public :: get_gk_superc_hk_rank4
+  public :: get_gk_superc_dos_rank4
+  public :: get_gk_superc_hk_rank5
+  public :: get_gk_superc_hk_rank5_6
 
 
-  !##################################################################
-
-
-
-  !##################################################################
-  interface dmft_gk
-     module procedure :: dmft_gf_push_zeta
-     module procedure :: dmft_get_gk_normal_main
-     module procedure :: dmft_get_gk_normal_dos
-     module procedure :: dmft_get_gk_normal_ineq
-     module procedure :: dmft_get_gk_normal_cluster
-#if __GFORTRAN__ &&  __GNUC__ > 8
-     module procedure :: dmft_get_gk_normal_cluster_ineq
-#endif
-     !
-     module procedure :: dmft_get_gk_superc_main
-     module procedure :: dmft_get_gk_superc_dos
-     module procedure :: dmft_get_gk_superc_ineq
-  end interface dmft_gk
-
-  interface dmft_gk_matsubara
-     module procedure :: dmft_get_gk_matsubara_normal_main
-     module procedure :: dmft_get_gk_matsubara_normal_dos
-     module procedure :: dmft_get_gk_matsubara_normal_ineq
-     module procedure :: dmft_get_gk_matsubara_normal_cluster
-#if __GFORTRAN__ &&  __GNUC__ > 8
-     module procedure :: dmft_get_gk_matsubara_normal_cluster_ineq
-#endif
-     !
-     module procedure :: dmft_get_gk_matsubara_superc_main
-     module procedure :: dmft_get_gk_matsubara_superc_dos
-     module procedure :: dmft_get_gk_matsubara_superc_ineq
-  end interface dmft_gk_matsubara
-
-  interface dmft_gk_realaxis
-     module procedure :: dmft_get_gk_realaxis_normal_main
-     module procedure :: dmft_get_gk_realaxis_normal_dos
-     module procedure :: dmft_get_gk_realaxis_normal_ineq
-     module procedure :: dmft_get_gk_realaxis_normal_cluster
-#if __GFORTRAN__ &&  __GNUC__ > 8
-     module procedure :: dmft_get_gk_realaxis_normal_cluster_ineq
-#endif
-     module procedure :: dmft_get_gk_realaxis_superc_main
-     module procedure :: dmft_get_gk_realaxis_superc_dos
-     module procedure :: dmft_get_gk_realaxis_superc_ineq
-  end interface dmft_gk_realaxis
-
-
-
-
-  !##################################################################
-  interface dmft_get_gk
-     module procedure :: dmft_gf_push_zeta
-     module procedure :: dmft_get_gk_normal_main
-     module procedure :: dmft_get_gk_normal_dos
-     module procedure :: dmft_get_gk_normal_ineq
-     module procedure :: dmft_get_gk_normal_cluster
-#if __GFORTRAN__ &&  __GNUC__ > 8
-     module procedure :: dmft_get_gk_normal_cluster_ineq
-#endif
-     !
-     module procedure :: dmft_get_gk_superc_main
-     module procedure :: dmft_get_gk_superc_dos
-     module procedure :: dmft_get_gk_superc_ineq
-  end interface dmft_get_gk
-
-  interface dmft_get_gk_matsubara
-     module procedure :: dmft_get_gk_matsubara_normal_main
-     module procedure :: dmft_get_gk_matsubara_normal_dos
-     module procedure :: dmft_get_gk_matsubara_normal_ineq
-     module procedure :: dmft_get_gk_matsubara_normal_cluster
-#if __GFORTRAN__ &&  __GNUC__ > 8
-     module procedure :: dmft_get_gk_matsubara_normal_cluster_ineq
-#endif
-     !
-     module procedure :: dmft_get_gk_matsubara_superc_main
-     module procedure :: dmft_get_gk_matsubara_superc_dos
-     module procedure :: dmft_get_gk_matsubara_superc_ineq
-  end interface dmft_get_gk_matsubara
-
-  interface dmft_get_gk_realaxis
-     module procedure :: dmft_get_gk_realaxis_normal_main
-     module procedure :: dmft_get_gk_realaxis_normal_dos
-     module procedure :: dmft_get_gk_realaxis_normal_ineq
-     module procedure :: dmft_get_gk_realaxis_normal_cluster
-#if __GFORTRAN__ &&  __GNUC__ > 8
-     module procedure :: dmft_get_gk_realaxis_normal_cluster_ineq
-#endif
-     module procedure :: dmft_get_gk_realaxis_superc_main
-     module procedure :: dmft_get_gk_realaxis_superc_dos
-     module procedure :: dmft_get_gk_realaxis_superc_ineq
-  end interface dmft_get_gk_realaxis
-  !##################################################################
-
-
-
-
-  !PUBLIC IN DMFT:
-  public :: get_gk
-  public :: get_gk_matsubara
-  public :: get_gk_realaxis
-
-
-  public :: dmft_gk
-  public :: dmft_gk_matsubara
-  public :: dmft_gk_realaxis
-
-  public :: dmft_get_gk
-  public :: dmft_get_gk_matsubara
-  public :: dmft_get_gk_realaxis
 
 contains
 
 
 
-
-  subroutine dmft_get_gk_normal_main(Hk,Gk,Sigma,axis,zeta,hk_symm)
-    complex(8),dimension(:,:),intent(in)          :: Hk        ![Nspin*Norb][Nspin*Norb]
-    complex(8),dimension(:,:,:,:,:),intent(in)    :: Sigma     ![Nspin][Nspin][Norb][Norb][Lfreq]
-    complex(8),dimension(:,:,:,:,:),intent(inout) :: Gk     !as Sigma
-    character(len=*)                              :: axis
-    complex(8),dimension(:),optional              :: zeta
-    logical,optional                              :: hk_symm   !
-    logical                                       :: hk_symm_  !
-    complex(8),dimension(:,:,:),allocatable       :: csi ![Nspin*Norb][Nspin*Norb][Lfreq]
+  !##################################################################
+  !##################################################################
+  !                       NORMAL PHASE
+  !##################################################################
+  !##################################################################
+  subroutine get_gk_normal_main(Hk,Gk,Sigma,axis)
+    complex(8),dimension(:,:),intent(in)      :: Hk        ![N,N]
+    complex(8),dimension(:,:,:),intent(in)    :: Sigma     ![N,N][Lfreq]
+    complex(8),dimension(:,:,:),intent(inout) :: Gk      !as Sigma
+    character(len=*)                          :: axis
+    complex(8),dimension(:,:,:),allocatable   :: csi   ![N,N][Lfreq]
     !
     !MPI setup:
 #ifdef _MPI    
@@ -191,49 +60,42 @@ contains
     mpi_master=.true.
 #endif
     !
-    if(present(zeta))then
-       call build_frequency_array(axis,zeta)
-    else
-       call build_frequency_array(axis)
-    endif
+    call build_frequency_array(axis)
     !
-    hk_symm_  =.false.;if(present(hk_symm)) hk_symm_=hk_symm
     !
-    Nspin = size(Sigma,1)
-    Norb  = size(Sigma,3)
-    Lfreq = size(Sigma,5)
-    Nso   = Nspin*Norb
+    Ntot  = size(Hk,1)
+    Lfreq = size(Sigma,3)
     !Testing part:
-    call assert_shape(Hk,[Nso,Nso],"dmft_get_gk_normal_main_mpi","Hk")
-    call assert_shape(Sigma,[Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_gk_normal_main_mpi","Sigma")
-    call assert_shape(Gk,[Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_gk_normal_main_mpi","Gk")
+    call assert_shape(Hk,[Ntot,Ntot],"get_gk_normal_main","Hk")
+    call assert_shape(Sigma,[Ntot,Ntot,Lfreq],"get_gk_normal_main","Sigma")
+    call assert_shape(Gk, [Ntot,Ntot,Lfreq],"get_gk_normal_main","Gk")
     !
     !Allocate and setup the Matsubara freq.
-    allocate(csi(Nso,Nso,Lfreq))
+    allocate(csi(Ntot,Ntot,Lfreq))
     !
     do i=1,Lfreq
-       csi(:,:,i)=(wfreq(i)+xmu)*eye(Nso) - nn2so_reshape(Sigma(:,:,:,:,i),Nspin,Norb)
+       csi(:,:,i)=(wfreq(i)+xmu)*eye(Ntot) - Sigma(:,:,i)
     enddo
     !
     !invert (Csi-Hk) for each k-point
-    Gk=zero
-    call invert_gk_normal_mpi(csi,Hk,hk_symm_,Gk)    
-  end subroutine dmft_get_gk_normal_main
+    Gk = zero
+    call invert_gk_normal_mpi(csi,Hk,Gk)      
+  end subroutine get_gk_normal_main
 
 
 
-
-  subroutine dmft_get_gk_normal_dos(Ebands,Dbands,Hloc,Gk,Sigma,axis,zeta)
-    real(8),dimension(:),intent(in)               :: Ebands    ![Nspin*Norb]
-    real(8),dimension(size(Ebands)),intent(in)    :: Dbands    ![Nspin*Norb]
-    real(8),dimension(size(Ebands)),intent(in)    :: Hloc      ![Nspin*Norb]
-    complex(8),dimension(:,:,:,:,:),intent(in)    :: Sigma     ![Nspin][Nspin][Norb][Norb][Lfreq]
-    complex(8),dimension(:,:,:,:,:),intent(inout) :: Gk     !as Sigma
-    character(len=*)                              :: axis
-    complex(8),dimension(:),optional              :: zeta
-    !
-    complex(8),dimension(:,:,:),allocatable       :: csi ![Nspin*Norb][Nspin*Norb][Lfreq]
-    complex(8),dimension(:,:,:,:,:),allocatable   :: Gtmp      !as Sigma
+  !TRIDIAG Hk
+  !Hk has a blocks tridiagonal form with blocks of size [Ncell,Ncell]. Ntot=Nsites*Ncell,
+  !with: Nsites the number of sites in the super-cell
+  !      Ncell the dimension of the unit cell 
+  subroutine get_gk_normal_tridiag(Hk,Gk,Sigma,axis,Nsites,Ncell)
+    complex(8),dimension(:,:),intent(in)      :: Hk      ![N,N]
+    complex(8),dimension(:,:,:),intent(in)    :: Sigma   ![N,N,Lfreq]
+    complex(8),dimension(:,:,:),intent(inout) :: Gk    !as Sigma
+    character(len=*)                          :: axis
+    integer,intent(in)                        :: Nsites,Ncell
+    !allocatable arrays
+    complex(8),dimension(:,:,:),allocatable   :: csi
     !
     !MPI setup:
 #ifdef _MPI    
@@ -252,49 +114,107 @@ contains
     mpi_master=.true.
 #endif
     !
-    if(present(zeta))then
-       call build_frequency_array(axis,zeta)
-    else
-       call build_frequency_array(axis)
-    endif
+    call build_frequency_array(axis)
     !
-    Nspin = size(Sigma,1)
-    Norb  = size(Sigma,3)
-    Lfreq = size(Sigma,5)
-    Nso   = Nspin*Norb    
+    Ntot  = size(Hk,1)
+    Lfreq = size(Sigma,3)
     !Testing part:
-    if(size(Ebands)/=Nso)stop "dmft_get_gk_normal_dos_main_mpi ERROR: size(Ebands)!=Nso"
-    call assert_shape(Sigma,[Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_gk_normal_dos_main_mpi","Sigma")
-    call assert_shape(Gk,[Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_gk_normal_dos_main_mpi","Gk")
+    if(Nsites*Ncell/=Ntot)stop "get_gk_normal_tridiag ERROR: passed Nsites*Ncell != size(Hk,1)==Ntot"
+    call assert_shape(Hk,[Ntot,Ntot],'get_gk_normal_tridiag',"Hk")
+    call assert_shape(Sigma,[Ntot,Ntot,Lfreq],'get_gk_normal_tridiag',"Sigma")
+    call assert_shape(Gk,[Ntot,Ntot,Lfreq],'get_gk_normal_tridiag',"Gk")
     !
-    !Allocate and setup the Matsubara freq.
-    allocate(csi(Nso,Nso,Lfreq))
+    allocate(csi(Ntot,Ntot,Lfreq))
     !
     do i=1,Lfreq
-       csi(:,:,i)=(wfreq(i)+xmu)*eye(Nso) - nn2so_reshape(Sigma(:,:,:,:,i),Nspin,Norb)
+       csi(:,:,i) = (wfreq(i)+xmu)*eye(Ntot) - Sigma(:,:,i)
     enddo
     !
-    allocate(Gtmp(Nspin,Nspin,Norb,Norb,Lfreq));Gtmp=zero
+    Gk=zero
+    call invert_gk_normal_tridiag_mpi(csi,Hk,Gk,Nsites,Ncell)
+  end subroutine get_gk_normal_tridiag
+
+
+  !DOS case: Hk--> Es,DOSs
+  subroutine get_gk_normal_dos(Ebands,Dbands,Hloc,Gk,Sigma,axis)
+    real(8),dimension(:),intent(in)            :: Ebands    ![N]
+    real(8),dimension(:),intent(in)            :: Dbands    ![N]
+    real(8),dimension(size(Ebands)),intent(in) :: Hloc      ![N]
+    complex(8),dimension(:,:,:),intent(in)     :: Sigma     ![N,N][Lmats]
+    complex(8),dimension(:,:,:),intent(inout)  :: Gk      !as Sigma
+    character(len=*)                           :: axis
     !
-    do i = 1+mpi_rank, Lfreq, mpi_size
-       do ispin=1,Nspin
-          do iorb=1,Norb
-             io = iorb + (ispin-1)*Norb
-             Gtmp(ispin,ispin,iorb,iorb,i) = Dbands(io)/( csi(io,io,i)-Hloc(io)-Ebands(io) )
+    complex(8),dimension(:,:,:),allocatable    :: csi ![N,N][Lmats]
+    complex(8),dimension(:,:,:),allocatable    :: Gktmp      !as Sigma
+    complex(8),dimension(:,:),allocatable      :: Gdos_tmp ![N][N]
+    logical                                    :: dos_diag !1. T / 2. F
+    !
+    !MPI setup:
+#ifdef _MPI    
+    if(check_MPI())then
+       mpi_size  = get_size_MPI()
+       mpi_rank =  get_rank_MPI()
+       mpi_master= get_master_MPI()
+    else
+       mpi_size=1
+       mpi_rank=0
+       mpi_master=.true.
+    endif
+#else
+    mpi_size=1
+    mpi_rank=0
+    mpi_master=.true.
+#endif
+    !
+    call build_frequency_array(axis)
+    !
+    Ntot  = size(Ebands)
+    Lfreq = size(Sigma,3)
+    !
+    !case F  => 1  DOS, H(e)=diag(Ebands), non-diagonal case
+    !case T  => >1 DOS, Ebands, diagonal case
+    dos_diag = .not.(size(Dbands) < size(Ebands))
+    !
+    !Testing part:
+    call assert_shape(Sigma,[Ntot,Ntot,Lfreq],"dmft_get_gk_normal_dos","Sigma")
+    call assert_shape(Gk,[Ntot,Ntot,Lfreq],"dmft_get_gk_normal_dos","Gk")
+    !
+    !Allocate and setup the Matsubara freq.
+    allocate(csi(Ntot,Ntot,Lfreq))
+    do i=1,Lfreq
+       csi(:,:,i)=(wfreq(i)+xmu)*eye(Ntot) - Sigma(:,:,i)
+    enddo
+    !
+    !invert (Z-Hk) for each k-point
+    allocate(Gktmp(Ntot,Ntot,Lfreq));Gktmp=zero
+    !
+    ! diagonal case
+    if(dos_diag)then
+       do i=1+mpi_rank, Lfreq, mpi_size
+          do io=1,Ntot
+             Gktmp(io,io,i) = Dbands(io)/( csi(io,io,i)-Hloc(io)-Ebands(io) )
           enddo
        enddo
-    end do
+    else
+       allocate(Gdos_tmp(Ntot,Ntot)) ;Gdos_tmp=zero
+       do i = 1+mpi_rank, Lfreq, mpi_size
+          Gdos_tmp = csi(:,:,i)-diag(Hloc(:))-diag(Ebands(:)) !G(e,w) = csi - Hloc - H(e)
+          call inv(Gdos_tmp)
+          Gktmp(:,:,i) = Dbands(1)*Gdos_tmp
+       enddo
+    end if
+    !
 #ifdef _MPI    
     if(check_MPI())then
        Gk=zero
-       call Mpi_AllReduce(Gtmp,Gk, size(Gk), MPI_Double_Complex, MPI_Sum, Mpi_Comm_World, MPI_ierr)
+       call Mpi_AllReduce(Gktmp,Gk, size(Gk), MPI_Double_Complex, MPI_Sum, MPI_COMM_WORLD, MPI_ierr)
     else
-       Gk = Gtmp
+       Gk=Gktmp
     endif
 #else
-    Gk = Gtmp
+    Gk=Gktmp
 #endif
-  end subroutine dmft_get_gk_normal_dos
+  end subroutine get_gk_normal_dos
 
 
 
@@ -305,252 +225,24 @@ contains
 
 
 
-  subroutine dmft_get_gk_normal_ineq(Hk,Gk,Sigma,axis,zeta,tridiag,hk_symm)
-    complex(8),dimension(:,:),intent(in)            :: Hk        ![Nlat*Nspin*Norb][Nlat*Nspin*Norb]
-    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sigma     ![Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
-    complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gk     !as Sigma
-    character(len=*)                            :: axis
-    complex(8),dimension(:),optional                :: zeta
-    logical,optional                                :: tridiag
-    logical                                         :: tridiag_
-    logical,optional                                :: hk_symm   !
-    logical                                         :: hk_symm_  !
+
+
+
+
+
+
+
+
+
+
+
+  subroutine get_gk_superc_main(Hk,Gk,Sigma,axis)
+    complex(8),dimension(:,:,:),intent(in)                      :: Hk       ![2][N,N]
+    complex(8),dimension(:,:,:,:),intent(in)                    :: Sigma    ![2][N,N,Lfreq]
+    complex(8),dimension(:,:,:,:),intent(inout)                 :: Gk     !as Sigma
+    character(len=*)                                            :: axis
     !allocatable arrays
-    complex(8),dimension(:,:,:,:,:,:),allocatable   :: Gtmp    !as Sigma
-    complex(8),dimension(:,:,:,:),allocatable       :: csi ![Nlat][Nspin*Norb][Nspin*Norb][Lfreq]
-    !
-    !MPI setup:
-#ifdef _MPI    
-    if(check_MPI())then
-       mpi_size  = get_size_MPI()
-       mpi_rank =  get_rank_MPI()
-       mpi_master= get_master_MPI()
-    else
-       mpi_size=1
-       mpi_rank=0
-       mpi_master=.true.
-    endif
-#else
-    mpi_size=1
-    mpi_rank=0
-    mpi_master=.true.
-#endif
-    !
-    if(present(zeta))then
-       call build_frequency_array(axis,zeta)
-    else
-       call build_frequency_array(axis)
-    endif
-    !
-    tridiag_=.false.;if(present(tridiag))tridiag_=tridiag
-    hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
-    !
-    Nlat  = size(Sigma,1)
-    Nspin = size(Sigma,2)
-    Norb  = size(Sigma,4)
-    Lfreq = size(Sigma,6)
-    Nso   = Nspin*Norb
-    Nlso  = Nlat*Nspin*Norb
-    !Testing part:
-    call assert_shape(Hk,[Nlso,Nlso],'dmft_get_gk_normal_ineq_main_mpi',"Hk")
-    call assert_shape(Sigma,[Nlat,Nspin,Nspin,Norb,Norb,Lfreq],'dmft_get_gk_normal_ineq_main_mpi',"Sigma")
-    call assert_shape(Gk,[Nlat,Nspin,Nspin,Norb,Norb,Lfreq],'dmft_get_gk_normal_ineq_main_mpi',"Gk")
-    !
-    if(mpi_master)then
-       if(.not.tridiag_)then
-          write(*,"(A)")"Direct Inversion algorithm:"
-       else
-          write(*,"(A)")"Quantum Zipper algorithm:"
-       endif
-    endif
-    !
-    allocate(csi(Nlat,Nso,Nso,Lfreq))
-    !
-    do ilat=1,Nlat
-       do i=1,Lfreq
-          csi(ilat,:,:,i) = (wfreq(i)+xmu)*eye(Nso)     - nn2so_reshape(Sigma(ilat,:,:,:,:,i),Nspin,Norb)
-       enddo
-    enddo
-    !
-    !pass each Z_site to the routines that invert (Csi-Hk) for each k-point 
-    Gk=zero
-    if(.not.tridiag_)then
-       call invert_gk_normal_ineq_mpi(csi,Hk,hk_symm_,Gk)
-    else
-       call invert_gk_normal_tridiag_mpi(csi,Hk,hk_symm_,Gk)
-    endif
-  end subroutine dmft_get_gk_normal_ineq
-
-
-
-
-
-
-
-
-
-
-  subroutine dmft_get_gk_normal_cluster(Hk,Gk,Sigma,axis,zeta,hk_symm)
-    complex(8),dimension(:,:),intent(in)              :: Hk        ![Nlat*Nspin*Norb][Nlat*Nspin*Norb]
-    complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Sigma     ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
-    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gk     !as Sigma
-    character(len=*)                                  :: axis
-    complex(8),dimension(:),optional                  :: zeta
-    logical,optional                                  :: hk_symm   !
-    logical                                           :: hk_symm_  !
-    !allocatable arrays
-    complex(8),dimension(:,:,:),allocatable           :: csi ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lfreq]
-    !
-    !MPI setup:
-#ifdef _MPI    
-    if(check_MPI())then
-       mpi_size  = get_size_MPI()
-       mpi_rank =  get_rank_MPI()
-       mpi_master= get_master_MPI()
-    else
-       mpi_size=1
-       mpi_rank=0
-       mpi_master=.true.
-    endif
-#else
-    mpi_size=1
-    mpi_rank=0
-    mpi_master=.true.
-#endif
-    !
-    if(present(zeta))then
-       call build_frequency_array(axis,zeta)
-    else
-       call build_frequency_array(axis)
-    endif
-    !
-    hk_symm_  =.false.;if(present(hk_symm)) hk_symm_=hk_symm
-    !
-    Nlat  = size(Sigma,1)
-    Nspin = size(Sigma,3)
-    Norb  = size(Sigma,5)
-    Lfreq = size(Sigma,7)
-    Nlso   = Nlat*Nspin*Norb
-    !
-    !Testing part:
-    call assert_shape(Hk,[Nlso,Nlso],"dmft_get_gk_normal_cluster_mpi","Hk")
-    call assert_shape(Sigma,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_gk_normal_cluster_mpi","Sigma")
-    call assert_shape(Gk,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_gk_normal_cluster_mpi","Gk")
-    !
-    !Allocate and setup the Matsubara freq.
-    allocate(csi(Nlso,Nlso,Lfreq))
-    !
-    do i=1,Lfreq
-       csi(:,:,i)=(wfreq(i)+xmu)*eye(Nlso) - nnn2lso_cluster_reshape(Sigma(:,:,:,:,:,:,i),Nlat,Nspin,Norb)
-    enddo
-    !
-    !invert (Csi-Hk) for each k-point
-    Gk=zero
-    call invert_gk_normal_cluster_mpi(csi,Hk,hk_symm_,Gk)      
-  end subroutine dmft_get_gk_normal_cluster
-
-
-
-
-#if __GFORTRAN__ &&  __GNUC__ > 8
-  subroutine dmft_get_gk_normal_cluster_ineq(Hk,Gk,Sigma,axis,zeta,tridiag,hk_symm)
-    complex(8),dimension(:,:),intent(in)                :: Hk        ![Nineq*Nlat*Nspin*Norb][Nineq*Nlat*Nspin*Norb]
-    complex(8),dimension(:,:,:,:,:,:,:,:),intent(in)    :: Sigma     ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
-    complex(8),dimension(:,:,:,:,:,:,:,:),intent(inout) :: Gk     !as Sigma
-    character(len=*)                                :: axis
-    complex(8),dimension(:),optional                    :: zeta
-    logical,optional                                    :: tridiag
-    logical                                             :: tridiag_
-    logical,optional                                    :: hk_symm   !
-    logical                                             :: hk_symm_  !
-    !allocatable arrays
-    complex(8),dimension(:,:,:,:,:,:,:,:),allocatable   :: Gtmp    !as Sigma
-    complex(8),dimension(:,:,:,:),allocatable           :: csi ![Nineq][Nlat*Nspin*Norb][Nlat*Nspin*Norb][Lfreq]
-    !
-    !MPI setup:
-#ifdef _MPI    
-    if(check_MPI())then
-       mpi_size  = get_size_MPI()
-       mpi_rank =  get_rank_MPI()
-       mpi_master= get_master_MPI()
-    else
-       mpi_size=1
-       mpi_rank=0
-       mpi_master=.true.
-    endif
-#else
-    mpi_size=1
-    mpi_rank=0
-    mpi_master=.true.
-#endif
-    !
-    if(present(zeta))then
-       call build_frequency_array(axis,zeta)
-    else
-       call build_frequency_array(axis)
-    endif
-    !
-    tridiag_=.false.;if(present(tridiag))tridiag_=tridiag
-    hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
-    !
-    Nineq  = size(Sigma,1)
-    Nlat  = size(Sigma,2)
-    Nspin = size(Sigma,4)
-    Norb  = size(Sigma,6)
-    Lfreq = size(Sigma,8)
-    Nso   = Nspin*Norb
-    Nlso  = Nlat*Nspin*Norb
-    Nilso = Nineq*Nlat*Nspin*Norb
-    !Testing part:
-    call assert_shape(Hk,[Nilso,Nilso],'dmft_get_gk_normal_ineq_main_mpi',"Hk")
-    call assert_shape(Sigma,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],'dmft_get_gk_normal_ineq_main_mpi',"Sigma")
-    call assert_shape(Gk,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],'dmft_get_gk_normal_ineq_main_mpi',"Gk")
-    !
-    if(mpi_master)then
-       if(.not.tridiag_)then
-          write(*,"(A)")"Direct Inversion algorithm:"
-       else
-          write(*,"(A)")"Quantum Zipper algorithm:"
-       endif
-    endif
-    !
-    allocate(csi(Nineq,Nlso,Nlso,Lfreq))
-    do iineq=1,Nineq
-       do i=1,Lfreq
-          csi(iineq,:,:,i) = (wfreq(i)+xmu)*eye(Nlso)     - nnn2lso_cluster_reshape(Sigma(iineq,:,:,:,:,:,:,i),Nlat,Nspin,Norb)
-       enddo
-    enddo
-    !
-    !pass each Z_site to the routines that invert (Csi-Hk) for each k-point 
-    Gk=zero
-    if(.not.tridiag_)then
-       call invert_gk_normal_cluster_ineq_mpi(csi,Hk,hk_symm_,Gk)
-    else
-       call invert_gk_normal_cluster_ineq_tridiag_mpi(csi,Hk,hk_symm_,Gk)
-    endif
-  end subroutine dmft_get_gk_normal_cluster_ineq
-#endif
-
-
-
-
-
-
-
-
-
-
-
-
-  subroutine dmft_get_gk_superc_main(Hk,Gk,Sigma,axis,zeta,hk_symm)
-    complex(8),dimension(:,:,:),intent(in)          :: Hk        ![2][Nspin*Norb][Nspin*Norb]
-    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sigma     ![2][Nspin][Nspin][Norb][Norb][Lfreq]
-    complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gk     !as Sigma
-    character(len=*)                            :: axis
-    complex(8),dimension(:),optional                :: zeta
-    logical,optional                                :: hk_symm   !
-    logical                                         :: hk_symm_  !
-    complex(8),dimension(:,:,:,:,:),allocatable     :: csi ![2][2][Nspin*Norb][Nspin*Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:),allocatable                 :: csi     ![2][2][N][N][Lfreq]
     !
     !
     !MPI setup:
@@ -570,61 +262,55 @@ contains
     mpi_master=.true.
 #endif
     !
+    call build_frequency_array(axis)
     !
-    if(present(zeta))then
-       call build_frequency_array(axis,zeta)
-    else
-       call build_frequency_array(axis)
-    endif
     !
-    hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
+    Ntot  = size(Hk,2)
+    Lfreq = size(Sigma,4)
     !
-    Nspin = size(Sigma,2)
-    Norb  = size(Sigma,4)
-    Lfreq = size(Sigma,6)
-    Nso   = Nspin*Norb
-    !Testing part:
-    call assert_shape(Hk,[2,Nso,Nso],'dmft_get_gk_superc_main_mpi',"Hk")
-    call assert_shape(Sigma,[2,Nspin,Nspin,Norb,Norb,Lfreq],'dmft_get_gk_superc_main_mpi',"Sigma")
-    call assert_shape(Gk,[2,Nspin,Nspin,Norb,Norb,Lfreq],'dmft_get_gk_superc_main_mpi',"Gk")
+    call assert_shape(Hk,[2,Ntot,Ntot],'get_gk_superc',"Hk")
+    call assert_shape(Sigma,[2,Ntot,Ntot,Lfreq],'get_gk_superc',"Sigma")
+    call assert_shape(Gk,[2,Ntot,Ntot,Lfreq],'get_gk_superc',"Gk")
     !
-    allocate(csi(2,2,Nso,Nso,Lfreq))
+    allocate(csi(2,2,Ntot,Ntot,Lfreq))
+    !
     select case(axis)
-    case default; stop "dmft_get_gk_superc_main error: specified axis not valid. axis={matsubara,realaxis}"
+    case default; stop "get_gk_superc_main error: specified axis not valid. axis={matsubara,realaxis}"
     case("matsubara","mats","Matsubara","Mats")
        do i=1,Lfreq
-          csi(1,1,:,:,i) = (wfreq(i)+xmu)*eye(Nso) -        nn2so_reshape(Sigma(1,:,:,:,:,i),Nspin,Norb)
-          csi(1,2,:,:,i) =                         -        nn2so_reshape(Sigma(2,:,:,:,:,i),Nspin,Norb)
-          csi(2,1,:,:,i) =                         -        nn2so_reshape(Sigma(2,:,:,:,:,i),Nspin,Norb)
-          csi(2,2,:,:,i) = (wfreq(i)-xmu)*eye(Nso) + conjg( nn2so_reshape(Sigma(1,:,:,:,:,i),Nspin,Norb) )
+          csi(1,1,:,:,i) = (wfreq(i)+xmu)*eye(Ntot) -        Sigma(1,:,:,i)
+          csi(1,2,:,:,i) =                          -        Sigma(2,:,:,i)
+          csi(2,1,:,:,i) =                          -        Sigma(2,:,:,i)
+          csi(2,2,:,:,i) = (wfreq(i)-xmu)*eye(Ntot) + conjg( Sigma(1,:,:,i))
        enddo
     case("realaxis","real","Realaxis","Real")
        do i=1,Lfreq
-          csi(1,1,:,:,i) = (wfreq(i) + xmu)*eye(Nso)                 - nn2so_reshape(Sigma(1,:,:,:,:,i),Nspin,Norb)
-          csi(1,2,:,:,i) =                                           - nn2so_reshape(Sigma(2,:,:,:,:,i),Nspin,Norb)
-          csi(2,1,:,:,i) =                                           - nn2so_reshape(Sigma(2,:,:,:,:,i),Nspin,Norb)
-          csi(2,2,:,:,i) = -conjg(wfreq(Lfreq+1-i) + xmu)*eye(Nso) + conjg( nn2so_reshape(Sigma(1,:,:,:,:,Lfreq+1-i),Nspin,Norb) )
+          csi(1,1,:,:,i) = (wfreq(i) + xmu)*eye(Ntot)                - Sigma(1,:,:,i)
+          csi(1,2,:,:,i) =                                           - Sigma(2,:,:,i)
+          csi(2,1,:,:,i) =                                           - Sigma(2,:,:,i)
+          csi(2,2,:,:,i) = -conjg(wfreq(Lfreq+1-i) + xmu)*eye(Ntot)  + conjg( Sigma(1,:,:,Lfreq+1-i) )
        enddo
     end select
-    !invert (Csi-Hk) for each k-point
+    !
     Gk=zero
-    call invert_gk_superc_mpi(csi,Hk,hk_symm_,Gk)
-  end subroutine dmft_get_gk_superc_main
+    call invert_gk_superc_mpi(csi,Hk,Gk)
+  end subroutine get_gk_superc_main
 
 
-  subroutine dmft_get_gk_superc_dos(Ebands,Dbands,Hloc,Gk,Sigma,axis,zeta)
-    real(8),dimension(:,:),intent(in)               :: Ebands    ![2][Nspin*Norb]
-    real(8),dimension(:),intent(in)                 :: Dbands    ![Nspin*Norb]
-    real(8),dimension(2,size(Ebands,2)),intent(in)  :: Hloc      ![2][Nspin*Norb]
-    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sigma     ![2][Nspin][Nspin][Norb][Norb][Lfreq]
-    complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gk     !as Sigma
-    character(len=*)                                :: axis
-    complex(8),dimension(:),optional                :: zeta
+
+  subroutine get_gk_superc_dos(Ebands,Dbands,Hloc,Gk,Sigma,axis)
+    real(8),dimension(:,:),intent(in)              :: Ebands    ![2,N]
+    real(8),dimension(:),intent(in)                :: Dbands    ![N]
+    real(8),dimension(2,size(Ebands,2)),intent(in) :: Hloc      ![2,N]
+    complex(8),dimension(:,:,:,:),intent(in)       :: Sigma     ![2,N,N,Lfreq]
+    complex(8),dimension(:,:,:,:),intent(inout)    :: Gk      !as Sigma
+    character(len=*)                               :: axis
     ! arrays
-    complex(8)                                      :: gktmp(2),cdet
-    complex(8)                                      :: zeta_11,zeta_12,zeta_21,zeta_22 
-    complex(8),dimension(:,:,:,:,:),allocatable     :: csi ![2][2][Nspin*Norb][Nspin*Norb][Lfreq]
-    complex(8),dimension(:,:,:,:,:,:),allocatable   :: Gtmp    !as Sigma
+    complex(8),dimension(:,:,:,:,:),allocatable    :: csi ![2][2][N,N,Lfreq]
+    complex(8),dimension(:,:),allocatable          :: Gmatrix 
+    complex(8),dimension(:,:,:,:),allocatable      :: Gtmp    !as Sigma
+    complex(8),dimension(:,:),allocatable          :: Gdos_tmp ![N][N]
+    logical                                        :: dos_diag !1. T / 2. F
     !
     !MPI setup:
 #ifdef _MPI    
@@ -643,69 +329,63 @@ contains
     mpi_master=.true.
 #endif
     !
-    if(present(zeta))then
-       call build_frequency_array(axis,zeta)
-    else
-       call build_frequency_array(axis)
-    endif
+    call build_frequency_array(axis)
     !
-    Nspin = size(Sigma,2)
-    Norb  = size(Sigma,4)
-    Lfreq = size(Sigma,6)
-    Nso   = Nspin*Norb
+    !
+    Ntot  = size(Ebands,2)
+    Lfreq = size(Sigma,4)
+    !
+    !case F  => 1  DOS, H(e)=diag(Ebands), non-diagonal case
+    !case T  => >1 DOS, Ebands, diagonal case
+    ! dos_diag = .not.(size(Dbands,1) < size(Ebands,2))
+    !
     !Testing part:
-    call assert_shape(Ebands,[2,Nso],'dmft_get_gk_superc_dos',"Ebands")
-    call assert_shape(Sigma,[2,Nspin,Nspin,Norb,Norb,Lfreq],'dmft_get_gk_superc_main',"Sigma")
-    call assert_shape(Gk,[2,Nspin,Nspin,Norb,Norb,Lfreq],'dmft_get_gk_superc_main',"Gk")
+    call assert_shape(Ebands,[2,Ntot],'get_gk_superc_dos',"Ebands")
+    call assert_shape(Dbands,[Ntot],'get_gk_superc_dos',"Dbands")
+    call assert_shape(Sigma,[2,Ntot,Ntot,Lfreq],'get_gk_superc_dos',"Sigma")
+    call assert_shape(Gk,[2,Ntot,Ntot,Lfreq],'get_gk_superc_dos',"Gk")
     !
-    allocate(csi(2,2,Nso,Nso,Lfreq))
-    csi=zero
-    do i=1,Lfreq
-       csi(1,1,:,:,i) = (wfreq(i)+xmu)*eye(Nso) - diag(Hloc(1,:)) -   nn2so_reshape(Sigma(1,:,:,:,:,i),Nspin,Norb)
-       csi(1,2,:,:,i) =                                      -        nn2so_reshape(Sigma(2,:,:,:,:,i),Nspin,Norb)
-       csi(2,1,:,:,i) =                                      -        nn2so_reshape(Sigma(2,:,:,:,:,i),Nspin,Norb)
-       csi(2,2,:,:,i) = (wfreq(i)-xmu)*eye(Nso) - diag(Hloc(2,:)) + conjg( nn2so_reshape(Sigma(1,:,:,:,:,i),Nspin,Norb) )
-    enddo
+    !
+    allocate(csi(2,2,Ntot,Ntot,Lfreq));csi = zero
     select case(axis)
-    case default; stop "dmft_get_gk_superc_main error: specified axis not valid. axis={matsubara,realaxis}"
+    case default; stop "get_gk_superc_main error: specified axis not valid. axis={matsubara,realaxis}"
     case("matsubara","mats","Matsubara","Mats")
        do i=1,Lfreq
-          csi(1,1,:,:,i) = (wfreq(i)+xmu)*eye(Nso) - diag(Hloc(1,:)) -   nn2so_reshape(Sigma(1,:,:,:,:,i),Nspin,Norb)
-          csi(1,2,:,:,i) =                                      -        nn2so_reshape(Sigma(2,:,:,:,:,i),Nspin,Norb)
-          csi(2,1,:,:,i) =                                      -        nn2so_reshape(Sigma(2,:,:,:,:,i),Nspin,Norb)
-          csi(2,2,:,:,i) = (wfreq(i)-xmu)*eye(Nso) - diag(Hloc(2,:)) + conjg( nn2so_reshape(Sigma(1,:,:,:,:,i),Nspin,Norb) )
+          csi(1,1,:,:,i) = (wfreq(i)+xmu)*eye(Ntot) - diag(Hloc(1,:)) -        Sigma(1,:,:,i)
+          csi(1,2,:,:,i) =                                            -        Sigma(2,:,:,i)
+          csi(2,1,:,:,i) =                                            -        Sigma(2,:,:,i)
+          csi(2,2,:,:,i) = (wfreq(i)-xmu)*eye(Ntot) + diag(Hloc(2,:)) + conjg( Sigma(1,:,:,i) )
        enddo
     case("realaxis","real","Realaxis","Real")
        do i=1,Lfreq
-          csi(1,1,:,:,i) = (wfreq(i)+xmu)*eye(Nso)                 - diag(Hloc(1,:)) - nn2so_reshape(Sigma(1,:,:,:,:,i),Nspin,Norb)
-          csi(1,2,:,:,i) = -nn2so_reshape(Sigma(2,:,:,:,:,i),Nspin,Norb)
-          csi(2,1,:,:,i) = -nn2so_reshape(Sigma(2,:,:,:,:,i),Nspin,Norb)
-          csi(2,2,:,:,i) = -conjg( wfreq(Lfreq+1-i)+xmu )*eye(Nso) + diag(Hloc(2,:)) + conjg( nn2so_reshape(Sigma(1,:,:,:,:,Lfreq+1-i),Nspin,Norb) )
+          csi(1,1,:,:,i) = (wfreq(i)+xmu)*eye(Ntot)                 - diag(Hloc(1,:)) -        Sigma(1,:,:,i)
+          csi(1,2,:,:,i) =                                                            -        Sigma(2,:,:,i)
+          csi(2,1,:,:,i) =                                                            -        Sigma(2,:,:,i)
+          csi(2,2,:,:,i) = -conjg( wfreq(Lfreq+1-i)+xmu )*eye(Ntot) + diag(Hloc(2,:)) + conjg( Sigma(1,:,:,Lfreq+1-i) )
        enddo
     end select
     !
-    !invert (Csi-Hk) for each k-point
-    Gk=zero
-    allocate(Gtmp(2,Nspin,Nspin,Norb,Norb,Lfreq));Gtmp=zero
-    do i = 1+mpi_rank, Lfreq, mpi_size
-       do ispin=1,Nspin
-          do iorb=1,Norb
-             io = iorb + (ispin-1)*Norb
-             zeta_11 = csi(1,1,io,io,i)
-             zeta_12 = csi(1,2,io,io,i)
-             zeta_21 = csi(2,1,io,io,i)
-             zeta_22 = csi(2,2,io,io,i)
-             !
-             cdet = (zeta_11-Hloc(1,io)-Ebands(1,io))*(zeta_22-Hloc(2,io)-Ebands(2,io)) - zeta_12*zeta_21
-             gktmp(1)=-(zeta_22-Hloc(2,io)-Ebands(2,io))/cdet
-             gktmp(2)=  zeta_12/cdet
-             Gtmp(1,ispin,ispin,iorb,iorb,i) = Gtmp(1,ispin,ispin,iorb,iorb,i) + gktmp(1)*Dbands(io)
-             Gtmp(2,ispin,ispin,iorb,iorb,i) = Gtmp(2,ispin,ispin,iorb,iorb,i) + gktmp(2)*Dbands(io)
-          enddo
+    !invert (Z-Hk) for each k-point
+    allocate(Gtmp(2,Ntot,Ntot,Lfreq))
+    allocate(Gmatrix(2*Ntot,2*Ntot))
+    Gtmp=zero
+    !
+    do i=1+mpi_rank,Lfreq, mpi_size
+       Gmatrix  = zero
+       Gmatrix(1:Ntot,1:Ntot)               = csi(1,1,:,:,i) - diag(Ebands(1,:))
+       Gmatrix(1:Ntot,Ntot+1:2*Ntot)        = csi(1,2,:,:,i)
+       Gmatrix(Ntot+1:2*Ntot,1:Ntot)        = csi(2,1,:,:,i)
+       Gmatrix(Ntot+1:2*Ntot,Ntot+1:2*Ntot) = csi(2,2,:,:,i) - diag(Ebands(2,:))
+       call inv(Gmatrix)
+       do io=1,Ntot
+          Gtmp(1,io,io,i) = Gtmp(1,io,io,i) + Gmatrix(io,io)*Dbands(io)
+          Gtmp(2,io,io,i) = Gtmp(2,io,io,i) + Gmatrix(io,Ntot+io)*Dbands(io)
        enddo
     enddo
+    !
 #ifdef _MPI    
     if(check_MPI())then
+       Gk=zero
        call Mpi_AllReduce(Gtmp,Gk, size(Gk), MPI_Double_Complex, MPI_Sum, MPI_COMM_WORLD, MPI_ierr)
     else
        Gk=Gtmp
@@ -713,93 +393,8 @@ contains
 #else
     Gk=Gtmp
 #endif
-  end subroutine dmft_get_gk_superc_dos
+  end subroutine get_gk_superc_dos
 
-
-  subroutine dmft_get_gk_superc_ineq(Hk,Gk,Sigma,axis,zeta,hk_symm)
-    complex(8),dimension(:,:,:),intent(in)            :: Hk        ![2][Nlat*Nspin*Norb][Nlat*Nspin*Norb]
-    complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Sigma     ![2][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
-    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gk     !as Sigma
-    character(len=*)                                  :: axis
-    complex(8),dimension(:),optional                  :: zeta
-    logical,optional                                  :: hk_symm   !
-    logical                                           :: hk_symm_  !
-    !allocatable arrays
-    complex(8),dimension(:,:,:,:,:,:),allocatable     :: csi ![2][2][Nlat][Nspin*Norb][Nspin*Norb][Lfreq]
-    !
-    !
-    !MPI setup:
-#ifdef _MPI    
-    if(check_MPI())then
-       mpi_size  = get_size_MPI()
-       mpi_rank =  get_rank_MPI()
-       mpi_master= get_master_MPI()
-    else
-       mpi_size=1
-       mpi_rank=0
-       mpi_master=.true.
-    endif
-#else
-    mpi_size=1
-    mpi_rank=0
-    mpi_master=.true.
-#endif
-    !
-    if(present(zeta))then
-       call build_frequency_array(axis,zeta)
-    else
-       call build_frequency_array(axis)
-    endif
-    !
-    hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
-    !
-    Nlat  = size(Sigma,2)
-    Nspin = size(Sigma,3)
-    Norb  = size(Sigma,5)
-    Lfreq = size(Sigma,7)
-    Nso   = Nspin*Norb
-    Nlso  = Nlat*Nspin*Norb
-    !Testing part:
-    call assert_shape(Hk,[2,Nlso,Nlso],'dmft_get_gk_superc_ineq_main_mpi',"Hk")
-    call assert_shape(Sigma,[2,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],'dmft_get_gk_superc_ineq_main_mpi',"Sigma")
-    call assert_shape(Gk,[2,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],'dmft_get_gk_superc_ineq_main_mpi',"Gk")
-    !
-    allocate(csi(2,2,Nlat,Nso,Nso,Lfreq));csi=zero
-    select case(axis)
-    case default; stop "dmft_get_gk_superc_main error: specified axis not valid. axis={matsubara,realaxis}"
-    case("matsubara","mats","Matsubara","Mats")
-       do ilat=1,Nlat
-          !SYMMETRIES in Matsubara-frequencies  [assuming a real order parameter]
-          !G22(iw) = -[G11[iw]]*
-          !G21(iw) =   G12[w]
-          do i=1,Lfreq
-             csi(1,1,ilat,:,:,i) = (wfreq(i)+xmu)*eye(Nso) -        nn2so_reshape(Sigma(1,ilat,:,:,:,:,i),Nspin,Norb)
-             csi(1,2,ilat,:,:,i) =                         -        nn2so_reshape(Sigma(2,ilat,:,:,:,:,i),Nspin,Norb)
-             csi(2,1,ilat,:,:,i) =                         -        nn2so_reshape(Sigma(2,ilat,:,:,:,:,i),Nspin,Norb)
-             csi(2,2,ilat,:,:,i) = (wfreq(i)-xmu)*eye(Nso) + conjg( nn2so_reshape(Sigma(1,ilat,:,:,:,:,i),Nspin,Norb) )
-          enddo
-       enddo
-    case("realaxis","real","Realaxis","Real")
-       do ilat=1,Nlat
-          !SYMMETRIES in real-frequencies   [assuming a real order parameter]
-          !G22(w)  = -[G11[-w]]*
-          !G21(w)  =   G12[w]   
-          do i=1,Lfreq
-             csi(1,1,ilat,:,:,i) = (dcmplx(wr(i),eps)+ xmu)*eye(Nso)                - &
-                  nn2so_reshape(Sigma(1,ilat,:,:,:,:,i),Nspin,Norb)
-             csi(1,2,ilat,:,:,i) =                                                  - &
-                  nn2so_reshape(Sigma(2,ilat,:,:,:,:,i),Nspin,Norb)
-             csi(2,1,ilat,:,:,i) =                                                  - &
-                  nn2so_reshape(Sigma(2,ilat,:,:,:,:,i),Nspin,Norb)
-             csi(2,2,ilat,:,:,i) = -conjg( dcmplx(wr(Lfreq+1-i),eps)+xmu )*eye(Nso) + &
-                  conjg( nn2so_reshape(Sigma(1,ilat,:,:,:,:,Lfreq+1-i),Nspin,Norb) )
-          enddo
-       enddo
-    end select
-    !
-    Gk=zero
-    call invert_gk_superc_ineq_mpi(csi,Hk,hk_symm_,Gk)
-  end subroutine dmft_get_gk_superc_ineq
 
 
 
@@ -818,341 +413,386 @@ contains
   !                       INTERFACES
   !##################################################################
   !##################################################################
-  subroutine dmft_get_gk_matsubara_normal_main(Hk,Gk,Sigma,zeta,hk_symm)
-    complex(8),dimension(:,:),intent(in)          :: Hk        ![Nspin*Norb][Nspin*Norb]
-    complex(8),dimension(:,:,:,:,:),intent(in)    :: Sigma     ![Nspin][Nspin][Norb][Norb][Lfreq]
-    complex(8),dimension(:,:,:,:,:),intent(inout) :: Gk         !as Sigma
-    complex(8),dimension(:),optional              :: zeta
-    logical,optional                              :: hk_symm   ![Lk]
-    logical                                       :: hk_symm_  ![Lk]
-    !
-    hk_symm_  =.false. ; if(present(hk_symm)) hk_symm_=hk_symm
-    !
-    if(present(zeta))then
-       call dmft_get_gk_normal_main(Hk,Gk,Sigma,"matsubara",hk_symm=hk_symm_)
-    else
-       call dmft_get_gk_normal_main(Hk,Gk,Sigma,"matsubara",zeta,hk_symm=hk_symm_)
-    endif
-  end subroutine dmft_get_gk_matsubara_normal_main
-
-  subroutine dmft_get_gk_realaxis_normal_main(Hk,Gk,Sigma,zeta,hk_symm)
-    complex(8),dimension(:,:),intent(in)          :: Hk        ![Nspin*Norb][Nspin*Norb]
-    complex(8),dimension(:,:,:,:,:),intent(in)    :: Sigma     ![Nspin][Nspin][Norb][Norb][Lfreq]
-    complex(8),dimension(:,:,:,:,:),intent(inout) :: Gk         !as Sigma
-    complex(8),dimension(:),optional              :: zeta
-    logical,optional                              :: hk_symm   ![Lk]
-    logical                                       :: hk_symm_  ![Lk]
-    !
-    hk_symm_  =.false. ; if(present(hk_symm)) hk_symm_=hk_symm
-    !
-    if(present(zeta))then
-       call dmft_get_gk_normal_main(Hk,Gk,Sigma,"realaxis",hk_symm=hk_symm_)
-    else
-       call dmft_get_gk_normal_main(Hk,Gk,Sigma,"realaxis",zeta,hk_symm=hk_symm_)
-    endif
-  end subroutine dmft_get_gk_realaxis_normal_main
-
-
-
-
   !##################################################################
   !##################################################################
-
-
-
-
-
-  subroutine dmft_get_gk_matsubara_normal_dos(Ebands,Dbands,Hloc,Gk,Sigma,zeta)
-    real(8),dimension(:),intent(in)               :: Ebands    ![Nspin*Norb]
-    real(8),dimension(:),intent(in)               :: Dbands    ![Nspin*Norb /[1]
-    real(8),dimension(size(Ebands)),intent(in)    :: Hloc      ![Nspin*Norb]
-    complex(8),dimension(:,:,:,:,:),intent(in)    :: Sigma     ![Nspin][Nspin][Norb][Norb][Lfreq]
+  !                         NORMAL
+  !##################################################################
+  !##################################################################
+  subroutine get_gk_normal_hk_rank4(Hk,Gk,Sigma,axis) !N=Nspin*Norb
+    complex(8),dimension(:,:),intent(in)          :: Hk        ![N,N]
+    complex(8),dimension(:,:,:,:,:),intent(in)    :: Sigma     ![Nspin,Nspin,Norb,Norb][Lfreq]
     complex(8),dimension(:,:,:,:,:),intent(inout) :: Gk        !as Sigma
-    complex(8),dimension(:),optional              :: zeta
-    if(present(zeta))then
-       call dmft_get_gk_normal_dos(Ebands,Dbands,Hloc,Gk,Sigma,"matsubara")
-    else
-       call dmft_get_gk_normal_dos(Ebands,Dbands,Hloc,Gk,Sigma,"matsubara",zeta)
-    endif
-  end subroutine dmft_get_gk_matsubara_normal_dos
-
-  subroutine dmft_get_gk_realaxis_normal_dos(Ebands,Dbands,Hloc,Gk,Sigma,zeta)
-    real(8),dimension(:),intent(in)               :: Ebands    ![Nspin*Norb][Lk]
-    real(8),dimension(:),intent(in)               :: Dbands    ![Nspin*Norb][Lk] /[1][Lk]
-    real(8),dimension(size(Ebands)),intent(in)    :: Hloc      ![Nspin*Norb]
-    complex(8),dimension(:,:,:,:,:),intent(in)    :: Sigma     ![Nspin][Nspin][Norb][Norb][Lfreq]
-    complex(8),dimension(:,:,:,:,:),intent(inout) :: Gk         !as Sigma
-    complex(8),dimension(:),optional              :: zeta
-    if(present(zeta))then
-       call dmft_get_gk_normal_dos(Ebands,Dbands,Hloc,Gk,Sigma,"realaxis")
-    else
-       call dmft_get_gk_normal_dos(Ebands,Dbands,Hloc,Gk,Sigma,"realaxis",zeta)
-    endif
-  end subroutine dmft_get_gk_realaxis_normal_dos
-
-
-
-  !##################################################################
-  !##################################################################
-
-
-  subroutine dmft_get_gk_matsubara_normal_ineq(Hk,Gk,Sigma,zeta,tridiag,hk_symm)
-    complex(8),dimension(:,:),intent(in)            :: Hk   ![Nlat*Nspin*Norb][Nlat*Nspin*Norb]
-    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sigma![Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
-    complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gk     !as Sigma
-    complex(8),dimension(:),optional                :: zeta
-    logical,optional                                :: tridiag
-    logical                                         :: tridiag_
-    logical,optional                                :: hk_symm
-    logical                                         :: hk_symm_
+    character(len=*)                              :: axis
+    complex(8),dimension(:,:,:),allocatable       :: SF,GF
+    Ntot  = size(Hk,1)
+    Nspin = size(Sigma,1)
+    Norb  = size(Sigma,3)
+    Lfreq = size(Sigma,5)    
+    Nso   = Nspin*Norb
     !
-    tridiag_=.false.;if(present(tridiag))tridiag_=tridiag
-    hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
+    if(mpi_master)write(*,"(A)")"Get k-dependent Green's function [Nspin,Nspin,Norb,Norb]:"
+    if(mpi_master)write(*,"(A)")"The order is (int-->ext):[Norb,Nspin]"
+    call assert_shape(Hk,[Ntot,Nso],"get_gk_normal_rank4","Hk")
+    call assert_shape(Sigma,[Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_rank4","Sigma")
+    call assert_shape(Gk, [Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_rank4","Gk")
     !
-    if(present(zeta))then
-       call dmft_get_gk_normal_ineq(Hk,Gk,Sigma,"matsubara",tridiag=tridiag_,hk_symm=hk_symm_)
-    else
-       call dmft_get_gk_normal_ineq(Hk,Gk,Sigma,"matsubara",zeta,tridiag=tridiag_,hk_symm=hk_symm_)
-    endif
-  end subroutine dmft_get_gk_matsubara_normal_ineq
-
-  subroutine dmft_get_gk_realaxis_normal_ineq(Hk,Gk,Sigma,zeta,tridiag,hk_symm)
-    complex(8),dimension(:,:),intent(in)            :: Hk   ![Nlat*Nspin*Norb][Nlat*Nspin*Norb]
-    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sigma![Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
-    complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gk     !as Sigma
-    complex(8),dimension(:),optional                :: zeta
-    logical,optional                                :: tridiag
-    logical                                         :: tridiag_
-    logical,optional                                :: hk_symm
-    logical                                         :: hk_symm_
+    allocate(SF(Ntot,Ntot,Lfreq), GF(Ntot,Ntot,Lfreq))
+    SF=zero
+    GF=zero
     !
-    tridiag_=.false.;if(present(tridiag))tridiag_=tridiag
-    hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
+    SF = reshape_rank4_to_matrix(Sigma,Nspin,Norb,Lfreq)
+    call get_gk_normal_main(Hk,GF,SF,axis)
+    Gk = reshape_matrix_to_rank4(GF,Nspin,Norb,Lfreq)
+    deallocate(SF,GF)
+  end subroutine get_gk_normal_hk_rank4
+
+  subroutine get_gk_normal_dos_rank4(Ebands,Dbands,Hloc,Gk,Sigma,axis)!N=Nspin*Norb
+    real(8),dimension(:),intent(in)             :: Ebands    ![N]
+    real(8),dimension(:),intent(in)             :: Dbands    ![N]
+    real(8),dimension(size(Ebands)),intent(in)  :: Hloc      ![N]
+    complex(8),dimension(:,:,:,:,:),intent(in)    :: Sigma     ![Nspin,Nspin,Norb,Norb][L]
+    complex(8),dimension(:,:,:,:,:),intent(inout) :: Gk      !as Sigma
+    character(len=*)                              :: axis
+    complex(8),dimension(:,:,:),allocatable       :: SF,GF
     !
-    if(present(zeta))then
-       call dmft_get_gk_normal_ineq(Hk,Gk,Sigma,"realaxis",tridiag=tridiag_,hk_symm=hk_symm_)
-    else
-       call dmft_get_gk_normal_ineq(Hk,Gk,Sigma,"realaxis",zeta,tridiag=tridiag_,hk_symm=hk_symm_)
-    endif
-  end subroutine dmft_get_gk_realaxis_normal_ineq
-
-
-
-
-
-
-  !##################################################################
-  !##################################################################
-
-
-
-  subroutine dmft_get_gk_matsubara_normal_cluster(Hk,Gk,Sigma,zeta,hk_symm)
-    complex(8),dimension(:,:),intent(in)              :: Hk ![Nlat*Nspin*Norb][Nlat*Nspin*Norb]
-    complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Sigma ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
-    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gk      !as Sigma
-    complex(8),dimension(:),optional                  :: zeta
-    logical,optional                                  :: hk_symm   ![Lk]
-    logical                                           :: hk_symm_  ![Lk]
+    Ntot  = size(Ebands,1)
+    Nspin = size(Sigma,1)
+    Norb  = size(Sigma,3)
+    Lfreq = size(Sigma,5)    
+    Nso   = Nspin*Norb
     !
-    hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
+    if(mpi_master)write(*,"(A)")"Get k-dependent Green's function [Nspin,Nspin,Norb,Norb]:"
+    if(mpi_master)write(*,"(A)")"The order is (int-->ext):[Norb,Nspin]"
+    call assert_shape(Sigma,[Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_rank4","Sigma")
+    call assert_shape(Gk, [Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_rank4","Gk")
     !
-    if(present(zeta))then
-       call dmft_get_gk_normal_cluster(Hk,Gk,Sigma,"matsubara",hk_symm=hk_symm_)
-    else
-       call dmft_get_gk_normal_cluster(Hk,Gk,Sigma,"matsubara",zeta,hk_symm=hk_symm_)
-    endif
-  end subroutine dmft_get_gk_matsubara_normal_cluster
-
-  subroutine dmft_get_gk_realaxis_normal_cluster(Hk,Gk,Sigma,zeta,hk_symm)
-    complex(8),dimension(:,:),intent(in)              :: Hk ![Nlat*Nspin*Norb][Nlat*Nspin*Norb]
-    complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Sigma ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
-    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gk      !as Sigma
-    complex(8),dimension(:),optional                  :: zeta
-    logical,optional                                  :: hk_symm   ![Lk]
-    logical                                           :: hk_symm_  ![Lk]
+    allocate(SF(Ntot,Ntot,Lfreq), GF(Ntot,Ntot,Lfreq))
+    SF=zero
+    GF=zero
     !
-    hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
+    SF = reshape_rank4_to_matrix(Sigma,Nspin,Norb,Lfreq)
+    call get_gk_normal_dos(Ebands,Dbands,Hloc,GF,SF,axis)
+    Gk = reshape_matrix_to_rank4(GF,Nspin,Norb,Lfreq)
+    deallocate(SF,GF)
+  end subroutine get_gk_normal_dos_rank4
+
+  subroutine get_gk_normal_hk_rank5(Hk,Gk,Sigma,axis) !N=Nlat*Nspin*Norb
+    complex(8),dimension(:,:),intent(in)            :: Hk        ![N,N]
+    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sigma     ![Nlat,Nspin,Nspin,Norb,Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gk      !as Sigma
+    character(len=*)                                :: axis
+    complex(8),dimension(:,:,:),allocatable         :: SF,GF
+    Ntot  = size(Hk,1)
+    Nlat  = size(Sigma,1)
+    Nspin = size(Sigma,2)
+    Norb  = size(Sigma,4)
+    Lfreq = size(Sigma,6)
+    Nlso  = Nlat*Nspin*Norb
     !
-    if(present(zeta))then
-       call dmft_get_gk_normal_cluster(Hk,Gk,Sigma,"realaxis",hk_symm=hk_symm_)
-    else
-       call dmft_get_gk_normal_cluster(Hk,Gk,Sigma,"realaxis",zeta,hk_symm=hk_symm_)
-    endif
-  end subroutine dmft_get_gk_realaxis_normal_cluster
+    if(mpi_master)write(*,"(A)")"Get k-dependent Green's function [Nlat,Nspin,Nspin,Norb,Norb]:"
+    if(mpi_master)write(*,"(A)")"The order is (int-->ext):[Norb,Nspin,Nlat]"
+    call assert_shape(Hk,[Ntot,Nlso],"get_gk_normal_rank5","Hk")
+    call assert_shape(Sigma,[Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_rank5","Sigma")
+    call assert_shape(Gk, [Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_rank5","Gk")
+    !
+    allocate(SF(Ntot,Ntot,Lfreq), GF(Ntot,Ntot,Lfreq))
+    SF=zero
+    GF=zero
+    !
+    SF   = reshape_rank5_to_matrix(Sigma,Nlat,Nspin,Norb,Lfreq)
+    call get_gk_normal_main(Hk,GF,SF,axis)
+    Gk = reshape_matrix_to_rank5(GF,Nlat,Nspin,Norb,Lfreq)
+    deallocate(SF,GF)
+  end subroutine get_gk_normal_hk_rank5
+
+  subroutine get_gk_normal_tridiag_rank5(Hk,Gk,Sigma,axis,Nsites,Ncell) !N=Nlat*Nspin*Norb
+    complex(8),dimension(:,:),intent(in)            :: Hk        ![N,N]
+    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sigma     ![Nlat,Nspin,Nspin,Norb,Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gk      !as Sigma
+    character(len=*)                                :: axis
+    integer,intent(in)                              :: Nsites,Ncell
+    complex(8),dimension(:,:,:),allocatable         :: SF,GF
+    Ntot  = size(Hk,1)
+    Nlat  = size(Sigma,1)
+    Nspin = size(Sigma,2)
+    Norb  = size(Sigma,4)
+    Lfreq = size(Sigma,6)
+    Nlso  = Nlat*Nspin*Norb
+    !
+    if(mpi_master)write(*,"(A)")"Get k-dependent Green's function [Nlat,Nspin,Nspin,Norb,Norb]:"
+    if(mpi_master)write(*,"(A)")"The order is (int-->ext):[Norb,Nspin,Nlat]"
+    call assert_shape(Hk,[Ntot,Nlso],"get_gk_normal_rank5","Hk")
+    call assert_shape(Sigma,[Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_rank5","Sigma")
+    call assert_shape(Gk, [Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_rank5","Gk")
+    !
+    allocate(SF(Ntot,Ntot,Lfreq), GF(Ntot,Ntot,Lfreq))
+    SF=zero
+    GF=zero
+    !
+    SF   = reshape_rank5_to_matrix(Sigma,Nlat,Nspin,Norb,Lfreq)
+    call get_gk_normal_tridiag(Hk,GF,SF,axis,Nsites,Ncell)
+    Gk = reshape_matrix_to_rank5(GF,Nlat,Nspin,Norb,Lfreq)
+    deallocate(SF,GF)
+  end subroutine get_gk_normal_tridiag_rank5
+
+  subroutine get_gk_normal_hk_rank5_6(Hk,Gk,Sigma,axis) !N=Nlat*Nspin*Norb
+    complex(8),dimension(:,:),intent(in)              :: Hk        ![N,N]
+    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Sigma     ![Nlat,Nspin,Nspin,Norb,Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gk        ![Nlat,Nlat,Nspin,Nspin,Norb,Norb][Lfreq]
+    character(len=*)                                  :: axis
+    complex(8),dimension(:,:,:),allocatable           :: SF,GF
+    Ntot  = size(Hk,1)
+    Nlat  = size(Sigma,1)
+    Nspin = size(Sigma,2)
+    Norb  = size(Sigma,4)
+    Lfreq = size(Sigma,6)
+    Nlso  = Nlat*Nspin*Norb
+    !
+    if(mpi_master)write(*,"(A)")"Get k-dependent Green's function [Nlat,Nspin,Nspin,Norb,Norb]:"
+    if(mpi_master)write(*,"(A)")"The order is (int-->ext):[Norb,Nspin,Nlat]"
+    call assert_shape(Hk,[Ntot,Nlso],"get_gk_normal_rank5_6","Hk")
+    call assert_shape(Sigma,[Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_rank5_6","Sigma")
+    call assert_shape(Gk, [Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_rank5_6","Gk")
+    !
+    allocate(SF(Ntot,Ntot,Lfreq), GF(Ntot,Ntot,Lfreq))
+    SF=zero
+    GF=zero
+    !
+    SF   = reshape_rank5_to_matrix(Sigma,Nlat,Nspin,Norb,Lfreq)
+    call get_gk_normal_main(Hk,GF,SF,axis)
+    Gk = reshape_matrix_to_rank6(GF,Nlat,Nspin,Norb,Lfreq)
+    deallocate(SF,GF)
+  end subroutine get_gk_normal_hk_rank5_6
 
 
+  subroutine get_gk_normal_hk_rank6(Hk,Gk,Sigma,axis) !N=Nlat*Nspin*Norb
+    complex(8),dimension(:,:),intent(in)              :: Hk     ![N,N]
+    complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Sigma  ![Nlat,Nlat,Nspin,Nspin,Norb,Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gk   !as Sigma
+    character(len=*)                                  :: axis
+    complex(8),dimension(:,:,:),allocatable           :: SF,GF
+    Ntot  = size(Hk,1)
+    Nlat  = size(Sigma,1)
+    Nspin = size(Sigma,3)
+    Norb  = size(Sigma,5)
+    Lfreq = size(Sigma,7)
+    Nlso  = Nlat*Nspin*Norb
+    !
+    if(mpi_master)write(*,"(A)")"Get k-dependent Green's function [Nlat,Nlat,Nspin,Nspin,Norb,Norb]:"
+    if(mpi_master)write(*,"(A)")"The order is (int-->ext):[Norb,Nlat,Nspin]"
+    call assert_shape(Hk,[Ntot,Nlso],"get_gk_normal_rank6","Hk")
+    call assert_shape(Sigma,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_rank6","Sigma")
+    call assert_shape(Gk, [Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_rank6","Gk")
+    !
+    allocate(SF(Ntot,Ntot,Lfreq), GF(Ntot,Ntot,Lfreq))
+    SF=zero
+    GF=zero
+    !
+    SF   = reshape_rank6_to_matrix(Sigma,Nlat,Nspin,Norb,Lfreq)
+    call get_gk_normal_main(Hk,GF,SF,axis)
+    Gk = reshape_matrix_to_rank6(GF,Nlat,Nspin,Norb,Lfreq)
+    deallocate(SF,GF)
+  end subroutine get_gk_normal_hk_rank6
 
-
-
-  !##################################################################
-  !##################################################################
 
 #if __GFORTRAN__ &&  __GNUC__ > 8
-  subroutine dmft_get_gk_matsubara_normal_cluster_ineq(Hk,Gk,Sigma,zeta,tridiag,hk_symm)
-    complex(8),dimension(:,:),intent(in)                :: Hk        ![Nineq*Nlat*Nspin*Norb][Nineq*Nlat*Nspin*Norb][Lk]
-    complex(8),dimension(:,:,:,:,:,:,:,:),intent(in)    :: Sigma     ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
-    complex(8),dimension(:,:,:,:,:,:,:,:),intent(inout) :: Gk     !as Sigma
-    complex(8),dimension(:),optional                    :: zeta
-    logical,optional                                    :: tridiag
-    logical                                             :: tridiag_
-    logical,optional                                    :: hk_symm
-    logical                                             :: hk_symm_
+  subroutine get_gk_normal_hk_rank7(Hk,Gk,Sigma,axis) !N=Nineq*Nlat*Nspin*Norb
+    complex(8),dimension(:,:),intent(in)                :: Hk     ![N,N]
+    complex(8),dimension(:,:,:,:,:,:,:,:),intent(in)    :: Sigma  ![Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:,:,:),intent(inout) :: Gk   !as Sigma
+    character(len=*)                                    :: axis
+    complex(8),dimension(:,:,:),allocatable             :: SF,GF
+    Ntot  = size(Hk,1)
+    Nineq = size(Sigma,1)
+    Nlat  = size(Sigma,2)
+    Nspin = size(Sigma,4)
+    Norb  = size(Sigma,6)
+    Lfreq = size(Sigma,8)
+    Nlso  = Nineq*Nlat*Nspin*Norb
     !
-    tridiag_=.false.;if(present(tridiag))tridiag_=tridiag
-    hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
+    if(mpi_master)write(*,"(A)")"Get k-dependent Green's function [Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb]:"
+    if(mpi_master)write(*,"(A)")"The order is (int-->ext):[Norb,Nlat,Nspin,Nineq]"
+    call assert_shape(Hk,[Ntot,Nlso],"get_gk_normal_rank7","Hk")
+    call assert_shape(Sigma,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_rank7","Sigma")
+    call assert_shape(Gk, [Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_rank7","Gk")
     !
-    if(present(zeta))then
-       call dmft_get_gk_normal_cluster_ineq(Hk,Gk,Sigma,"matsubara",tridiag=tridiag_,hk_symm=hk_symm_)
-    else
-       call dmft_get_gk_normal_cluster_ineq(Hk,Gk,Sigma,"matsubara",zeta,tridiag=tridiag_,hk_symm=hk_symm_)
-    endif
-  end subroutine dmft_get_gk_matsubara_normal_cluster_ineq
+    allocate(SF(Ntot,Ntot,Lfreq), GF(Ntot,Ntot,Lfreq))
+    SF=zero
+    GF=zero
+    !
+    SF   = reshape_rank7_to_matrix(Sigma,Nineq,Nlat,Nspin,Norb,Lfreq)
+    call get_gk_normal_main(Hk,GF,SF,axis)
+    Gk = reshape_matrix_to_rank7(GF,Nineq,Nlat,Nspin,Norb,Lfreq)
+    deallocate(SF,GF)
+  end subroutine get_gk_normal_hk_rank7
 
-  subroutine dmft_get_gk_realaxis_normal_cluster_ineq(Hk,Gk,Sigma,zeta,tridiag,hk_symm)
-    complex(8),dimension(:,:),intent(in)                :: Hk        ![Nineq*Nlat*Nspin*Norb][Nineq*Nlat*Nspin*Norb][Lk]
-    complex(8),dimension(:,:,:,:,:,:,:,:),intent(in)    :: Sigma     ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lfreq]
-    complex(8),dimension(:,:,:,:,:,:,:,:),intent(inout) :: Gk     !as Sigma
-    complex(8),dimension(:),optional                    :: zeta
-    logical,optional                                    :: tridiag
-    logical                                             :: tridiag_
-    logical,optional                                    :: hk_symm
-    logical                                             :: hk_symm_
+  subroutine get_gk_normal_tridiag_rank7(Hk,Gk,Sigma,axis,Nsites,Ncell) !N=Nlat*Nspin*Norb
+    complex(8),dimension(:,:),intent(in)                :: Hk     ![N,N]
+    complex(8),dimension(:,:,:,:,:,:,:,:),intent(in)    :: Sigma  ![Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:,:,:),intent(inout) :: Gk   !as Sigma
+    character(len=*)                                    :: axis
+    integer,intent(in)                                  :: Nsites,Ncell
+    complex(8),dimension(:,:,:),allocatable             :: SF,GF
+    Ntot  = size(Hk,1)
+    Nineq = size(Sigma,1)
+    Nlat  = size(Sigma,2)
+    Nspin = size(Sigma,4)
+    Norb  = size(Sigma,6)
+    Lfreq = size(Sigma,8)
+    Nlso  = Nineq*Nlat*Nspin*Norb
     !
-    tridiag_=.false.;if(present(tridiag))tridiag_=tridiag
-    hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
+    if(mpi_master)write(*,"(A)")"Get k-dependent Green's function [Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb]:"
+    if(mpi_master)write(*,"(A)")"The order is (int-->ext):[Norb,Nlat,Nspin,Nineq]"
+    call assert_shape(Hk,[Ntot,Nlso],"get_gk_normal_rank7","Hk")
+    call assert_shape(Sigma,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_rank7","Sigma")
+    call assert_shape(Gk, [Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_rank7","Gk")
     !
-    if(present(zeta))then
-       call dmft_get_gk_normal_cluster_ineq(Hk,Gk,Sigma,"realaxis",tridiag=tridiag_,hk_symm=hk_symm_)
-    else
-       call dmft_get_gk_normal_cluster_ineq(Hk,Gk,Sigma,"realaxis",zeta,tridiag=tridiag_,hk_symm=hk_symm_)
-    endif
-  end subroutine dmft_get_gk_realaxis_normal_cluster_ineq
+    allocate(SF(Ntot,Ntot,Lfreq), GF(Ntot,Ntot,Lfreq))
+    SF=zero
+    GF=zero
+    !
+    SF   = reshape_rank7_to_matrix(Sigma,Nineq,Nlat,Nspin,Norb,Lfreq)
+    call get_gk_normal_tridiag(Hk,GF,SF,axis,Nsites,Ncell)
+    Gk = reshape_matrix_to_rank7(GF,Nineq,Nlat,Nspin,Norb,Lfreq)
+    deallocate(SF,GF)
+  end subroutine get_gk_normal_tridiag_rank7
 #endif
 
 
 
 
 
-  !##################################################################
-  !##################################################################
-
-
-  subroutine dmft_get_gk_matsubara_superc_main(Hk,Gk,Sigma,zeta,hk_symm)
-    complex(8),dimension(:,:,:),intent(in)          :: Hk     ![2][Nspin*Norb][Nspin*Norb]
-    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sigma  ![2][Nspin][Nspin][Norb][Norb][Lfreq]
-    complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gk     !as Sigma
-    complex(8),dimension(:),optional                :: zeta
-    logical,optional                                :: hk_symm
-    logical                                         :: hk_symm_
-    !
-    hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
-    !
-    if(present(zeta))then
-       call dmft_get_gk_superc_main(Hk,Gk,Sigma,"matsubara",hk_symm=hk_symm_)
-    else
-       call dmft_get_gk_superc_main(Hk,Gk,Sigma,"matsubara",zeta,hk_symm=hk_symm_)
-    endif
-  end subroutine dmft_get_gk_matsubara_superc_main
-
-  subroutine dmft_get_gk_realaxis_superc_main(Hk,Gk,Sigma,zeta,hk_symm)
-    complex(8),dimension(:,:,:),intent(in)          :: Hk     ![2][Nspin*Norb][Nspin*Norb]
-    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sigma  ![2][Nspin][Nspin][Norb][Norb][Lfreq]
-    complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gk     !as Sigma
-    complex(8),dimension(:),optional                :: zeta
-    logical,optional                                :: hk_symm
-    logical                                         :: hk_symm_
-    !
-    hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
-    !
-    if(present(zeta))then
-       call dmft_get_gk_superc_main(Hk,Gk,Sigma,"realaxis",hk_symm=hk_symm_)
-    else
-       call dmft_get_gk_superc_main(Hk,Gk,Sigma,"realaxis",zeta,hk_symm=hk_symm_)
-    endif
-  end subroutine dmft_get_gk_realaxis_superc_main
-
-
-
-
 
 
   !##################################################################
   !##################################################################
-
-  subroutine dmft_get_gk_matsubara_superc_dos(Ebands,Dbands,Hloc,Gk,Sigma,zeta)
-    real(8),dimension(:,:),intent(in)               :: Ebands    ![2][Nspin*Norb]
-    real(8),dimension(:),intent(in)                 :: Dbands    ![Nspin*Norb]/[1]
-    real(8),dimension(2,size(Ebands,2)),intent(in)  :: Hloc      ![Nspin*Norb]
-    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sigma     ![2][Nspin][Nspin][Norb][Norb][Lfreq]
-    complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gk     !as Sigma
-    complex(8),dimension(:),optional                :: zeta
-    !
-    if(present(zeta))then
-       call dmft_get_gk_superc_dos(Ebands,Dbands,Hloc,Gk,Sigma,"matsubara")
-    else
-       call dmft_get_gk_superc_dos(Ebands,Dbands,Hloc,Gk,Sigma,"matsubara",zeta)
-    endif
-  end subroutine dmft_get_gk_matsubara_superc_dos
-
-
-  subroutine dmft_get_gk_realaxis_superc_dos(Ebands,Dbands,Hloc,Gk,Sigma,zeta)
-    real(8),dimension(:,:),intent(in)               :: Ebands    ![2][Nspin*Norb]
-    real(8),dimension(:),intent(in)                 :: Dbands    ![Nspin*Norb]/[1]
-    real(8),dimension(2,size(Ebands,2)),intent(in)  :: Hloc      ![Nspin*Norb]
-    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sigma     ![2][Nspin][Nspin][Norb][Norb][Lfreq]
-    complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gk     !as Sigma
-    complex(8),dimension(:),optional                :: zeta  !
-    if(present(zeta))then
-       call dmft_get_gk_superc_dos(Ebands,Dbands,Hloc,Gk,Sigma,"realaxis")
-    else
-       call dmft_get_gk_superc_dos(Ebands,Dbands,Hloc,Gk,Sigma,"realaxis",zeta)
-    endif
-  end subroutine dmft_get_gk_realaxis_superc_dos
-
-
-
-
-
+  !                         SUPERC
   !##################################################################
   !##################################################################
 
-  subroutine dmft_get_gk_matsubara_superc_ineq(Hk,Gk,Sigma,zeta,hk_symm)
-    complex(8),dimension(:,:,:),intent(in)            :: Hk   ![2][Nlat*Nspin*Norb][Nlat*Nspin*Norb]
-    complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Sigma![2][Nlat][Nspin][Nspin][Norb][Norb][L]
-    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gk     !as Sigma
-    complex(8),dimension(:),optional                  :: zeta
-    logical,optional                                  :: hk_symm
-    logical                                           :: hk_symm_
+  subroutine get_gk_superc_hk_rank4(Hk,Gk,Sigma,axis) !N=Nspin*Norb
+    complex(8),dimension(:,:,:),intent(in)          :: Hk        ![2][N,N]
+    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sigma     ![2][Nspin,Nspin,Norb,Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gk      !as Sigma
+    character(len=*)                                :: axis
+    complex(8),dimension(:,:,:,:),allocatable       :: SF,GF ![2][N,N,Lfreq]
+    Ntot  = size(Hk,2)
+    Nspin = size(Sigma,2)
+    Norb  = size(Sigma,4)
+    Lfreq = size(Sigma,6)    
+    Nso   = Nspin*Norb
     !
-    hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
+    if(mpi_master)write(*,"(A)")"Get k-dependent Green's function [Nspin,Nspin,Norb,Norb]:"
+    if(mpi_master)write(*,"(A)")"The order is (int-->ext):[Norb,Nspin]"
+    call assert_shape(Hk,[2,Ntot,Nso],"get_gk_superc_rank4","Hk")
+    call assert_shape(Sigma,[2,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_superc_rank4","Sigma")
+    call assert_shape(Gk, [2,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_superc_rank4","Gk")
     !
-    if(present(zeta))then
-       call dmft_get_gk_superc_ineq(Hk,Gk,Sigma,"matsubara",hk_symm=hk_symm_)
-    else
-       call dmft_get_gk_superc_ineq(Hk,Gk,Sigma,"matsubara",zeta,hk_symm=hk_symm_)
-    endif
-  end subroutine dmft_get_gk_matsubara_superc_ineq
-
-
-
-  subroutine dmft_get_gk_realaxis_superc_ineq(Hk,Gk,Sigma,zeta,hk_symm)
-    complex(8),dimension(:,:,:),intent(in)            :: Hk   ![2][Nlat*Nspin*Norb][Nlat*Nspin*Norb]
-    complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Sigma![2][Nlat][Nspin][Nspin][Norb][Norb][L]
-    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gk     !as Sigma
-    complex(8),dimension(:),optional                  :: zeta
-    logical,optional                                  :: hk_symm
-    logical                                           :: hk_symm_
+    allocate(SF(2,Ntot,Ntot,Lfreq), GF(2,Ntot,Ntot,Lfreq))
+    SF=zero; GF=zero
     !
-    hk_symm_=.false.;if(present(hk_symm)) hk_symm_=hk_symm
+    SF(1,:,:,:) = reshape_rank4_to_matrix(Sigma(1,:,:,:,:,:),Nspin,Norb,Lfreq)
+    SF(2,:,:,:) = reshape_rank4_to_matrix(Sigma(2,:,:,:,:,:),Nspin,Norb,Lfreq)
+    call get_gk_superc_main(Hk,GF,SF,axis)
+    Gk(1,:,:,:,:,:) = reshape_matrix_to_rank4(GF(1,:,:,:),Nspin,Norb,Lfreq)
+    Gk(2,:,:,:,:,:) = reshape_matrix_to_rank4(GF(2,:,:,:),Nspin,Norb,Lfreq)
+    deallocate(SF,GF)
+  end subroutine get_gk_superc_hk_rank4
+
+  subroutine get_gk_superc_dos_rank4(Ebands,Dbands,Hloc,Gk,Sigma,axis)!N=Nspin*Norb
+    real(8),dimension(:,:),intent(in)               :: Ebands   ![2][N]
+    real(8),dimension(:),intent(in)                 :: Dbands    ![N]
+    real(8),dimension(2,size(Ebands,2)),intent(in)  :: Hloc      ![2,N]
+    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sigma     ![2][Nspin,Nspin,Norb,Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gk      !as Sigma
+    character(len=*)                                :: axis
+    complex(8),dimension(:,:,:,:),allocatable       :: SF,GF ![2][N,N,Lfreq]
     !
-    if(present(zeta))then
-       call dmft_get_gk_superc_ineq(Hk,Gk,Sigma,"realaxis",hk_symm=hk_symm_)
-    else
-       call dmft_get_gk_superc_ineq(Hk,Gk,Sigma,"realaxis",zeta,hk_symm=hk_symm_)
-    endif
-  end subroutine dmft_get_gk_realaxis_superc_ineq
+    Ntot  = size(Ebands,2)
+    Nspin = size(Sigma,2)
+    Norb  = size(Sigma,4)
+    Lfreq = size(Sigma,6)
+    Nso   = Nspin*Norb
+    !
+    if(mpi_master)write(*,"(A)")"Get k-dependent Green's function [Nspin,Nspin,Norb,Norb]:"
+    if(mpi_master)write(*,"(A)")"The order is (int-->ext):[Norb,Nspin]"
+    call assert_shape(Sigma,[2,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_superc_rank4","Sigma")
+    call assert_shape(Gk, [2,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_superc_rank4","Gk")
+    !
+    allocate(SF(2,Ntot,Ntot,Lfreq), GF(2,Ntot,Ntot,Lfreq))
+    SF=zero; GF=zero
+    !
+    SF(1,:,:,:) = reshape_rank4_to_matrix(Sigma(1,:,:,:,:,:),Nspin,Norb,Lfreq)
+    SF(2,:,:,:) = reshape_rank4_to_matrix(Sigma(2,:,:,:,:,:),Nspin,Norb,Lfreq)
+    call get_gk_superc_dos(Ebands,Dbands,Hloc,GF,SF,axis)
+    Gk(1,:,:,:,:,:) = reshape_matrix_to_rank4(GF(1,:,:,:),Nspin,Norb,Lfreq)
+    Gk(2,:,:,:,:,:) = reshape_matrix_to_rank4(GF(2,:,:,:),Nspin,Norb,Lfreq)
+    deallocate(SF,GF)
+  end subroutine get_gk_superc_dos_rank4
 
 
+  subroutine get_gk_superc_hk_rank5(Hk,Gk,Sigma,axis) !N=Nlat*Nspin*Norb
+    complex(8),dimension(:,:,:),intent(in)            :: Hk        ![2][N,N]
+    complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Sigma     ![2][Nlat,Nspin,Nspin,Norb,Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gk      !as Sigma
+    character(len=*)                                  :: axis
+    complex(8),dimension(:,:,:,:),allocatable         :: SF,GF ![2][N,N,Lfreq]
+    Ntot  = size(Hk,2)
+    Nlat  = size(Sigma,2)
+    Nspin = size(Sigma,3)
+    Norb  = size(Sigma,5)
+    Lfreq = size(Sigma,7)
+    Nso   = Nspin*Norb
+    !
+    if(mpi_master)write(*,"(A)")"Get k-dependent Green's function [Nspin,Nspin,Norb,Norb]:"
+    if(mpi_master)write(*,"(A)")"The order is (int-->ext):[Norb,Nspin]"
+    call assert_shape(Hk,[2,Ntot,Nso],"get_gk_superc_rank5","Hk")
+    call assert_shape(Sigma,[2,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_superc_rank5","Sigma")
+    call assert_shape(Gk, [2,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_superc_rank5","Gk")
+    !
+    allocate(SF(2,Ntot,Ntot,Lfreq), GF(2,Ntot,Ntot,Lfreq))
+    SF=zero; GF=zero
+    !
+    SF(1,:,:,:) = reshape_rank5_to_matrix(Sigma(1,:,:,:,:,:,:),Nlat,Nspin,Norb,Lfreq)
+    SF(2,:,:,:) = reshape_rank5_to_matrix(Sigma(2,:,:,:,:,:,:),Nlat,Nspin,Norb,Lfreq)
+    call get_gk_superc_main(Hk,GF,SF,axis)
+    Gk(1,:,:,:,:,:,:) = reshape_matrix_to_rank5(GF(1,:,:,:),Nlat,Nspin,Norb,Lfreq)
+    Gk(2,:,:,:,:,:,:) = reshape_matrix_to_rank5(GF(2,:,:,:),Nlat,Nspin,Norb,Lfreq)
+    deallocate(SF,GF)
+  end subroutine get_gk_superc_hk_rank5
+
+
+  subroutine get_gk_superc_hk_rank5_6(Hk,Gk,Fk,Sigma,axis) !N=Nlat*Nspin*Norb
+    complex(8),dimension(:,:,:),intent(in)            :: Hk        ![2,N,N]
+    complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Sigma     ![2][Nlat,Nspin,Nspin,Norb,Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gk        ![Nlat,Nlat,Nspin,Nspin,Norb,Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Fk        ![Nlat,Nlat,Nspin,Nspin,Norb,Norb][Lfreq]
+    character(len=*)                                  :: axis
+    complex(8),dimension(:,:,:,:),allocatable         :: SF,GF
+    Ntot  = size(Hk,2)
+    Nlat  = size(Sigma,2)
+    Nspin = size(Sigma,3)
+    Norb  = size(Sigma,5)
+    Lfreq = size(Sigma,7)
+    Nlso  = Nlat*Nspin*Norb
+    !
+    if(mpi_master)write(*,"(A)")"Get k-dependent Green's function [Nlat,Nlat,Nspin,Nspin,Norb,Norb]:"
+    if(mpi_master)write(*,"(A)")"The order is (int-->ext):[Norb,Nspin,Nlat]"
+    call assert_shape(Hk,[2,Ntot,Nlso],"get_gk_superc_rank5_6","Hk")
+    call assert_shape(Sigma,[2,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_superc_rank5_6","Sigma")
+    call assert_shape(Gk, [Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_superc_rank5_6","Gk")
+    call assert_shape(Fk, [Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_superc_rank5_6","Floc")
+    !
+    allocate(SF(2,Ntot,Ntot,Lfreq), GF(2,Ntot,Ntot,Lfreq))
+    SF=zero; GF=zero
+    !
+    SF(1,:,:,:) = reshape_rank5_to_matrix(Sigma(1,:,:,:,:,:,:),Nlat,Nspin,Norb,Lfreq)
+    SF(2,:,:,:) = reshape_rank5_to_matrix(Sigma(2,:,:,:,:,:,:),Nlat,Nspin,Norb,Lfreq)
+    call get_gk_superc_main(Hk,GF,SF,axis)
+    Gk = reshape_matrix_to_rank6(GF(1,:,:,:),Nlat,Nspin,Norb,Lfreq)
+    Fk = reshape_matrix_to_rank6(GF(2,:,:,:),Nlat,Nspin,Norb,Lfreq)
+    deallocate(SF,GF)
+  end subroutine get_gk_superc_hk_rank5_6
 
 
 
