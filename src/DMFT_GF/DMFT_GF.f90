@@ -1,5 +1,5 @@
 module DMFT_GF
-  USE GF_COMMON
+  USE GF_COMMON, only:gf_push_zeta
   USE GF_GLOC
   USE GF_GK
   implicit none

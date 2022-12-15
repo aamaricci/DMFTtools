@@ -60,8 +60,6 @@ contains
     mpi_master=.true.
 #endif
     !
-    call build_frequency_array(axis)
-    !
     !
     Ntot  = size(Hk,1)
     Lfreq = size(Sigma,3)
@@ -69,6 +67,8 @@ contains
     call assert_shape(Hk,[Ntot,Ntot],"get_gk_normal_main","Hk")
     call assert_shape(Sigma,[Ntot,Ntot,Lfreq],"get_gk_normal_main","Sigma")
     call assert_shape(Gk, [Ntot,Ntot,Lfreq],"get_gk_normal_main","Gk")
+    !
+    call build_frequency_array(axis)
     !
     !Allocate and setup the Matsubara freq.
     allocate(csi(Ntot,Ntot,Lfreq))
@@ -114,8 +114,6 @@ contains
     mpi_master=.true.
 #endif
     !
-    call build_frequency_array(axis)
-    !
     Ntot  = size(Hk,1)
     Lfreq = size(Sigma,3)
     !Testing part:
@@ -123,6 +121,8 @@ contains
     call assert_shape(Hk,[Ntot,Ntot],'get_gk_normal_tridiag',"Hk")
     call assert_shape(Sigma,[Ntot,Ntot,Lfreq],'get_gk_normal_tridiag',"Sigma")
     call assert_shape(Gk,[Ntot,Ntot,Lfreq],'get_gk_normal_tridiag',"Gk")
+    !
+        call build_frequency_array(axis)
     !
     allocate(csi(Ntot,Ntot,Lfreq))
     !
@@ -166,8 +166,6 @@ contains
     mpi_master=.true.
 #endif
     !
-    call build_frequency_array(axis)
-    !
     Ntot  = size(Ebands)
     Lfreq = size(Sigma,3)
     !
@@ -178,6 +176,8 @@ contains
     !Testing part:
     call assert_shape(Sigma,[Ntot,Ntot,Lfreq],"dmft_get_gk_normal_dos","Sigma")
     call assert_shape(Gk,[Ntot,Ntot,Lfreq],"dmft_get_gk_normal_dos","Gk")
+    !
+        call build_frequency_array(axis)
     !
     !Allocate and setup the Matsubara freq.
     allocate(csi(Ntot,Ntot,Lfreq))
@@ -262,8 +262,6 @@ contains
     mpi_master=.true.
 #endif
     !
-    call build_frequency_array(axis)
-    !
     !
     Ntot  = size(Hk,2)
     Lfreq = size(Sigma,4)
@@ -271,6 +269,8 @@ contains
     call assert_shape(Hk,[2,Ntot,Ntot],'get_gk_superc',"Hk")
     call assert_shape(Sigma,[2,Ntot,Ntot,Lfreq],'get_gk_superc',"Sigma")
     call assert_shape(Gk,[2,Ntot,Ntot,Lfreq],'get_gk_superc',"Gk")
+    !
+        call build_frequency_array(axis)
     !
     allocate(csi(2,2,Ntot,Ntot,Lfreq))
     !
@@ -329,8 +329,6 @@ contains
     mpi_master=.true.
 #endif
     !
-    call build_frequency_array(axis)
-    !
     !
     Ntot  = size(Ebands,2)
     Lfreq = size(Sigma,4)
@@ -344,6 +342,8 @@ contains
     call assert_shape(Dbands,[Ntot],'get_gk_superc_dos',"Dbands")
     call assert_shape(Sigma,[2,Ntot,Ntot,Lfreq],'get_gk_superc_dos',"Sigma")
     call assert_shape(Gk,[2,Ntot,Ntot,Lfreq],'get_gk_superc_dos',"Gk")
+    !
+        call build_frequency_array(axis)
     !
     !
     allocate(csi(2,2,Ntot,Ntot,Lfreq));csi = zero

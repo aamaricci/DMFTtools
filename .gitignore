@@ -3,3 +3,4 @@ install.log
 build*/
 *.inc
 repo
+src/DMFT_TOOLS_VERSION.f90

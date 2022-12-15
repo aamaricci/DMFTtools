@@ -67,8 +67,6 @@ contains
     mpi_master=.true.
 #endif
     !
-    call build_frequency_array(axis)
-    !
     ! !
     Ntot  = size(Hk,1)
     Lk    = size(Hk,3)
@@ -77,6 +75,8 @@ contains
     call assert_shape(Hk,[Ntot,Ntot,Lk],"get_gloc_normal_main","Hk")
     call assert_shape(Sigma,[Ntot,Ntot,Lfreq],"get_gloc_normal_main","Sigma")
     call assert_shape(Gloc, [Ntot,Ntot,Lfreq],"get_gloc_normal_main","Gloc")
+    !
+    call build_frequency_array(axis)
     !
     !Allocate and setup the Matsubara freq.
     allocate(Gk(Ntot,Ntot,Lfreq))
@@ -152,8 +152,6 @@ contains
     mpi_master=.true.
 #endif
     !
-    call build_frequency_array(axis)
-    !
     Ntot  = size(Hk,1)
     Lk    = size(Hk,3)
     Lfreq = size(Sigma,3)
@@ -162,6 +160,8 @@ contains
     call assert_shape(Hk,[Ntot,Ntot,Lk],'get_gloc_normal_tridiag',"Hk")
     call assert_shape(Sigma,[Ntot,Ntot,Lfreq],'get_gloc_normal_tridiag',"Sigma")
     call assert_shape(Gloc,[Ntot,Ntot,Lfreq],'get_gloc_normal_tridiag',"Gloc")
+    !
+    call build_frequency_array(axis)
     !
     if(mpi_master)write(*,"(A)")"Get local Green's function, axis:"//str(axis)
     if(mpi_master)write(*,"(A)")"Block Tridiagonal Gaussian elimination algorithm:"
@@ -240,8 +240,6 @@ contains
     mpi_master=.true.
 #endif
     !
-    call build_frequency_array(axis)
-    !
     Ntot  = size(Ebands,1)
     Lk    = size(Ebands,2)
     Lfreq = size(Sigma,3)
@@ -254,6 +252,8 @@ contains
     call assert_shape(Ebands,[Ntot,Lk],"dmft_get_gloc_normal_dos","Ebands")
     call assert_shape(Sigma,[Ntot,Ntot,Lfreq],"dmft_get_gloc_normal_dos","Sigma")
     call assert_shape(Gloc,[Ntot,Ntot,Lfreq],"dmft_get_gloc_normal_dos","Gloc")
+    !
+    call build_frequency_array(axis)
     !
     !Allocate and setup the Matsubara freq.
     allocate(csi(Ntot,Ntot,Lfreq))
@@ -364,8 +364,6 @@ contains
     mpi_master=.true.
 #endif
     !
-    call build_frequency_array(axis)
-    !
     !
     Ntot  = size(Hk,2)
     Lk    = size(Hk,4)
@@ -375,6 +373,8 @@ contains
     call assert_shape(Sigma,[2,Ntot,Ntot,Lfreq],'get_gloc_superc',"Sigma")
     call assert_shape(Gloc,[2,Ntot,Ntot,Lfreq],'get_gloc_superc',"Gloc")
     !
+    call build_frequency_array(axis)
+    !        
     allocate(csi(2,2,Ntot,Ntot,Lfreq))
     !
     select case(axis)
@@ -460,8 +460,6 @@ contains
     mpi_master=.true.
 #endif
     !
-    call build_frequency_array(axis)
-    !
     !
     Ntot  = size(Ebands,2)
     Lk    = size(Ebands,3)
@@ -476,6 +474,8 @@ contains
     call assert_shape(Dbands,[Ntot,Lk],'get_gloc_superc_dos',"Dbands")
     call assert_shape(Sigma,[2,Ntot,Ntot,Lfreq],'get_gloc_superc_dos',"Sigma")
     call assert_shape(Gloc,[2,Ntot,Ntot,Lfreq],'get_gloc_superc_dos',"Gloc")
+    !
+    call build_frequency_array(axis)
     !
     !
     allocate(csi(2,2,Ntot,Ntot,Lfreq));csi = zero

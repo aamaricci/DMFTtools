@@ -9,6 +9,8 @@ module GF_COMMON
   USE SF_MPI
   USE MPI
 #endif
+  !
+  USE DMFT_CTRL_VARS
   implicit none
 
 
@@ -96,12 +98,11 @@ module GF_COMMON
   real(8)                                   :: xmu,eps
   real(8)                                   :: wini,wfin 
   !
-  real(8),dimension(:),allocatable          :: wm !Matsubara frequencies
-  real(8),dimension(:),allocatable          :: wr !Real frequencies
-  integer                                   :: Lfreq
-  complex(8),dimension(:),allocatable       :: wfreq
-  logical                                   :: Bfreq=.false.
-
+  real(8),dimension(:),allocatable    :: wm !Matsubara frequencies
+  real(8),dimension(:),allocatable    :: wr !Real frequencies
+  integer                             :: Lfreq
+  complex(8),dimension(:),allocatable :: wfreq
+  logical                             :: pushed=.false.
 
 
 contains
@@ -113,14 +114,15 @@ contains
     if(allocated(wfreq))deallocate(wfreq)
     allocate(wfreq(Lfreq))
     wfreq=zeta
-    Bfreq=.true.
+    pushed=.true.
   end subroutine gf_push_zeta
 
   subroutine build_frequency_array(axis)
     character(len=*) :: axis
-    if(Bfreq)then
+    if(pushed)then
        if(size(wfreq)/=Lfreq)stop "build_frequency_array ERROR: pushed wfreq has wrong size"
     else
+       if(allocated(wfreq))deallocate(wfreq)
        allocate(wfreq(Lfreq))
        select case(axis)
        case default;
