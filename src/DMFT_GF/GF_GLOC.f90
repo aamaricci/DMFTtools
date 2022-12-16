@@ -557,10 +557,13 @@ contains
   !##################################################################
   subroutine get_gloc_normal_hk_rank4(Hk,Gloc,Sigma,axis) !N=Nspin*Norb
     complex(8),dimension(:,:,:),intent(in)        :: Hk        ![N,N,Lk]
-    complex(8),dimension(:,:,:,:,:),intent(in)    :: Sigma     ![Nspin,Nspin,Norb,Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:),intent(in)    :: Sigma     ![Nspin,Nspin,Norb,Norb][L]
     complex(8),dimension(:,:,:,:,:),intent(inout) :: Gloc      !as Sigma
     character(len=*)                              :: axis
     complex(8),dimension(:,:,:),allocatable       :: SF,GF
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
     Ntot  = size(Hk,1)
     Lk    = size(Hk,3)
     Nspin = size(Sigma,1)
@@ -588,10 +591,13 @@ contains
     real(8),dimension(:,:),intent(in)             :: Ebands    ![N][Lk]
     real(8),dimension(:,:),intent(in)             :: Dbands    ![N][Lk] /[1][Lk]
     real(8),dimension(size(Ebands,1)),intent(in)  :: Hloc      ![N]
-    complex(8),dimension(:,:,:,:,:),intent(in)    :: Sigma     ![Nspin,Nspin,Norb,Norb][Lmats]
+    complex(8),dimension(:,:,:,:,:),intent(in)    :: Sigma     ![Nspin,Nspin,Norb,Norb][L]
     complex(8),dimension(:,:,:,:,:),intent(inout) :: Gloc      !as Sigma
     character(len=*)                              :: axis
     complex(8),dimension(:,:,:),allocatable       :: SF,GF
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
     !
     Ntot  = size(Ebands,1)
     Lk    = size(Ebands,2)
@@ -617,10 +623,13 @@ contains
 
   subroutine get_gloc_normal_hk_rank5(Hk,Gloc,Sigma,axis) !N=Nlat*Nspin*Norb
     complex(8),dimension(:,:,:),intent(in)          :: Hk        ![N,N,Lk]
-    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sigma     ![Nlat,Nspin,Nspin,Norb,Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sigma     ![Nlat,Nspin,Nspin,Norb,Norb][L]
     complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gloc      !as Sigma
     character(len=*)                                :: axis
     complex(8),dimension(:,:,:),allocatable         :: SF,GF
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
     Ntot  = size(Hk,1)
     Lk    = size(Hk,3)
     Nlat  = size(Sigma,1)
@@ -647,11 +656,14 @@ contains
 
   subroutine get_gloc_normal_tridiag_rank5(Hk,Gloc,Sigma,axis,Nsites,Ncell) !N=Nlat*Nspin*Norb
     complex(8),dimension(:,:,:),intent(in)          :: Hk        ![N,N,Lk]
-    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sigma     ![Nlat,Nspin,Nspin,Norb,Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sigma     ![Nlat,Nspin,Nspin,Norb,Norb][L]
     complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gloc      !as Sigma
     character(len=*)                                :: axis
     integer,intent(in)                              :: Nsites,Ncell
     complex(8),dimension(:,:,:),allocatable         :: SF,GF
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
     Ntot  = size(Hk,1)
     Lk    = size(Hk,3)
     Nlat  = size(Sigma,1)
@@ -678,10 +690,13 @@ contains
 
   subroutine get_gloc_normal_hk_rank5_6(Hk,Gloc,Sigma,axis) !N=Nlat*Nspin*Norb
     complex(8),dimension(:,:,:),intent(in)            :: Hk        ![N,N,Lk]
-    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Sigma     ![Nlat,Nspin,Nspin,Norb,Norb][Lfreq]
-    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gloc      ![Nlat,Nlat,Nspin,Nspin,Norb,Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Sigma     ![Nlat,Nspin,Nspin,Norb,Norb][L]
+    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gloc      ![Nlat,Nlat,Nspin,Nspin,Norb,Norb][L]
     character(len=*)                                  :: axis
     complex(8),dimension(:,:,:),allocatable           :: SF,GF
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
     Ntot  = size(Hk,1)
     Lk    = size(Hk,3)
     Nlat  = size(Sigma,1)
@@ -709,10 +724,13 @@ contains
 
   subroutine get_gloc_normal_hk_rank6(Hk,Gloc,Sigma,axis) !N=Nlat*Nspin*Norb
     complex(8),dimension(:,:,:),intent(in)            :: Hk     ![N,N,Lk]
-    complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Sigma  ![Nlat,Nlat,Nspin,Nspin,Norb,Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Sigma  ![Nlat,Nlat,Nspin,Nspin,Norb,Norb][L]
     complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gloc   !as Sigma
     character(len=*)                                  :: axis
     complex(8),dimension(:,:,:),allocatable           :: SF,GF
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
     Ntot  = size(Hk,1)
     Lk    = size(Hk,3)
     Nlat  = size(Sigma,1)
@@ -741,10 +759,13 @@ contains
 #if __GFORTRAN__ &&  __GNUC__ > 8
   subroutine get_gloc_normal_hk_rank7(Hk,Gloc,Sigma,axis) !N=Nineq*Nlat*Nspin*Norb
     complex(8),dimension(:,:,:),intent(in)              :: Hk     ![N,N,Lk]
-    complex(8),dimension(:,:,:,:,:,:,:,:),intent(in)    :: Sigma  ![Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:,:,:),intent(in)    :: Sigma  ![Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb][L]
     complex(8),dimension(:,:,:,:,:,:,:,:),intent(inout) :: Gloc   !as Sigma
     character(len=*)                                    :: axis
     complex(8),dimension(:,:,:),allocatable             :: SF,GF
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
     Ntot  = size(Hk,1)
     Lk    = size(Hk,3)
     Nineq = size(Sigma,1)
@@ -772,11 +793,14 @@ contains
 
   subroutine get_gloc_normal_tridiag_rank7(Hk,Gloc,Sigma,axis,Nsites,Ncell) !N=Nlat*Nspin*Norb
     complex(8),dimension(:,:,:),intent(in)              :: Hk     ![N,N,Lk]
-    complex(8),dimension(:,:,:,:,:,:,:,:),intent(in)    :: Sigma  ![Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:,:,:),intent(in)    :: Sigma  ![Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb][L]
     complex(8),dimension(:,:,:,:,:,:,:,:),intent(inout) :: Gloc   !as Sigma
     character(len=*)                                    :: axis
     integer,intent(in)                                  :: Nsites,Ncell
     complex(8),dimension(:,:,:),allocatable             :: SF,GF
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
     Ntot  = size(Hk,1)
     Lk    = size(Hk,3)
     Nineq = size(Sigma,1)
@@ -817,10 +841,13 @@ contains
 
   subroutine get_gloc_superc_hk_rank4(Hk,Gloc,Sigma,axis) !N=Nspin*Norb
     complex(8),dimension(:,:,:,:),intent(in)        :: Hk        ![2][N,N,Lk]
-    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sigma     ![2][Nspin,Nspin,Norb,Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sigma     ![2][Nspin,Nspin,Norb,Norb][L]
     complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gloc      !as Sigma
     character(len=*)                                :: axis
     complex(8),dimension(:,:,:,:),allocatable       :: SF,GF ![2][N,N,Lfreq]
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
     Ntot  = size(Hk,2)
     Lk    = size(Hk,4)
     Nspin = size(Sigma,2)
@@ -849,10 +876,13 @@ contains
     real(8),dimension(:,:,:),intent(in)             :: Ebands   ![2][N,Lk]
     real(8),dimension(:,:),intent(in)               :: Dbands    ![N][Lk] /[1][Lk]
     real(8),dimension(2,size(Ebands,2)),intent(in)  :: Hloc      ![2,N]
-    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sigma     ![2][Nspin,Nspin,Norb,Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sigma     ![2][Nspin,Nspin,Norb,Norb][L]
     complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gloc      !as Sigma
     character(len=*)                                :: axis
     complex(8),dimension(:,:,:,:),allocatable       :: SF,GF ![2][N,N,Lfreq]
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
     !
     Ntot  = size(Ebands,2)
     Lk    = size(Ebands,3)
@@ -880,10 +910,13 @@ contains
 
   subroutine get_gloc_superc_hk_rank5(Hk,Gloc,Sigma,axis) !N=Nlat*Nspin*Norb
     complex(8),dimension(:,:,:,:),intent(in)          :: Hk        ![2][N,N,Lk]
-    complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Sigma     ![2][Nlat,Nspin,Nspin,Norb,Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Sigma     ![2][Nlat,Nspin,Nspin,Norb,Norb][L]
     complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gloc      !as Sigma
     character(len=*)                                  :: axis
     complex(8),dimension(:,:,:,:),allocatable         :: SF,GF ![2][N,N,Lfreq]
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
     Ntot  = size(Hk,2)
     Lk    = size(Hk,4)
     Nlat  = size(Sigma,2)
@@ -912,11 +945,14 @@ contains
 
   subroutine get_gloc_superc_hk_rank5_6(Hk,Gloc,Floc,Sigma,axis) !N=Nlat*Nspin*Norb
     complex(8),dimension(:,:,:,:),intent(in)          :: Hk        ![2,N,N,Lk]
-    complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Sigma     ![2][Nlat,Nspin,Nspin,Norb,Norb][Lfreq]
-    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gloc      ![Nlat,Nlat,Nspin,Nspin,Norb,Norb][Lfreq]
-    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Floc      ![Nlat,Nlat,Nspin,Nspin,Norb,Norb][Lfreq]
+    complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Sigma     ![2][Nlat,Nspin,Nspin,Norb,Norb][L]
+    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gloc      ![Nlat,Nlat,Nspin,Nspin,Norb,Norb][L]
+    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Floc      ![Nlat,Nlat,Nspin,Nspin,Norb,Norb][L]
     character(len=*)                                  :: axis
     complex(8),dimension(:,:,:,:),allocatable         :: SF,GF
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
     Ntot  = size(Hk,2)
     Lk    = size(Hk,4)
     Nlat  = size(Sigma,2)

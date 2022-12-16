@@ -1,6 +1,6 @@
 module GK_MATSUBARA
   USE DMFT_CTRL_VARS  
-  USE GF_COMMON_OLD
+  USE LEGACY_GF_COMMON
   implicit none
   private
 

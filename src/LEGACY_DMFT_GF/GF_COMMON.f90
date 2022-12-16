@@ -1,4 +1,4 @@
-module GF_COMMON_OLD
+module LEGACY_GF_COMMON
   USE SF_TIMER
   USE SF_CONSTANTS, only: one,xi,zero,pi
   USE SF_IOTOOLS,   only: reg,txtfy,splot,file_gzip
@@ -2097,4 +2097,4 @@ contains
   end function c_nnn2nlso_cluster
 
 
-end module GF_COMMON_OLD
+end module LEGACY_GF_COMMON

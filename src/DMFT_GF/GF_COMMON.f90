@@ -86,17 +86,17 @@ module GF_COMMON
 #endif
   end interface reshape_rank7_to_matrix
 
-  integer                                   :: Lk,Nlso,Nlat,Nspin,Norb,Nso,Lreal,Lmats,Nineq,Nilso,Ntot
-  integer                                   :: i,j,ik,ilat,jlat,iorb,jorb,ispin,jspin,io,jo,is,js,iineq
+  integer                             :: Lk,Nlso,Nlat,Nspin,Norb,Nso,Lreal,Lmats,Nineq,Nilso,Ntot
+  integer                             :: i,j,ik,ilat,jlat,iorb,jorb,ispin,jspin,io,jo,is,js,iineq
   !
-  integer                                   :: mpi_ierr
-  integer                                   :: mpi_rank
-  integer                                   :: mpi_size
-  logical                                   :: mpi_master
+  integer                             :: mpi_ierr
+  integer                             :: mpi_rank
+  integer                             :: mpi_size
+  logical                             :: mpi_master
   !
-  real(8)                                   :: beta
-  real(8)                                   :: xmu,eps
-  real(8)                                   :: wini,wfin 
+  real(8)                             :: beta
+  real(8)                             :: xmu,eps
+  real(8)                             :: wini,wfin 
   !
   real(8),dimension(:),allocatable    :: wm !Matsubara frequencies
   real(8),dimension(:),allocatable    :: wr !Real frequencies
@@ -119,6 +119,7 @@ contains
 
   subroutine build_frequency_array(axis)
     character(len=*) :: axis
+    call get_ctrl_var(xmu,"XMU")
     if(pushed)then
        if(size(wfreq)/=Lfreq)stop "build_frequency_array ERROR: pushed wfreq has wrong size"
     else

@@ -1,6 +1,6 @@
 module GLOC_MATSUBARA
   USE DMFT_CTRL_VARS  
-  USE GF_COMMON_OLD
+  USE LEGACY_GF_COMMON
   implicit none
   private
 
@@ -41,8 +41,8 @@ module GLOC_MATSUBARA
      module procedure :: dmft_get_gloc_matsubara_normal_gij
      module procedure :: dmft_get_gloc_matsubara_superc_gij
   end interface get_gij_matsubara
-  
-  
+
+
   interface dmft_gij_matsubara
      module procedure :: dmft_get_gloc_matsubara_normal_gij
      module procedure :: dmft_get_gloc_matsubara_superc_gij
@@ -372,8 +372,8 @@ contains
   end subroutine dmft_get_gloc_matsubara_normal_dos
 
 
-  
-  
+
+
   subroutine dmft_get_gloc_matsubara_normal_ineq(Hk,Gmats,Smats,tridiag,hk_symm)
     complex(8),dimension(:,:,:),intent(in)          :: Hk        ![Nlat*Nspin*Norb][Nlat*Nspin*Norb][Nk]
     complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Smats     ![Nlat][Nspin][Nspin][Norb][Norb][Lmats]
