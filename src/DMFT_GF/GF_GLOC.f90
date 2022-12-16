@@ -342,8 +342,8 @@ contains
     complex(8),dimension(:,:,:,:),intent(inout)                 :: Gloc     !as Sigma
     character(len=*)                                            :: axis
     !allocatable arrays
-    complex(8),dimension(2,size(Hk,1),size(Hk,1),size(Sigma,4)) :: Gk      !as Sigma
-    complex(8),dimension(2,size(Hk,1),size(Hk,1),size(Sigma,4)) :: Gtmp    !as Sigma
+    complex(8),dimension(2,size(Hk,2),size(Hk,2),size(Sigma,4)) :: Gk      !as Sigma
+    complex(8),dimension(2,size(Hk,2),size(Hk,2),size(Sigma,4)) :: Gtmp    !as Sigma
     complex(8),dimension(:,:,:,:,:),allocatable                 :: csi     ![2][2][N][N][Lfreq]
     !
     !
