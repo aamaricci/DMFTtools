@@ -5,8 +5,6 @@ module SC_WEISS
   private
 
 
-
-
   public :: dmft_get_weiss_normal_main
   public :: dmft_get_weiss_normal_rank4
   public :: dmft_get_weiss_normal_rank5
@@ -83,15 +81,15 @@ contains
        !For a fixed frequency update the local Weiss field
        do ilat=1,Nsites_
           Sigma_site = select_block(ilat,Sigma(:,:,i),Nsites_,Nso)
-          !
+
           invG_site  = select_block(ilat,Gloc(:,:,i),Nsites_,Nso)
           call inv(invG_site)
           !
           ![G0]^-1 = [ [Gloc]^-1 + [Sigma] ]^-1
-          invG_site = invG_site + Sigma_site
+          invG0_site = invG_site + Sigma_site
+          call inv(invG0_site)
           !
-          call inv(invG_site)
-          calG0(ilat,:,:) = invG_site
+          calG0(ilat,:,:) = invG0_site
        enddo
        !Once all sites are obtained we dump back 
        Weiss_tmp(:,:,i) = blocks_to_matrix(calG0,Nsites_,Nso)
@@ -109,8 +107,6 @@ contains
     !
   end subroutine dmft_get_weiss_normal_main
   
-
-
 
 
   subroutine dmft_get_weiss_superc_main(Gloc,Floc,Sigma,Self,Weiss,Theta,Nsites) !N=Nsites*Nso
@@ -248,8 +244,8 @@ contains
   !##################################################################
   !##################################################################
   subroutine dmft_get_weiss_normal_rank4(Gloc,Sigma,Weiss)
-    complex(8),dimension(:,:,:,:,:),intent(in)    :: Gloc      ![Nspin,Nspin,Norb,Norb][L]
-    complex(8),dimension(:,:,:,:,:),intent(in)    :: Sigma     !..
+    complex(8),dimension(:,:,:,:,:),intent(inout) :: Gloc      ![Nspin,Nspin,Norb,Norb][L]
+    complex(8),dimension(:,:,:,:,:),intent(inout) :: Sigma     !..
     complex(8),dimension(:,:,:,:,:),intent(inout) :: Weiss     !..
     !aux
     complex(8),dimension(:,:,:),allocatable       :: SF,GF,WF  ![Nso,Nso][L]

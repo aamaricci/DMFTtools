@@ -583,7 +583,7 @@ contains
     real(8),dimension(Nspin*Norb,Nspin*Norb) :: Hmat
     integer                                  :: iorb,ispin,is
     integer                                  :: jorb,jspin,js
-    Hrank=zero
+    Hmat=zero
     do ispin=1,Nspin
        do jspin=1,Nspin
           do iorb=1,Norb
@@ -604,7 +604,7 @@ contains
     real(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hmat
     integer                                            :: iorb,ispin,ilat,is
     integer                                            :: jorb,jspin,jlat,js
-    Hrank=zero
+    Hmat=zero
     do ilat=1,Nlat
        do ispin=1,Nspin
           do jspin=1,Nspin
@@ -628,7 +628,7 @@ contains
     integer                                            :: iorb,jorb
     integer                                            :: ispin,jspin
     integer                                            :: is,js
-    Hrank=zero
+    Hmat=zero
     do ilat=1,Nlat
        do jlat=1,Nlat
           do ispin=1,Nspin
@@ -657,7 +657,7 @@ contains
     integer                                                        :: iorb,jorb
     integer                                                        :: ispin,jspin
     integer                                                        :: is,js
-    Hrank=zero
+    Hmat=zero
     do iineq=1,Nineq
        do ilat=1,Nlat
           do jlat=1,Nlat
@@ -686,7 +686,7 @@ contains
     complex(8),dimension(Nspin*Norb,Nspin*Norb) :: Hmat
     integer                                  :: iorb,ispin,is
     integer                                  :: jorb,jspin,js
-    Hrank=zero
+    Hmat=zero
     do ispin=1,Nspin
        do jspin=1,Nspin
           do iorb=1,Norb
@@ -706,7 +706,7 @@ contains
     complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hmat
     integer                                            :: iorb,ispin,ilat,is
     integer                                            :: jorb,jspin,jlat,js
-    Hrank=zero
+    Hmat=zero
     do ilat=1,Nlat
        do ispin=1,Nspin
           do jspin=1,Nspin
@@ -730,7 +730,7 @@ contains
     integer                                            :: iorb,jorb
     integer                                            :: ispin,jspin
     integer                                            :: is,js
-    Hrank=zero
+    Hmat=zero
     do ilat=1,Nlat
        do jlat=1,Nlat
           do ispin=1,Nspin
@@ -757,7 +757,7 @@ contains
     integer                                                        :: iorb,jorb
     integer                                                        :: ispin,jspin
     integer                                                        :: is,js
-    Hrank=zero
+    Hmat=zero
     do iineq=1,Nineq
        do ilat=1,Nlat
           do jlat=1,Nlat
@@ -795,7 +795,7 @@ contains
     real(8),dimension(Nspin*Norb,Nspin*Norb,L) :: Hmat
     integer                                    :: iorb,ispin,is
     integer                                    :: jorb,jspin,js
-    Hrank=zero
+    Hmat=zero
     do ispin=1,Nspin
        do jspin=1,Nspin
           do iorb=1,Norb
@@ -815,7 +815,7 @@ contains
     real(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb,L) :: Hmat
     integer                                              :: iorb,ispin,ilat,is
     integer                                              :: jorb,jspin,jlat,js
-    Hrank=zero
+    Hmat=zero
     do ilat=1,Nlat
        do ispin=1,Nspin
           do jspin=1,Nspin
@@ -839,7 +839,7 @@ contains
     integer                                              :: iorb,jorb
     integer                                              :: ispin,jspin
     integer                                              :: is,js
-    Hrank=zero
+    Hmat=zero
     do ilat=1,Nlat
        do jlat=1,Nlat
           do ispin=1,Nspin
@@ -867,7 +867,7 @@ contains
     integer                                                          :: iorb,jorb
     integer                                                          :: ispin,jspin
     integer                                                          :: is,js
-    Hrank=zero
+    Hmat=zero
     do iineq=1,Nineq
        do ilat=1,Nlat
           do jlat=1,Nlat
@@ -889,12 +889,12 @@ contains
 #endif
 
   function c_rank4L_TO_matrixL(Hrank,Nspin,Norb,L) result(Hmat)
-    integer                                    :: Nspin,Norb,L
+    integer                                       :: Nspin,Norb,L
     complex(8),dimension(Nspin,Nspin,Norb,Norb,L) :: Hrank
     complex(8),dimension(Nspin*Norb,Nspin*Norb,L) :: Hmat
-    integer                                    :: iorb,ispin,is
-    integer                                    :: jorb,jspin,js
-    Hrank=zero
+    integer                                       :: iorb,ispin,is
+    integer                                       :: jorb,jspin,js
+    Hmat=zero
     do ispin=1,Nspin
        do jspin=1,Nspin
           do iorb=1,Norb
@@ -914,7 +914,7 @@ contains
     complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb,L) :: Hmat
     integer                                              :: iorb,ispin,ilat,is
     integer                                              :: jorb,jspin,jlat,js
-    Hrank=zero
+    Hmat=zero
     do ilat=1,Nlat
        do ispin=1,Nspin
           do jspin=1,Nspin
@@ -938,7 +938,7 @@ contains
     integer                                              :: iorb,jorb
     integer                                              :: ispin,jspin
     integer                                              :: is,js
-    Hrank=zero
+    Hmat=zero
     do ilat=1,Nlat
        do jlat=1,Nlat
           do ispin=1,Nspin
@@ -966,7 +966,7 @@ contains
     integer                                                          :: iorb,jorb
     integer                                                          :: ispin,jspin
     integer                                                          :: is,js
-    Hrank=zero
+    Hmat=zero
     do iineq=1,Nineq
        do ilat=1,Nlat
           do jlat=1,Nlat
