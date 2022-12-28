@@ -222,9 +222,9 @@ module DMFT_TIGHT_BINDING
   public :: TB_hr_to_hk
 
   public :: TB_slo2lso_model
-  public :: TB_reshape_array
-  public :: TB_reorder_array
-  public :: TB_reshape_hk
+  public :: TB_reshuffle
+  public :: TB_reorder
+  public :: TB_reshuffle_hk
   public :: TB_reorder_hk
   !
   public :: kpoint_gamma

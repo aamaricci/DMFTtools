@@ -24,21 +24,35 @@ module TB_COMMON
   end interface add_to
 
 
-  interface TB_reshape_array
-     module procedure :: tb_reorder_vec_d,tb_reorder_vec_c
-     module procedure :: tb_reorder_mat_d,tb_reorder_mat_c
-     module procedure :: tb_reorder_hk_d,tb_reorder_hk_c
-  end interface TB_reshape_array
-  interface TB_reorder_array
-     module procedure :: tb_reorder_vec_d,tb_reorder_vec_c
-     module procedure :: tb_reorder_mat_d,tb_reorder_mat_c
-     module procedure :: tb_reorder_hk_d,tb_reorder_hk_c
-  end interface TB_reorder_array
-  interface TB_reshape_hk
-     module procedure :: tb_reorder_hk_d,tb_reorder_hk_c
-  end interface TB_reshape_hk
+  interface TB_reshuffle
+     module procedure :: tb_reorder_vec_i
+     module procedure :: tb_reorder_vec_d
+     module procedure :: tb_reorder_vec_c
+     module procedure :: tb_reorder_mat_i
+     module procedure :: tb_reorder_mat_d
+     module procedure :: tb_reorder_mat_c
+     module procedure :: tb_reorder_hk_i
+     module procedure :: tb_reorder_hk_d
+     module procedure :: tb_reorder_hk_c
+  end interface TB_reshuffle
+
+  interface TB_reorder
+     module procedure :: legacy_reorder_vec_d
+     module procedure :: legacy_reorder_vec_c
+     module procedure :: legacy_reorder_mat_d
+     module procedure :: legacy_reorder_mat_c
+  end interface TB_reorder
+
+
+  interface TB_reshuffle_hk
+     module procedure :: tb_reorder_hk_i
+     module procedure :: tb_reorder_hk_d
+     module procedure :: tb_reorder_hk_c
+  end interface TB_reshuffle_hk
+
   interface TB_reorder_hk
-     module procedure :: tb_reorder_hk_d,tb_reorder_hk_c
+     module procedure :: legacy_reorder_hk_d
+     module procedure :: legacy_reorder_hk_c
   end interface TB_reorder_hk
 
   interface tb_findloc
@@ -117,7 +131,594 @@ contains
 
 
 
-  function tb_reorder_vec_d(Huser,Nin,OrderIn,OrderOut) result(Hss)
+
+  subroutine tb_reorder_vec_i(Huser,Nvec,IndexOut)
+    ![Ntot],!M-elements,D-DegreesOfFreedom(Nspin,Norb,Nlat)
+    integer,dimension(:)               :: Huser   
+    ![M*D]=[Nvec_1,...,Nvec_D],Nvec_i=[N_i1,...,N_iM]
+    integer,dimension(:)               :: Nvec
+    integer,dimension(:)               :: IndexOut!pi[1,..,D]
+    !
+    integer,dimension(size(Huser))     :: Hss
+    integer,dimension(:,:),allocatable :: Nin,Nout
+    integer,dimension(:),allocatable   :: Ivec,Jvec
+    integer,dimension(:),allocatable   :: shift
+    integer                            :: Ntot,D,M,DM
+    integer                            :: iss
+    integer                            :: iuser
+    integer                            :: i
+    integer                            :: im
+    integer                            :: id
+    !
+    Ntot = size(Huser)
+    DM   = size(Nvec)
+    D    = size(IndexOut)
+    M    = DM/D
+    if(mod(DM,D)/=0)stop "tb_reorder_vec error: size(Nin) is not multiple of size(IndexOut)"
+    !
+    if(all(IndexOut==(/(i,i=1,D)/) ))return
+    !
+    allocate(Nin(M,D),Nout(M,D))
+    do im=1,M
+       do id=1,D
+          Nin(im,id) = Nvec(im+(id-1)*M)
+       enddo
+       Nout(im,:)=indx_reorder(Nin(im,:),IndexOut)
+    enddo
+    !
+    allocate(shift(M))
+    shift(1)=0
+    do im=2,M
+       shift(im)=shift(m-1)+product(Nin(im-1,:))
+    enddo
+    !
+    allocate(Ivec(D),Jvec(D))
+    !From IndexOut we can re-order the dimensions array to get the User dimensions array
+    do im=1,M
+       do i=1,product(Nin(im,:))
+          iuser = shift(im)+i
+          Ivec  = i2indices(i,Nin(im,:))            !Map iuser to Ivec by Nin
+          Jvec  = indx_reorder(Ivec,IndexOut)       !Reorder according to Out ordering Ivec-->Jvec
+          iss   = shift(im)+indices2i(Jvec,Nout(im,:))  !Map Jvec to iss by Nout
+          Hss(iss) = Huser(iuser)
+       enddo
+    enddo
+    Huser = Hss
+    return
+  end subroutine tb_reorder_vec_i
+
+  subroutine tb_reorder_vec_d(Huser,Nvec,IndexOut)
+    ![Ntot],!M-elements,D-DegreesOfFreedom(Nspin,Norb,Nlat)
+    real(8),dimension(:)               :: Huser   
+    ![M*D]=[Nvec_1,...,Nvec_D],Nvec_i=[N_i1,...,N_iM]
+    integer,dimension(:)               :: Nvec
+    integer,dimension(:)               :: IndexOut!pi[1,..,D]
+    !
+    real(8),dimension(size(Huser))     :: Hss
+    integer,dimension(:,:),allocatable :: Nin,Nout
+    integer,dimension(:),allocatable   :: Ivec,Jvec
+    integer,dimension(:),allocatable   :: shift
+    integer                            :: Ntot,D,M,DM
+    integer                            :: iss
+    integer                            :: iuser
+    integer                            :: i
+    integer                            :: im
+    integer                            :: id
+    !
+    Ntot = size(Huser)
+    DM   = size(Nvec)
+    D    = size(IndexOut)
+    M    = DM/D
+    if(mod(DM,D)/=0)stop "tb_reorder_vec error: size(Nin) is not multiple of size(IndexOut)"
+    !
+    if(all(IndexOut==(/(i,i=1,D)/) ))return
+    !
+    allocate(Nin(M,D),Nout(M,D))
+    do im=1,M
+       do id=1,D
+          Nin(im,id) = Nvec(im+(id-1)*M)
+       enddo
+       Nout(im,:)=indx_reorder(Nin(im,:),IndexOut)
+    enddo
+    !
+    allocate(shift(M))
+    shift(1)=0
+    do im=2,M
+       shift(im)=shift(m-1)+product(Nin(im-1,:))
+    enddo
+    !
+    allocate(Ivec(D),Jvec(D))
+    !From IndexOut we can re-order the dimensions array to get the User dimensions array
+    do im=1,M
+       do i=1,product(Nin(im,:))
+          iuser = shift(im)+i
+          Ivec  = i2indices(i,Nin(im,:))            !Map iuser to Ivec by Nin
+          Jvec  = indx_reorder(Ivec,IndexOut)       !Reorder according to Out ordering Ivec-->Jvec
+          iss   = shift(im)+indices2i(Jvec,Nout(im,:))  !Map Jvec to iss by Nout
+          Hss(iss) = Huser(iuser)
+       enddo
+    enddo
+    Huser = Hss
+    return
+  end subroutine tb_reorder_vec_d
+
+  subroutine tb_reorder_vec_c(Huser,Nvec,IndexOut) 
+    ![Ntot],!M-elements,D-DegreesOfFreedom(Nspin,Norb,Nlat)
+    complex(8),dimension(:)            :: Huser   
+    ![M*D]=[Nvec_1,...,Nvec_D],Nvec_i=[N_i1,...,N_iM]
+    integer,dimension(:)               :: Nvec
+    integer,dimension(:)               :: IndexOut!pi[1,..,D]
+    !
+    complex(8),dimension(size(Huser))  :: Hss
+    integer,dimension(:,:),allocatable :: Nin,Nout
+    integer,dimension(:),allocatable   :: Ivec,Jvec
+    integer,dimension(:),allocatable   :: shift
+    integer                            :: Ntot,D,M,DM
+    integer                            :: iss
+    integer                            :: iuser
+    integer                            :: i
+    integer                            :: im
+    integer                            :: id
+    !
+    Ntot = size(Huser)
+    DM   = size(Nvec)
+    D    = size(IndexOut)
+    M    = DM/D
+    if(mod(DM,D)/=0)stop "tb_reorder_vec error: size(Nin) is not multiple of size(IndexOut)"
+    !
+    if(all(IndexOut==(/(i,i=1,D)/) ))return
+    !
+    allocate(Nin(M,D),Nout(M,D))
+    do im=1,M
+       do id=1,D
+          Nin(im,id) = Nvec(im+(id-1)*M)
+       enddo
+       Nout(im,:)=indx_reorder(Nin(im,:),IndexOut)
+    enddo
+    !
+    allocate(shift(M))
+    shift(1)=0
+    do im=2,M
+       shift(im)=shift(m-1)+product(Nin(im-1,:))
+    enddo
+    !
+    allocate(Ivec(D),Jvec(D))
+    !From IndexOut we can re-order the dimensions array to get the User dimensions array
+    do im=1,M
+       do i=1,product(Nin(im,:))
+          iuser = shift(im)+i
+          Ivec  = i2indices(i,Nin(im,:))            !Map iuser to Ivec by Nin
+          Jvec  = indx_reorder(Ivec,IndexOut)       !Reorder according to Out ordering Ivec-->Jvec
+          iss   = shift(im)+indices2i(Jvec,Nout(im,:))  !Map Jvec to iss by Nout
+          Hss(iss) = Huser(iuser)
+       enddo
+    enddo
+    Huser = Hss
+    return
+  end subroutine tb_reorder_vec_c
+
+
+
+
+
+
+
+  subroutine tb_reorder_mat_i(Huser,Nvec,IndexOut) 
+    ![Ntot],!M-elements,D-DegreesOfFreedom(Nspin,Norb,Nlat)
+    integer,dimension(:,:)                         :: Huser 
+    ![M*D]=[Nvec_1,...,Nvec_D],Nvec_i=[N_i1,...,N_iM]
+    integer,dimension(:)                           :: Nvec
+    integer,dimension(:)                           :: IndexOut!pi[1,..,D]
+    !
+    integer,dimension(size(Huser,1),size(Huser,2)) :: Hss
+    integer,dimension(:,:),allocatable             :: Nin,Nout
+    integer,dimension(:),allocatable               :: Ivec,Jvec
+    integer,dimension(:),allocatable               :: Shift
+    integer                                        :: Ntot,D,M,DM
+    integer                                        :: iss,jss
+    integer                                        :: iuser,juser
+    integer                                        :: i,j
+    integer                                        :: im,jm
+    integer                                        :: id,jd
+    !
+    Ntot = size(Huser,1)
+    call assert_shape(Huser,[Ntot,Ntot],"tb_reorder_mat","Huser")
+    DM   = size(Nvec)
+    D    = size(IndexOut)
+    M    = DM/D
+    if(mod(DM,D)/=0)stop "tb_reorder_vec error: size(Nin) is not multiple of size(IndexOut)"
+    !
+    if(all(IndexOut==(/(i,i=1,D)/) ))return
+    !
+    allocate(Nin(M,D),Nout(M,D))
+    do im=1,M
+       do id=1,D
+          Nin(im,id) = Nvec(im+(id-1)*M)
+       enddo
+       Nout(im,:)=indx_reorder(Nin(im,:),IndexOut)
+    enddo
+    !
+    allocate(shift(M))
+    shift(1)=0
+    do im=2,M
+       shift(im)=shift(m-1)+product(Nin(im-1,:))
+    enddo
+    !
+    allocate(Ivec(D),Jvec(D))
+    !From IndexOut we can re-order the dimensions array to get the User dimensions array
+    do im=1,M
+       do i=1,product(Nin(im,:))
+          iuser = shift(im)+i
+          Ivec  = i2indices(i,Nin(im,:))            !Map iuser to Ivec by Nin
+          Jvec  = indx_reorder(Ivec,IndexOut)       !Reorder according to Out ordering Ivec-->Jvec
+          iss   = shift(im)+indices2i(Jvec,Nout(im,:))  !Map Jvec to iss by Nout
+          !
+          do jm=1,M
+             do j=1,product(Nin(jm,:))
+                juser = shift(jm)+j
+                Ivec  = i2indices(j,Nin(jm,:))            !Map iuser to Ivec by Nin
+                Jvec  = indx_reorder(Ivec,IndexOut)       !Reorder according to Out ordering Ivec-->Jvec
+                jss   = shift(jm)+indices2i(Jvec,Nout(jm,:))  !Map Jvec to iss by Nout
+                !
+                Hss(iss,jss) = Huser(iuser,juser)
+             enddo
+          enddo
+       enddo
+    enddo
+    Huser = Hss
+    return
+  end subroutine tb_reorder_mat_i
+
+  subroutine tb_reorder_mat_d(Huser,Nvec,IndexOut) 
+    ![Ntot],!M-elements,D-DegreesOfFreedom(Nspin,Norb,Nlat)
+    real(8),dimension(:,:)                         :: Huser 
+    ![M*D]=[Nvec_1,...,Nvec_D],Nvec_i=[N_i1,...,N_iM]
+    integer,dimension(:)                           :: Nvec
+    integer,dimension(:)                           :: IndexOut!pi[1,..,D]
+    !
+    real(8),dimension(size(Huser,1),size(Huser,2)) :: Hss
+    integer,dimension(:,:),allocatable             :: Nin,Nout
+    integer,dimension(:),allocatable               :: Ivec,Jvec
+    integer,dimension(:),allocatable               :: Shift
+    integer                                        :: Ntot,D,M,DM
+    integer                                        :: iss,jss
+    integer                                        :: iuser,juser
+    integer                                        :: i,j
+    integer                                        :: im,jm
+    integer                                        :: id,jd
+    !
+    Ntot = size(Huser,1)
+    call assert_shape(Huser,[Ntot,Ntot],"tb_reorder_mat","Huser")
+    DM   = size(Nvec)
+    D    = size(IndexOut)
+    M    = DM/D
+    if(mod(DM,D)/=0)stop "tb_reorder_vec error: size(Nin) is not multiple of size(IndexOut)"
+    !
+    if(all(IndexOut==(/(i,i=1,D)/) ))return
+    !
+    allocate(Nin(M,D),Nout(M,D))
+    do im=1,M
+       do id=1,D
+          Nin(im,id) = Nvec(im+(id-1)*M)
+       enddo
+       Nout(im,:)=indx_reorder(Nin(im,:),IndexOut)
+    enddo
+    !
+    allocate(shift(M))
+    shift(1)=0
+    do im=2,M
+       shift(im)=shift(m-1)+product(Nin(im-1,:))
+    enddo
+    !
+    allocate(Ivec(D),Jvec(D))
+    !From IndexOut we can re-order the dimensions array to get the User dimensions array
+    do im=1,M
+       do i=1,product(Nin(im,:))
+          iuser = shift(im)+i
+          Ivec  = i2indices(i,Nin(im,:))            !Map iuser to Ivec by Nin
+          Jvec  = indx_reorder(Ivec,IndexOut)       !Reorder according to Out ordering Ivec-->Jvec
+          iss   = shift(im)+indices2i(Jvec,Nout(im,:))  !Map Jvec to iss by Nout
+          !
+          do jm=1,M
+             do j=1,product(Nin(jm,:))
+                juser = shift(jm)+j
+                Ivec  = i2indices(j,Nin(jm,:))            !Map iuser to Ivec by Nin
+                Jvec  = indx_reorder(Ivec,IndexOut)       !Reorder according to Out ordering Ivec-->Jvec
+                jss   = shift(jm)+indices2i(Jvec,Nout(jm,:))  !Map Jvec to iss by Nout
+                !
+                Hss(iss,jss) = Huser(iuser,juser)
+             enddo
+          enddo
+       enddo
+    enddo
+    Huser = Hss
+    return
+  end subroutine tb_reorder_mat_d
+
+  subroutine tb_reorder_mat_c(Huser,Nvec,IndexOut) 
+    ![Ntot],!M-elements,D-DegreesOfFreedom(Nspin,Norb,Nlat)
+    complex(8),dimension(:,:)                         :: Huser 
+    complex(8),dimension(size(Huser,1),size(Huser,2)) :: Hss
+    ![M*D]=[Nvec_1,...,Nvec_D],Nvec_i=[N_i1,...,N_iM]
+    integer,dimension(:)                           :: Nvec
+    integer,dimension(:)                           :: IndexOut!pi[1,..,D]
+    !
+    integer,dimension(:,:),allocatable             :: Nin,Nout
+    integer,dimension(:),allocatable               :: Ivec,Jvec
+    integer,dimension(:),allocatable               :: Shift
+    integer                                        :: Ntot,D,M,DM
+    integer                                        :: iss,jss
+    integer                                        :: iuser,juser
+    integer                                        :: i,j
+    integer                                        :: im,jm
+    integer                                        :: id,jd
+    !
+    Ntot = size(Huser,1)
+    call assert_shape(Huser,[Ntot,Ntot],"tb_reorder_mat","Huser")
+    DM   = size(Nvec)
+    D    = size(IndexOut)
+    M    = DM/D
+    if(mod(DM,D)/=0)stop "tb_reorder_vec error: size(Nin) is not multiple of size(IndexOut)"
+    !
+    if(all(IndexOut==(/(i,i=1,D)/) ))return
+    !
+    allocate(Nin(M,D),Nout(M,D))
+    do im=1,M
+       do id=1,D
+          Nin(im,id) = Nvec(im+(id-1)*M)
+       enddo
+       Nout(im,:)=indx_reorder(Nin(im,:),IndexOut)
+    enddo
+    !
+    allocate(shift(M))
+    shift(1)=0
+    do im=2,M
+       shift(im)=shift(m-1)+product(Nin(im-1,:))
+    enddo
+    !
+    allocate(Ivec(D),Jvec(D))
+    !From IndexOut we can re-order the dimensions array to get the User dimensions array
+    do im=1,M
+       do i=1,product(Nin(im,:))
+          iuser = shift(im)+i
+          Ivec  = i2indices(i,Nin(im,:))            !Map iuser to Ivec by Nin
+          Jvec  = indx_reorder(Ivec,IndexOut)       !Reorder according to Out ordering Ivec-->Jvec
+          iss   = shift(im)+indices2i(Jvec,Nout(im,:))  !Map Jvec to iss by Nout
+          !
+          do jm=1,M
+             do j=1,product(Nin(jm,:))
+                juser = shift(jm)+j
+                Ivec  = i2indices(j,Nin(jm,:))            !Map iuser to Ivec by Nin
+                Jvec  = indx_reorder(Ivec,IndexOut)       !Reorder according to Out ordering Ivec-->Jvec
+                jss   = shift(jm)+indices2i(Jvec,Nout(jm,:))  !Map Jvec to iss by Nout
+                !
+                Hss(iss,jss) = Huser(iuser,juser)
+             enddo
+          enddo
+       enddo
+    enddo
+    Huser = Hss
+    return
+  end subroutine tb_reorder_mat_c
+
+
+
+
+
+  subroutine tb_reorder_hk_i(Huser,Nvec,IndexOut) 
+    ![Ntot],!M-elements,D-DegreesOfFreedom(Nspin,Norb,Nlat)
+    integer,dimension(:,:,:)                                     :: Huser 
+    integer,dimension(size(Huser,1),size(Huser,2),size(Huser,3)) :: Hss
+    ![M*D]=[Nvec_1,...,Nvec_D],Nvec_i=[N_i1,...,N_iM]
+    integer,dimension(:)                                         :: Nvec
+    integer,dimension(:)                                         :: IndexOut!pi[1,..,D]
+    !
+    integer,dimension(:,:),allocatable                           :: Nin,Nout
+    integer,dimension(:),allocatable                             :: Ivec,Jvec
+    integer,dimension(:),allocatable                             :: Shift
+    integer                                                      :: Ntot,D,M,DM,Nk
+    integer                                                      :: iss,jss
+    integer                                                      :: iuser,juser
+    integer                                                      :: i,j
+    integer                                                      :: im,jm
+    integer                                                      :: id,jd
+    !
+    Ntot = size(Huser,1)
+    Nk   = size(Huser,3)
+    call assert_shape(Huser,[Ntot,Ntot,Nk],"tb_reorder_hk","Huser")
+    DM   = size(Nvec)
+    D    = size(IndexOut)
+    M    = DM/D
+    if(mod(DM,D)/=0)stop "tb_reorder_vec error: size(Nin) is not multiple of size(IndexOut)"
+    !
+    if(all(IndexOut==(/(i,i=1,D)/) ))return
+    !
+    allocate(Nin(M,D),Nout(M,D))
+    do im=1,M
+       do id=1,D
+          Nin(im,id) = Nvec(im+(id-1)*M)
+       enddo
+       Nout(im,:)=indx_reorder(Nin(im,:),IndexOut)
+    enddo
+    !
+    allocate(shift(M))
+    shift(1)=0
+    do im=2,M
+       shift(im)=shift(m-1)+product(Nin(im-1,:))
+    enddo
+    !
+    allocate(Ivec(D),Jvec(D))
+    !From IndexOut we can re-order the dimensions array to get the User dimensions array
+    do im=1,M
+       do i=1,product(Nin(im,:))
+          iuser = shift(im)+i
+          Ivec  = i2indices(i,Nin(im,:))            !Map iuser to Ivec by Nin
+          Jvec  = indx_reorder(Ivec,IndexOut)       !Reorder according to Out ordering Ivec-->Jvec
+          iss   = shift(im)+indices2i(Jvec,Nout(im,:))  !Map Jvec to iss by Nout
+          !
+          do jm=1,M
+             do j=1,product(Nin(jm,:))
+                juser = shift(jm)+j
+                Ivec  = i2indices(j,Nin(jm,:))            !Map iuser to Ivec by Nin
+                Jvec  = indx_reorder(Ivec,IndexOut)       !Reorder according to Out ordering Ivec-->Jvec
+                jss   = shift(jm)+indices2i(Jvec,Nout(jm,:))  !Map Jvec to iss by Nout
+                !
+                Hss(iss,jss,:) = Huser(iuser,juser,:)
+             enddo
+          enddo
+       enddo
+    enddo
+    Huser = Hss
+    return
+  end subroutine tb_reorder_hk_i
+
+  subroutine tb_reorder_hk_d(Huser,Nvec,IndexOut) 
+    ![Ntot],!M-elements,D-DegreesOfFreedom(Nspin,Norb,Nlat)
+    real(8),dimension(:,:,:)                                     :: Huser 
+    real(8),dimension(size(Huser,1),size(Huser,2),size(Huser,3)) :: Hss
+    ![M*D]=[Nvec_1,...,Nvec_D],Nvec_i=[N_i1,...,N_iM]
+    integer,dimension(:)                                         :: Nvec
+    integer,dimension(:)                                         :: IndexOut!pi[1,..,D]
+    !
+    integer,dimension(:,:),allocatable                           :: Nin,Nout
+    integer,dimension(:),allocatable                             :: Ivec,Jvec
+    integer,dimension(:),allocatable                             :: Shift
+    integer                                                      :: Ntot,D,M,DM,Nk
+    integer                                                      :: iss,jss
+    integer                                                      :: iuser,juser
+    integer                                                      :: i,j
+    integer                                                      :: im,jm
+    integer                                                      :: id,jd
+    !
+    Ntot = size(Huser,1)
+    Nk   = size(Huser,3)
+    call assert_shape(Huser,[Ntot,Ntot,Nk],"tb_reorder_hk","Huser")
+    DM   = size(Nvec)
+    D    = size(IndexOut)
+    M    = DM/D
+    if(mod(DM,D)/=0)stop "tb_reorder_vec error: size(Nin) is not multiple of size(IndexOut)"
+    !
+    if(all(IndexOut==(/(i,i=1,D)/) ))return
+    !
+    allocate(Nin(M,D),Nout(M,D))
+    do im=1,M
+       do id=1,D
+          Nin(im,id) = Nvec(im+(id-1)*M)
+       enddo
+       Nout(im,:)=indx_reorder(Nin(im,:),IndexOut)
+    enddo
+    !
+    allocate(shift(M))
+    shift(1)=0
+    do im=2,M
+       shift(im)=shift(m-1)+product(Nin(im-1,:))
+    enddo
+    !
+    allocate(Ivec(D),Jvec(D))
+    !From IndexOut we can re-order the dimensions array to get the User dimensions array
+    do im=1,M
+       do i=1,product(Nin(im,:))
+          iuser = shift(im)+i
+          Ivec  = i2indices(i,Nin(im,:))            !Map iuser to Ivec by Nin
+          Jvec  = indx_reorder(Ivec,IndexOut)       !Reorder according to Out ordering Ivec-->Jvec
+          iss   = shift(im)+indices2i(Jvec,Nout(im,:))  !Map Jvec to iss by Nout
+          !
+          do jm=1,M
+             do j=1,product(Nin(jm,:))
+                juser = shift(jm)+j
+                Ivec  = i2indices(j,Nin(jm,:))            !Map iuser to Ivec by Nin
+                Jvec  = indx_reorder(Ivec,IndexOut)       !Reorder according to Out ordering Ivec-->Jvec
+                jss   = shift(jm)+indices2i(Jvec,Nout(jm,:))  !Map Jvec to iss by Nout
+                !
+                Hss(iss,jss,:) = Huser(iuser,juser,:)
+             enddo
+          enddo
+       enddo
+    enddo
+    Huser = Hss
+    return
+  end subroutine tb_reorder_hk_d
+
+  subroutine tb_reorder_hk_c(Huser,Nvec,IndexOut) 
+    ![Ntot],!M-elements,D-DegreesOfFreedom(Nspin,Norb,Nlat)
+    complex(8),dimension(:,:,:)                                     :: Huser 
+    complex(8),dimension(size(Huser,1),size(Huser,2),size(Huser,3)) :: Hss
+    ![M*D]=[Nvec_1,...,Nvec_D],Nvec_i=[N_i1,...,N_iM]
+    integer,dimension(:)                                         :: Nvec
+    integer,dimension(:)                                         :: IndexOut!pi[1,..,D]
+    !
+    integer,dimension(:,:),allocatable                           :: Nin,Nout
+    integer,dimension(:),allocatable                             :: Ivec,Jvec
+    integer,dimension(:),allocatable                             :: Shift
+    integer                                                      :: Ntot,D,M,DM,Nk
+    integer                                                      :: iss,jss
+    integer                                                      :: iuser,juser
+    integer                                                      :: i,j
+    integer                                                      :: im,jm
+    integer                                                      :: id,jd
+    !
+    Ntot = size(Huser,1)
+    Nk   = size(Huser,3)
+    call assert_shape(Huser,[Ntot,Ntot,Nk],"tb_reorder_hk","Huser")
+    DM   = size(Nvec)
+    D    = size(IndexOut)
+    M    = DM/D
+    if(mod(DM,D)/=0)stop "tb_reorder_vec error: size(Nin) is not multiple of size(IndexOut)"
+    !
+    if(all(IndexOut==(/(i,i=1,D)/) ))return
+    !
+    allocate(Nin(M,D),Nout(M,D))
+    do im=1,M
+       do id=1,D
+          Nin(im,id) = Nvec(im+(id-1)*M)
+       enddo
+       Nout(im,:)=indx_reorder(Nin(im,:),IndexOut)
+    enddo
+    !
+    allocate(shift(M))
+    shift(1)=0
+    do im=2,M
+       shift(im)=shift(m-1)+product(Nin(im-1,:))
+    enddo
+    !
+    allocate(Ivec(D),Jvec(D))
+    !From IndexOut we can re-order the dimensions array to get the User dimensions array
+    do im=1,M
+       do i=1,product(Nin(im,:))
+          iuser = shift(im)+i
+          Ivec  = i2indices(i,Nin(im,:))            !Map iuser to Ivec by Nin
+          Jvec  = indx_reorder(Ivec,IndexOut)       !Reorder according to Out ordering Ivec-->Jvec
+          iss   = shift(im)+indices2i(Jvec,Nout(im,:))  !Map Jvec to iss by Nout
+          !
+          do jm=1,M
+             do j=1,product(Nin(jm,:))
+                juser = shift(jm)+j
+                Ivec  = i2indices(j,Nin(jm,:))            !Map iuser to Ivec by Nin
+                Jvec  = indx_reorder(Ivec,IndexOut)       !Reorder according to Out ordering Ivec-->Jvec
+                jss   = shift(jm)+indices2i(Jvec,Nout(jm,:))  !Map Jvec to iss by Nout
+                !
+                Hss(iss,jss,:) = Huser(iuser,juser,:)
+             enddo
+          enddo
+       enddo
+    enddo
+    Huser = Hss
+    return
+  end subroutine tb_reorder_hk_c
+
+
+
+
+
+
+
+
+
+
+
+
+  !VEC
+  function legacy_reorder_vec_d(Huser,Nin,OrderIn,OrderOut) result(Hss)
     real(8),dimension(:)                   :: Huser ![Nlat*Nspin*Norb]
     integer,dimension(3)                   :: Nin   !In sequence of Nlat,Nspin,Norb as integers
     character(len=*),dimension(3)          :: OrderIn  !in  sequence of Nlat,Nspin,Norb as strings
@@ -148,7 +749,7 @@ contains
        IndexOut(i:i)=tb_findloc(OrderIn,OrderOut_(i))
     enddo
     if(any(IndexOut==0))then
-       print*,"TB_Reorder_vec ERROR: wrong entry in IndexOut at: ",tb_findloc(IndexOut,0)
+       print*,"Legacy_Reorder_vec ERROR: wrong entry in IndexOut at: ",tb_findloc(IndexOut,0)
        stop
     endif
     !
@@ -167,9 +768,9 @@ contains
        Hss = Huser
     endif
     return
-  end function tb_reorder_vec_d
+  end function legacy_reorder_vec_d
 
-  function tb_reorder_vec_c(Huser,Nin,OrderIn,OrderOut) result(Hss)
+  function legacy_reorder_vec_c(Huser,Nin,OrderIn,OrderOut) result(Hss)
     complex(8),dimension(:)                :: Huser ![Nlat*Nspin*Norb]
     integer,dimension(3)                   :: Nin   !In sequence of Nlat,Nspin,Norb as integers
     character(len=*),dimension(3)          :: OrderIn  !in  sequence of Nlat,Nspin,Norb as strings
@@ -201,7 +802,7 @@ contains
        IndexOut(i:i)=tb_findloc(OrderIn,OrderOut_(i))
     enddo
     if(any(IndexOut==0))then
-       print*,"TB_Reorder_vec ERROR: wrong entry in IndexOut at: ",tb_findloc(IndexOut,0)
+       print*,"Legacy_Reorder_vec ERROR: wrong entry in IndexOut at: ",tb_findloc(IndexOut,0)
        stop
     endif
     !
@@ -220,9 +821,15 @@ contains
        Hss = Huser
     endif
     return
-  end function tb_reorder_vec_c
+  end function legacy_reorder_vec_c
 
-  function tb_reorder_mat_d(Huser,Nin,OrderIn,OrderOut) result(Hss)
+
+
+
+
+
+  !MAT
+  function legacy_reorder_mat_d(Huser,Nin,OrderIn,OrderOut) result(Hss)
     real(8),dimension(:,:)                         :: Huser
     integer,dimension(3)                           :: Nin   !In sequence of Nlat,Nspin,Norb as integers
     character(len=*),dimension(3)                  :: OrderIn  !in  sequence of Nlat,Nspin,Norb as strings
@@ -243,7 +850,7 @@ contains
     endif
     !
     Nlso = size(Huser,1)
-    call assert_shape(Huser,[Nlso,Nlso],"tb_reorder_mat_c","Huser")
+    call assert_shape(Huser,[Nlso,Nlso],"legacy_reorder_mat_c","Huser")
     !
     !Construct an index array InderOut corresponding to the Out ordering.
     !This is a permutation of the In ordering taken as [1,2,3].
@@ -254,7 +861,7 @@ contains
        IndexOut(i:i)=tb_findloc(OrderIn,OrderOut_(i))
     enddo
     if(any(IndexOut==0))then
-       print*,"TB_Reorder_vec ERROR: wrong entry in IndexOut at: ",tb_findloc(IndexOut,0)
+       print*,"Legacy_Reorder_vec ERROR: wrong entry in IndexOut at: ",tb_findloc(IndexOut,0)
        stop
     endif
     !
@@ -278,9 +885,9 @@ contains
        Hss = Huser
     endif
     return
-  end function tb_reorder_mat_d
+  end function legacy_reorder_mat_d
 
-  function tb_reorder_mat_c(Huser,Nin,OrderIn,OrderOut) result(Hss)
+  function legacy_reorder_mat_c(Huser,Nin,OrderIn,OrderOut) result(Hss)
     complex(8),dimension(:,:)                         :: Huser
     integer,dimension(3)                              :: Nin   !In sequence of Nlat,Nspin,Norb as integers
     character(len=*),dimension(3)                     :: OrderIn  !in  sequence of Nlat,Nspin,Norb as strings
@@ -300,9 +907,8 @@ contains
        enddo
     endif
     !
-
     Nlso = size(Huser,1)
-    call assert_shape(Huser,[Nlso,Nlso],"tb_reorder_mat_c","Huser")
+    call assert_shape(Huser,[Nlso,Nlso],"legacy_reorder_mat_c","Huser")
     !
     !Construct an index array InderOut corresponding to the Out ordering.
     !This is a permutation of the In ordering taken as [1,2,3].
@@ -313,7 +919,7 @@ contains
        IndexOut(i:i)=tb_findloc(OrderIn,OrderOut_(i))
     enddo
     if(any(IndexOut==0))then
-       print*,"TB_Reorder_vec ERROR: wrong entry in IndexOut at: ",tb_findloc(IndexOut,0)
+       print*,"Legacy_Reorder_vec ERROR: wrong entry in IndexOut at: ",tb_findloc(IndexOut,0)
        stop
     endif
     !
@@ -337,12 +943,14 @@ contains
        Hss = Huser
     endif
     return
-  end function tb_reorder_mat_c
+  end function legacy_reorder_mat_c
 
 
 
 
-  function tb_reorder_hk_d(Huser,Nin,OrderIn,OrderOut) result(Hss)
+
+  !HK
+  function legacy_reorder_hk_d(Huser,Nin,OrderIn,OrderOut) result(Hss)
     real(8),dimension(:,:,:)                                     :: Huser
     integer,dimension(3)                                         :: Nin   !In sequence of Nlat,Nspin,Norb as integers
     character(len=*),dimension(3)                                :: OrderIn  !in  sequence of Nlat,Nspin,Norb as strings
@@ -365,7 +973,7 @@ contains
     !
     Nlso = size(Huser,1)
     Nk   = size(Huser,3)
-    call assert_shape(Huser,[Nlso,Nlso,Nk],"tb_reorder_hk_d","Huser")
+    call assert_shape(Huser,[Nlso,Nlso,Nk],"legacy_reorder_hk_d","Huser")
     !
     !Construct an index array InderOut corresponding to the Out ordering.
     !This is a permutation of the In ordering taken as [1,2,3].
@@ -376,7 +984,7 @@ contains
        IndexOut(i:i)=tb_findloc(OrderIn,OrderOut_(i))
     enddo
     if(any(IndexOut==0))then
-       print*,"TB_Reorder_vec ERROR: wrong entry in IndexOut at: ",tb_findloc(IndexOut,0)
+       print*,"Legacy_Reorder_vec ERROR: wrong entry in IndexOut at: ",tb_findloc(IndexOut,0)
        stop
     endif
     !
@@ -400,9 +1008,9 @@ contains
        Hss = Huser
     endif
     return
-  end function tb_reorder_hk_d
+  end function legacy_reorder_hk_d
 
-  function tb_reorder_hk_c(Huser,Nin,OrderIn,OrderOut) result(Hss)
+  function legacy_reorder_hk_c(Huser,Nin,OrderIn,OrderOut) result(Hss)
     complex(8),dimension(:,:,:)                                     :: Huser
     integer,dimension(3)                                            :: Nin   !In sequence of Nlat,Nspin,Norb as integers
     character(len=*),dimension(3)                                   :: OrderIn  !in  sequence of Nlat,Nspin,Norb as strings
@@ -424,7 +1032,7 @@ contains
     !   
     Nlso = size(Huser,1)
     Nk   = size(Huser,3)
-    call assert_shape(Huser,[Nlso,Nlso,Nk],"tb_reorder_hk_d","Huser")
+    call assert_shape(Huser,[Nlso,Nlso,Nk],"legacy_reorder_hk_d","Huser")
     !
     !Construct an index array InderOut corresponding to the Out ordering.
     !This is a permutation of the In ordering taken as [1,2,3].
@@ -435,7 +1043,7 @@ contains
        IndexOut(i:i)=tb_findloc(OrderIn,OrderOut_(i))
     enddo
     if(any(IndexOut==0))then
-       print*,"TB_Reorder_vec ERROR: wrong entry in IndexOut at: ",tb_findloc(IndexOut,0)
+       print*,"Legacy_Reorder_vec ERROR: wrong entry in IndexOut at: ",tb_findloc(IndexOut,0)
        stop
     endif
     !
@@ -459,7 +1067,12 @@ contains
        Hss = Huser
     endif
     return
-  end function tb_reorder_hk_c
+  end function legacy_reorder_hk_c
+
+
+
+
+
 
 
 
