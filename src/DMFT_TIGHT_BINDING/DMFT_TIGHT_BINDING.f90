@@ -144,6 +144,10 @@ module DMFT_TIGHT_BINDING
      module procedure :: FermiLevel_w90
   end interface TB_w90_FermiLevel
 
+  interface TB_w90_transform
+     module procedure ::  transform_Hij_w90_1R
+     module procedure ::  transform_Hij_w90_allR
+  end interface TB_w90_transform
 
   !TB_FSURF
   interface TB_fsurface
@@ -208,6 +212,7 @@ module DMFT_TIGHT_BINDING
   public :: TB_w90_Zeta
   public :: TB_w90_Self
   public :: TB_w90_model
+  public :: TB_w90_transform
   !
   public :: TB_write_hk
   public :: TB_read_hk

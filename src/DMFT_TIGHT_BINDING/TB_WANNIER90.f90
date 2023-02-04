@@ -218,6 +218,61 @@ contains
 
 
 
+  subroutine transform_Hij_w90_1R(transform_Hij)
+    interface 
+       function transform_Hij(Hij,N)
+         integer                   :: N
+         complex(8),dimension(N,N) :: Hij
+         complex(8),dimension(N,N) :: transform_Hij
+       end function transform_Hij
+    end interface
+    complex(8),dimension(:,:),allocatable :: Htmp
+    integer                               :: i,j,ir,a,b
+    !
+    !Read w90 TB Hamiltonian
+    allocate(Htmp(TB_w90%Ntot,TB_w90%Ntot))
+    !
+    do ir=1,TB_w90%Nrpts
+       !
+       !Copy H(R) into a tmp array
+       Htmp               = TB_w90%Hij(:,:,ir)
+       !Apply transformation on the single \bar{H}(R) = T(H(R))
+       TB_w90%Hij(:,:,ir) = transform_Hij(Htmp,TB_w90%Ntot)
+       !
+       if( all(TB_w90%Rvec(ir,:)==0) )then
+          Htmp        = TB_w90%Hloc
+          TB_w90%Hloc = transform_Hij(Htmp,TB_w90%Ntot)
+       endif
+    enddo
+    !
+    deallocate(Htmp)
+  end subroutine transform_Hij_w90_1R
+
+
+  subroutine transform_Hij_w90_allR(transform_Hij)
+    interface 
+       function transform_Hij(Hij,N,Nr)
+         integer                      :: N,Nr
+         complex(8),dimension(N,N,Nr) :: Hij
+         complex(8),dimension(N,N,Nr) :: transform_Hij
+       end function transform_Hij
+    end interface
+    complex(8),dimension(:,:,:),allocatable :: Htmp
+    integer                                 :: i,j,ir,a,b
+    !
+    !Read w90 TB Hamiltonian
+    allocate(Htmp(TB_w90%Ntot,TB_w90%Ntot,TB_w90%Nrpts))
+    !
+    !Copy H into a tmp array
+    Htmp               = TB_w90%Hij
+    !Apply transformation on the single \bar{H}(R) = T(H(R))
+    TB_w90%Hij = transform_Hij(Htmp,TB_w90%Ntot,TB_w90%Nrpts)
+    !
+    deallocate(Htmp)
+  end subroutine transform_Hij_w90_allR
+
+
+
   !< generate an internal function to be called in the building procedure
   function w90_hk_model(kvec,N) result(Hk)
     real(8),dimension(:)      :: kvec
@@ -424,7 +479,7 @@ contains
 
 
 
-  
+
 
 
 
