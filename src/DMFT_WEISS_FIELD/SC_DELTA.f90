@@ -9,13 +9,17 @@ module SC_DELTA
   public :: dmft_get_delta_normal_rank4
   public :: dmft_get_delta_normal_rank5
   public :: dmft_get_delta_normal_rank6
+#if __GFORTRAN__ &&  __GNUC__ > 8
   public :: dmft_get_delta_normal_rank7
-
+#endif
+  
   public :: dmft_get_delta_superc_main
   public :: dmft_get_delta_superc_rank4
   public :: dmft_get_delta_superc_rank5
+#if __GFORTRAN__ &&  __GNUC__ > 8
   public :: dmft_get_delta_superc_rank6
-
+#endif
+  
 contains
 
 

@@ -12,12 +12,16 @@ module SC_GLOBAL
      module procedure :: dmft_get_weiss_normal_rank4
      module procedure :: dmft_get_weiss_normal_rank5
      module procedure :: dmft_get_weiss_normal_rank6
+#if __GFORTRAN__ &&  __GNUC__ > 8
      module procedure :: dmft_get_weiss_normal_rank7
+#endif
      !
      module procedure :: dmft_get_weiss_superc_main
      module procedure :: dmft_get_weiss_superc_rank4
      module procedure :: dmft_get_weiss_superc_rank5
+#if __GFORTRAN__ &&  __GNUC__ > 8
      module procedure :: dmft_get_weiss_superc_rank6
+#endif
   end interface dmft_weiss
 
 
@@ -26,38 +30,54 @@ module SC_GLOBAL
      module procedure :: dmft_get_delta_normal_rank4
      module procedure :: dmft_get_delta_normal_rank5
      module procedure :: dmft_get_delta_normal_rank6
+#if __GFORTRAN__ &&  __GNUC__ > 8
      module procedure :: dmft_get_delta_normal_rank7
+#endif
      !
      module procedure :: dmft_get_delta_superc_main
      module procedure :: dmft_get_delta_superc_rank4
      module procedure :: dmft_get_delta_superc_rank5
+#if __GFORTRAN__ &&  __GNUC__ > 8
      module procedure :: dmft_get_delta_superc_rank6
+#endif
   end interface dmft_delta
 
+
+  
   interface dmft_self_consistency
      module procedure :: dmft_get_delta_normal_main
      module procedure :: dmft_get_delta_normal_rank4
      module procedure :: dmft_get_delta_normal_rank5
      module procedure :: dmft_get_delta_normal_rank6
+#if __GFORTRAN__ &&  __GNUC__ > 8
      module procedure :: dmft_get_delta_normal_rank7
+#endif
      !
      module procedure :: dmft_get_delta_superc_main
      module procedure :: dmft_get_delta_superc_rank4
      module procedure :: dmft_get_delta_superc_rank5
+#if __GFORTRAN__ &&  __GNUC__ > 8
      module procedure :: dmft_get_delta_superc_rank6
+#endif
      !
      module procedure :: dmft_get_weiss_normal_main
      module procedure :: dmft_get_weiss_normal_rank4
      module procedure :: dmft_get_weiss_normal_rank5
      module procedure :: dmft_get_weiss_normal_rank6
+#if __GFORTRAN__ &&  __GNUC__ > 8
      module procedure :: dmft_get_weiss_normal_rank7
+#endif
      !
      module procedure :: dmft_get_weiss_superc_main
      module procedure :: dmft_get_weiss_superc_rank4
      module procedure :: dmft_get_weiss_superc_rank5
+#if __GFORTRAN__ &&  __GNUC__ > 8
      module procedure :: dmft_get_weiss_superc_rank6
+#endif
   end interface dmft_self_consistency
 
+
+  
   public :: dmft_weiss
   public :: dmft_delta
   public :: dmft_self_consistency
