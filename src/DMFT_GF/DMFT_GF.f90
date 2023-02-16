@@ -19,8 +19,10 @@ module DMFT_GF
      module procedure :: get_gloc_normal_tridiag_rank5
      module procedure :: get_gloc_normal_hk_rank5_6
      module procedure :: get_gloc_normal_hk_rank6
+#if __GFORTRAN__ &&  __GNUC__ > 8
      module procedure :: get_gloc_normal_hk_rank7
      module procedure :: get_gloc_normal_tridiag_rank7
+#endif
      !main procedures superc
      module procedure :: get_gloc_superc_main
      module procedure :: get_gloc_superc_dos
@@ -46,8 +48,10 @@ module DMFT_GF
      module procedure :: get_gk_normal_tridiag_rank5
      module procedure :: get_gk_normal_hk_rank5_6
      module procedure :: get_gk_normal_hk_rank6
+#if __GFORTRAN__ &&  __GNUC__ > 8
      module procedure :: get_gk_normal_hk_rank7
      module procedure :: get_gk_normal_tridiag_rank7
+#endif
      !main procedures superc
      module procedure :: get_gk_superc_main
      module procedure :: get_gk_superc_dos
@@ -75,8 +79,10 @@ module DMFT_GF
      module procedure :: get_gloc_normal_tridiag_rank5
      module procedure :: get_gloc_normal_hk_rank5_6
      module procedure :: get_gloc_normal_hk_rank6
+#if __GFORTRAN__ &&  __GNUC__ > 8
      module procedure :: get_gloc_normal_hk_rank7
      module procedure :: get_gloc_normal_tridiag_rank7
+#endif
      !main procedures superc
      module procedure :: get_gloc_superc_main
      module procedure :: get_gloc_superc_dos
@@ -102,8 +108,10 @@ module DMFT_GF
      module procedure :: get_gk_normal_tridiag_rank5
      module procedure :: get_gk_normal_hk_rank5_6
      module procedure :: get_gk_normal_hk_rank6
+#if __GFORTRAN__ &&  __GNUC__ > 8
      module procedure :: get_gk_normal_hk_rank7
      module procedure :: get_gk_normal_tridiag_rank7
+#endif
      !main procedures superc
      module procedure :: get_gk_superc_main
      module procedure :: get_gk_superc_dos

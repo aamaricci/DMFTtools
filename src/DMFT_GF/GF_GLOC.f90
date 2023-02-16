@@ -17,8 +17,10 @@ module GF_GLOC
   public :: get_gloc_normal_tridiag_rank5
   public :: get_gloc_normal_hk_rank5_6
   public :: get_gloc_normal_hk_rank6
+#if __GFORTRAN__ &&  __GNUC__ > 8
   public :: get_gloc_normal_hk_rank7
   public :: get_gloc_normal_tridiag_rank7
+#endif
   !
   public :: get_gloc_superc_hk_rank4
   public :: get_gloc_superc_dos_rank4
