@@ -507,6 +507,7 @@ contains
     allocate(Gmatrix(2*Ntot,2*Ntot))
     Gtmp=zero
     !
+    !
     do ik = 1+mpi_rank, Lk, mpi_size
        do i=1,Lfreq
           Gmatrix  = zero
@@ -516,8 +517,10 @@ contains
           Gmatrix(Ntot+1:2*Ntot,Ntot+1:2*Ntot) = csi(2,2,:,:,i) - diag(Ebands(2,:,ik))
           call inv(Gmatrix)
           do io=1,Ntot
-             Gtmp(1,io,io,i) = Gtmp(1,io,io,i) + Gmatrix(io,io)*Dbands(io,ik)
-             Gtmp(2,io,io,i) = Gtmp(2,io,io,i) + Gmatrix(io,Ntot+io)*Dbands(io,ik)
+             do jo=1,Ntot
+                Gtmp(1,io,jo,i) = Gtmp(1,io,jo,i) + Gmatrix(io,jo)*Dbands(io,ik)
+                Gtmp(2,io,jo,i) = Gtmp(2,io,jo,i) + Gmatrix(io,Ntot+jo)*Dbands(io,ik)
+             end do
           enddo
        enddo
        call eta(ik,Lk)
