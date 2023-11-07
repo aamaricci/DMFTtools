@@ -9,7 +9,7 @@ There are still many useful features missing. Anyone is welcome to contribute or
 * [GNU Fortran (`gfortran`)](https://gcc.gnu.org/fortran/) > 5.0 **OR** [Intel Fortran Compiler Classic (`ifort`)](https://www.intel.com/content/www/us/en/developer/tools/oneapi/fortran-compiler.html)  > 13.0
 * [CMake](https://cmake.org/) ≥ 3.0 [> 3.16 for ninja support] 
 * [Make](https://www.gnu.org/software/make/) **OR** [Ninja](https://ninja-build.org/) ≥ 1.10 
-* [SciFortran](https://github.com/QcmPlab/SciFortran), our scientific fortran library
+* [SciFortran](https://github.com/aamaricci/SciFortran), our scientific fortran library
 * [MPI](https://github.com/open-mpi/ompi)  [optional, recommended]
 * [ScaLAPACK](https://github.com/Reference-ScaLAPACK/scalapack)  [optional, recommended] 
 
@@ -19,7 +19,7 @@ If any of the required libraries is not available in your system, or the version
 
 Our build system relies on CMake. Clone the repo:
 
-`git clone https://github.com/QcmPlab/DMFTtools dmft_tools`
+`git clone https://github.com/aamaricci/DMFTtools dmft_tools`
 
 <details>
 <summary> Using <tt>make</tt> (click to expand) </summary>
@@ -50,7 +50,7 @@ ninja
 
 [^3]: Ninja did not support fortran before version 1.10, although Kitware has long mantained a fortran-capable fork, which might be obtained easily as a [Spack package](https://packages.spack.io/package.html?name=ninja-fortran). Nevertheless we note that as of fall 2022 `pip install ninja --user` [ships Ninja v1.10.2](https://pypi.org/project/ninja/), hence obtaining a suitable official Ninja release should be trivial.
 
-[^4]: This depends on your CMake version. Comparing [this](https://cmake.org/cmake/help/v3.16/generator/Ninja.html#fortran-support) to [this](https://cmake.org/cmake/help/v3.17/generator/Ninja.html#fortran-support) would suggest that CMake started supporting Ninja's fortran features only after v3.17 but we have verified that at least v3.16.3 (current version shipped by `apt` on Ubuntu 20.04 LTS) does indeed work. For more information you can take a look to a [related SciFortran issue](https://github.com/QcmPlab/SciFortran/issues/16). 
+[^4]: This depends on your CMake version. Comparing [this](https://cmake.org/cmake/help/v3.16/generator/Ninja.html#fortran-support) to [this](https://cmake.org/cmake/help/v3.17/generator/Ninja.html#fortran-support) would suggest that CMake started supporting Ninja's fortran features only after v3.17 but we have verified that at least v3.16.3 (current version shipped by `apt` on Ubuntu 20.04 LTS) does indeed work. For more information you can take a look to a [related SciFortran issue](https://github.com/aamaricci/SciFortran/issues/16). 
 
 ## INSTALL
 
@@ -81,13 +81,13 @@ CMake does not officially provide uninstall procedures in the generated Make/Nin
 
 ### CONTACT
 
-If you encounter bugs or difficulties, please [file an issue](https://github.com/QcmPlab/DMFTtools/issues/new/choose). For any other communication, please reach out to:    
+If you encounter bugs or difficulties, please [file an issue](https://github.com/aamaricci/DMFTtools/issues/new/choose). For any other communication, please reach out to:    
 adriano DOT amaricci @ gmail DOT com
 
 --
 
 ***LICENSE***  
-Copyright (C) Adriano Amaricci, Lorenzo Crippa, Giacomo Mazza, Gabriele Bellomia, Samuele Giuli, Massimo Capone
+Copyright (C) Adriano Amaricci, Gabriele Bellomia, Samuele Giuli, Lorenzo Crippa, Giacomo Mazza
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License (LGPL) as published by
