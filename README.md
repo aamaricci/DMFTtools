@@ -87,6 +87,7 @@ adriano DOT amaricci @ gmail DOT com
 --
 
 ***LICENSE***  
+<<<<<<< HEAD
 Copyright (C) Adriano Amaricci, Gabriele Bellomia, Samuele Giuli, Lorenzo Crippa, Giacomo Mazza
 
 This program is free software: you can redistribute it and/or modify
