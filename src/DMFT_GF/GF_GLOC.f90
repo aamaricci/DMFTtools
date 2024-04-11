@@ -209,7 +209,7 @@ contains
 
 
   !DOS case: Hk--> Es,DOSs
-  subroutine get_gloc_normal_dos(Ebands,Dbands,Hloc,Gloc,Sigma,axis)
+  subroutine get_gloc_normal_dos(Ebands,Dbands,Hloc,Gloc,Sigma,axis,diagonal)
     real(8),dimension(:,:),intent(in)            :: Ebands    ![N][Lk]
     real(8),dimension(:,:),intent(in)            :: Dbands    ![N][Lk] /[1][Lk]
     real(8),dimension(size(Ebands,1)),intent(in) :: Hloc      ![N]
@@ -224,6 +224,7 @@ contains
     !New
     complex(8),dimension(:,:),allocatable        :: Gdos_tmp ![N][N]
     logical                                      :: dos_diag !1. T / 2. F
+    logical,optional                             :: diagonal
     !
     !MPI setup:
 #ifdef _MPI    
@@ -248,7 +249,11 @@ contains
     !
     !case F  => 1  DOS, H(e)=diag(Ebands), non-diagonal case
     !case T  => >1 DOS, Ebands, diagonal case
-    dos_diag = .not.(size(Dbands,1) < size(Ebands,1))
+    if(present(diagonal))then
+      dos_diag=diagonal
+    else
+      dos_diag = .not.(size(Dbands,1) < size(Ebands,1))
+    endif
     !
     !Testing part:
     call assert_shape(Ebands,[Ntot,Lk],"dmft_get_gloc_normal_dos","Ebands")
