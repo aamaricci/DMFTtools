@@ -597,13 +597,14 @@ contains
     deallocate(SF,GF)
   end subroutine get_gloc_normal_hk_rank4
 
-  subroutine get_gloc_normal_dos_rank4(Ebands,Dbands,Hloc,Gloc,Sigma,axis)!N=Nspin*Norb
+  subroutine get_gloc_normal_dos_rank4(Ebands,Dbands,Hloc,Gloc,Sigma,axis,diagonal)!N=Nspin*Norb
     real(8),dimension(:,:),intent(in)             :: Ebands    ![N][Lk]
     real(8),dimension(:,:),intent(in)             :: Dbands    ![N][Lk] /[1][Lk]
     real(8),dimension(size(Ebands,1)),intent(in)  :: Hloc      ![N]
     complex(8),dimension(:,:,:,:,:),intent(in)    :: Sigma     ![Nspin,Nspin,Norb,Norb][L]
     complex(8),dimension(:,:,:,:,:),intent(inout) :: Gloc      !as Sigma
     character(len=*)                              :: axis
+    logical,optional                              :: diagonal
     complex(8),dimension(:,:,:),allocatable       :: SF,GF
 #ifdef _MPI    
     if(check_MPI())mpi_master= get_master_MPI()
@@ -626,7 +627,11 @@ contains
     GF=zero
     !
     SF = reshape_rank4_to_matrix(Sigma,Nspin,Norb,Lfreq)
-    call get_gloc_normal_dos(Ebands,Dbands,Hloc,GF,SF,axis)
+    if(present(diagonal))then
+      call get_gloc_normal_dos(Ebands,Dbands,Hloc,GF,SF,axis,diagonal)
+    else
+      call get_gloc_normal_dos(Ebands,Dbands,Hloc,GF,SF,axis)
+    endif
     Gloc = reshape_matrix_to_rank4(GF,Nspin,Norb,Lfreq)
     deallocate(SF,GF)
   end subroutine get_gloc_normal_dos_rank4
