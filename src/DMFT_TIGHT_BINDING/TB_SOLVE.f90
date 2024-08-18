@@ -66,11 +66,11 @@ contains
     if(iproject_)then
        select case(Ndim)
        case (1)
-          forall(ipts=1:Npts)kpath(ipts,:) = kpath(ipts,1)*bk_x
+          forall(ipts=1:Npts)kpath(ipts,:) = kpath(ipts,1)*bk_1
        case(2)
-          forall(ipts=1:Npts)kpath(ipts,:) = kpath(ipts,1)*bk_x + kpath(ipts,2)*bk_y
+          forall(ipts=1:Npts)kpath(ipts,:) = kpath(ipts,1)*bk_1 + kpath(ipts,2)*bk_2
        case (3)
-          forall(ipts=1:Npts)kpath(ipts,:) = kpath(ipts,1)*bk_x + kpath(ipts,2)*bk_y + kpath(ipts,3)*bk_z
+          forall(ipts=1:Npts)kpath(ipts,:) = kpath(ipts,1)*bk_1 + kpath(ipts,2)*bk_2 + kpath(ipts,3)*bk_3
        end select
     endif
     !
@@ -233,11 +233,11 @@ contains
     if(iproject_)then
        select case(Ndim)
        case (1)
-          forall(ipts=1:Npts)kpath(ipts,:) = kpath(ipts,1)*bk_x
+          forall(ipts=1:Npts)kpath(ipts,:) = kpath(ipts,1)*bk_1
        case(2)
-          forall(ipts=1:Npts)kpath(ipts,:) = kpath(ipts,1)*bk_x + kpath(ipts,2)*bk_y
+          forall(ipts=1:Npts)kpath(ipts,:) = kpath(ipts,1)*bk_1 + kpath(ipts,2)*bk_2
        case (3)
-          forall(ipts=1:Npts)kpath(ipts,:) = kpath(ipts,1)*bk_x + kpath(ipts,2)*bk_y + kpath(ipts,3)*bk_z
+          forall(ipts=1:Npts)kpath(ipts,:) = kpath(ipts,1)*bk_1 + kpath(ipts,2)*bk_2 + kpath(ipts,3)*bk_3
        end select
     endif
     !

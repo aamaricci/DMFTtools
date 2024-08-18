@@ -29,17 +29,17 @@ contains
 
 
   subroutine TB_reset_ei
-    ei_x=[1d0,0d0,0d0]
-    ei_y=[0d0,1d0,0d0]
-    ei_z=[0d0,0d0,1d0]
+    ei_1=[1d0,0d0,0d0]
+    ei_2=[0d0,1d0,0d0]
+    ei_3=[0d0,0d0,1d0]
     set_eivec=.false.
   end subroutine TB_reset_ei
 
 
   subroutine TB_reset_bk
-    bk_x=[1d0,0d0,0d0]*pi2
-    bk_y=[0d0,1d0,0d0]*pi2
-    bk_z=[0d0,0d0,1d0]*pi2
+    bk_1=[1d0,0d0,0d0]*pi2
+    bk_2=[0d0,1d0,0d0]*pi2
+    bk_3=[0d0,0d0,1d0]*pi2
     set_bkvec=.false.
   end subroutine TB_reset_bk
 
@@ -61,26 +61,26 @@ contains
     bool=.true.
     !
     if(present(eix))then
-       ei_x = 0d0
-       ei_x(1:size(eix)) = eix
+       ei_1 = 0d0
+       ei_1(1:size(eix)) = eix
        bool=.false.
     endif
     !
     if(present(eiy))then
-       ei_y = 0d0
-       ei_y(1:size(eiy)) = eiy
+       ei_2 = 0d0
+       ei_2(1:size(eiy)) = eiy
        bool=.false.
     endif
     !
     if(present(eiz))then
-       ei_z = 0d0
-       ei_z(1:size(eiz)) = eiz
+       ei_3 = 0d0
+       ei_3(1:size(eiz)) = eiz
        bool=.false.
     endif
     !
     if(bool.and.mpi_master)write(*,"(A)")"TB_set_ei: using default values"
     set_eivec=.true.
-    if(mpi_master) write(*,*) set_eivec
+    !if(mpi_master)write(*,*) set_eivec
   end subroutine TB_set_ei
 
   subroutine TB_set_bk(bkx,bky,bkz)
@@ -99,20 +99,20 @@ contains
     bool=.true.
     !
     if(present(bkx))then
-       bk_x = 0d0
-       bk_x(1:size(bkx)) = bkx
+       bk_1 = 0d0
+       bk_1(1:size(bkx)) = bkx
        bool=.false.
     endif
     !
     if(present(bky))then
-       bk_y = 0d0
-       bk_y(1:size(bky)) = bky
+       bk_2 = 0d0
+       bk_2(1:size(bky)) = bky
        bool=.false.
     endif
     !
     if(present(bkz))then
-       bk_z = 0d0
-       bk_z(1:size(bkz)) = bkz
+       bk_3 = 0d0
+       bk_3(1:size(bkz)) = bkz
        bool=.false.
     endif
     !
@@ -129,8 +129,8 @@ contains
     if(.not.set_eivec)stop "TB_build_bk ERROR: Direct basis not set, set_eivec=F"
     verbose_=.false.;if(present(verbose))verbose_=verbose
     call TB_reciprocal_basis(&
-         a1=ei_x,a2=ei_y,a3=ei_z,&
-         b1=bk_x,b2=bk_y,b3=bk_z)
+         a1=ei_1,a2=ei_2,a3=ei_3,&
+         b1=bk_1,b2=bk_2,b3=bk_3)
     set_bkvec=.true.
     if(verbose_)call print_bk
   end subroutine TB_build_bk
@@ -142,8 +142,8 @@ contains
     verbose_=.false.;if(present(verbose))verbose_=verbose
     !note that we exchange the direct basis with the reciprocal
     call TB_reciprocal_basis(&
-         b1=ei_x,b2=ei_y,b3=ei_z,&
-         a1=bk_x,a2=bk_y,a3=bk_z)
+         b1=ei_1,b2=ei_2,b3=ei_3,&
+         a1=bk_1,a2=bk_2,a3=bk_3)
     set_eivec=.true.
     if(verbose_)call print_ei
   end subroutine TB_build_ei
@@ -151,11 +151,10 @@ contains
 
 
 
-  subroutine TB_get_bk(bkx,bky,bkz)
-    real(8),dimension(:),intent(inout)                  :: bkx
-    real(8),dimension(size(bkx)),intent(inout),optional :: bky
-    real(8),dimension(size(bkx)),intent(inout),optional :: bkz
-    real(8),dimension(3)                                :: b1,b2,b3
+  subroutine TB_get_bk(b1,b2,b3)
+    real(8),dimension(:),intent(inout)                 :: b1
+    real(8),dimension(size(b1)),intent(inout),optional :: b2
+    real(8),dimension(size(b1)),intent(inout),optional :: b3
     !
     mpi_master=.true.
 #ifdef _MPI    
@@ -169,17 +168,16 @@ contains
        call TB_build_bk(.true.)
     endif
     !
-    bkx = bk_x(1:size(bkx))
-    if(present(bky))bky = bk_y(1:size(bky))
-    if(present(bkz))bkz = bk_z(1:size(bkz))
+    b1 = bk_1(1:size(b1))
+    if(present(b2))b2 = bk_2(1:size(b2))
+    if(present(b3))b3 = bk_3(1:size(b3))
     !
   end subroutine TB_get_bk
 
-  subroutine TB_get_ei(eix,eiy,eiz)
-    real(8),dimension(:),intent(inout)                  :: eix
-    real(8),dimension(size(eix)),intent(inout),optional :: eiy
-    real(8),dimension(size(eix)),intent(inout),optional :: eiz
-    real(8),dimension(3)                                :: a1,a2,a3
+  subroutine TB_get_ei(e1,e2,e3)
+    real(8),dimension(:),intent(inout)                 :: e1
+    real(8),dimension(size(e1)),intent(inout),optional :: e2
+    real(8),dimension(size(e1)),intent(inout),optional :: e3
     !
     mpi_master=.true.
 #ifdef _MPI    
@@ -193,9 +191,9 @@ contains
        call TB_build_ei(.true.)
     endif
     !
-    eix = a1(1:size(eix))
-    if(present(eiy))eiy = a2(1:size(eiy))
-    if(present(eiz))eiz = a3(1:size(eiz))
+    e1 = ei_1(1:size(e1))
+    if(present(e2))e2 = ei_2(1:size(e2))
+    if(present(e3))e3 = ei_3(1:size(e3))
     !
   end subroutine TB_get_ei
 
@@ -205,9 +203,9 @@ contains
     integer              :: i,n
     if(.not.set_eivec)stop "TB_ei_length error: ei basis not set"
     n=size(len)
-    if(n>0)len(1) = sqrt(dot_product(ei_x,ei_x))
-    if(n>1)len(2) = sqrt(dot_product(ei_y,ei_y))
-    if(n>2)len(3) = sqrt(dot_product(ei_z,ei_z))
+    if(n>0)len(1) = sqrt(dot_product(ei_1,ei_1))
+    if(n>1)len(2) = sqrt(dot_product(ei_2,ei_2))
+    if(n>2)len(3) = sqrt(dot_product(ei_3,ei_3))
   end subroutine TB_ei_length
 
 
@@ -216,9 +214,9 @@ contains
     integer              :: i,n
     if(.not.set_bkvec)stop "TB_bk_length error: bk basis not set"
     n=size(len)
-    if(n>0)len(1) = sqrt(dot_product(bk_x,bk_x))
-    if(n>1)len(2) = sqrt(dot_product(bk_y,bk_y))
-    if(n>2)len(3) = sqrt(dot_product(bk_z,bk_z))
+    if(n>0)len(1) = sqrt(dot_product(bk_1,bk_1))
+    if(n>1)len(2) = sqrt(dot_product(bk_2,bk_2))
+    if(n>2)len(3) = sqrt(dot_product(bk_3,bk_3))
   end subroutine TB_bk_length
 
 
@@ -241,9 +239,9 @@ contains
        unit=6
        if(present(pfile))open(free_unit(unit),file=reg(pfile))
        write(unit,"(A)")"Using Direct Lattice vectors:"
-       write(unit,"(A,3F8.4,A1)")"ei_x = [",(ei_x(i),i=1,3),"]"
-       write(unit,"(A,3F8.4,A1)")"ei_y = [",(ei_y(i),i=1,3),"]"
-       write(unit,"(A,3F8.4,A1)")"ei_z = [",(ei_z(i),i=1,3),"]"
+       write(unit,"(A,3F8.4,A1)")"ei_1 = [",(ei_1(i),i=1,3),"]"
+       write(unit,"(A,3F8.4,A1)")"ei_2 = [",(ei_2(i),i=1,3),"]"
+       write(unit,"(A,3F8.4,A1)")"ei_3 = [",(ei_3(i),i=1,3),"]"
        if(present(pfile))close(unit)
     endif
     io_eivec=.true.
@@ -262,9 +260,9 @@ contains
        unit=6
        if(present(pfile))open(free_unit(unit),file=reg(pfile))
        write(unit,"(A)")"Using Reciprocal Lattice vectors:"
-       write(unit,"(A,3F8.4,A1)")"bk_x = [",(bk_x(i),i=1,3),"]"
-       write(unit,"(A,3F8.4,A1)")"bk_y = [",(bk_y(i),i=1,3),"]"
-       write(unit,"(A,3F8.4,A1)")"bk_z = [",(bk_z(i),i=1,3),"]"
+       write(unit,"(A,3F8.4,A1)")"bk_1 = [",(bk_1(i),i=1,3),"]"
+       write(unit,"(A,3F8.4,A1)")"bk_2 = [",(bk_2(i),i=1,3),"]"
+       write(unit,"(A,3F8.4,A1)")"bk_3 = [",(bk_3(i),i=1,3),"]"
        if(present(pfile))close(unit)
     endif
     io_bkvec=.true.
@@ -378,7 +376,7 @@ contains
     do ik=1,Nktot
        ivec = i2indices(ik,Nk)
        ktmp = [grid_x(ivec(1)), grid_y(ivec(2)), grid_z(ivec(3))]
-       kgrid(ik,:) = ktmp(1)*bk_x(:ndim) + ktmp(2)*bk_y(:ndim) + ktmp(3)*bk_z(:ndim)
+       kgrid(ik,:) = ktmp(1)*bk_1(:ndim) + ktmp(2)*bk_2(:ndim) + ktmp(3)*bk_3(:ndim)
     end do
   end subroutine build_kgrid
 
@@ -601,9 +599,9 @@ contains
           do ix=1,Nk(1)
              kx = dble(ix-1)/Nk(1)
              ik=ik+1
-             kgrid_x(ik,:)=kx*bk_x(:ndim)
-             kgrid_y(ik,:)=ky*bk_y(:ndim)
-             kgrid_z(ik,:)=kz*bk_z(:ndim)
+             kgrid_x(ik,:)=kx*bk_1(:ndim)
+             kgrid_y(ik,:)=ky*bk_2(:ndim)
+             kgrid_z(ik,:)=kz*bk_3(:ndim)
           enddo
        enddo
     enddo
@@ -630,7 +628,7 @@ contains
     do iz=1,Nr(3)
        do iy=1,Nr(2)
           do ix=1,Nr(1)
-             Rvec = ix*ei_x + iy*ei_y + iz*ei_z
+             Rvec = ix*ei_1 + iy*ei_2 + iz*ei_3
              ir=ir+1
              Rgrid(ir,:)=Rvec
           enddo
@@ -941,9 +939,9 @@ END MODULE TB_BASIS
 !   enddo
 !   if(product(Nk)/=product(Nkvec))stop "TB_build_grid ERROR: product(Nkvec) != product(Nk)"
 !   !
-!   Lb(1) = sqrt(dot_product(bk_x,bk_x))
-!   Lb(2) = sqrt(dot_product(bk_y,bk_y))
-!   Lb(3) = sqrt(dot_product(bk_z,bk_z))
+!   Lb(1) = sqrt(dot_product(bk_1,bk_1))
+!   Lb(2) = sqrt(dot_product(bk_2,bk_2))
+!   Lb(3) = sqrt(dot_product(bk_3,bk_3))
 !   Dk    = 0d0
 !   ik = 2
 !   do i=1,ndim
@@ -974,7 +972,7 @@ END MODULE TB_BASIS
 !            ky   = grid_y(iy)
 !            kz   = grid_z(iz)
 !            ik   = indices2i([ix,iy,iz],Nk)
-!            kvec = kx*bk_x(:ndim) + ky*bk_y(:ndim) + kz*bk_z(:ndim)
+!            kvec = kx*bk_1(:ndim) + ky*bk_2(:ndim) + kz*bk_3(:ndim)
 !            kgrid_refine(ik,:)=kvec
 !         end do
 !      end do
@@ -1010,7 +1008,7 @@ END MODULE TB_BASIS
 !         ky = dble(iy-1)/Nk(2)
 !         do ix=1,Nk(1)
 !            kx = dble(ix-1)/Nk(1)
-!            kvec = kx*bk_x(:ndim) + ky*bk_y(:ndim) + kz*bk_z(:ndim)
+!            kvec = kx*bk_1(:ndim) + ky*bk_2(:ndim) + kz*bk_3(:ndim)
 !            ik=ik+1
 !            kgrid(ik,:)=kvec
 !         enddo

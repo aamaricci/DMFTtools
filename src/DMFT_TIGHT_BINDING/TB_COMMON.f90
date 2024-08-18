@@ -61,6 +61,18 @@ module TB_COMMON
   end interface tb_findloc
 
 
+  interface cross2d
+     module procedure :: cross_2d_d
+     module procedure :: cross_2d_c
+  end interface cross2d
+
+
+  interface cross3d
+     module procedure :: cross_3d_d
+     module procedure :: cross_3d_c
+  end interface cross3d
+
+
   !Some special points in the BZ:
   !we do everything in 3d.
   real(8),dimension(3),parameter :: kpoint_gamma=[0,0,0]*pi
@@ -73,13 +85,14 @@ module TB_COMMON
   real(8),dimension(3),parameter :: kpoint_r=[1,1,1]*pi
 
 
-  real(8),dimension(3),save      :: ei_x=[1d0,0d0,0d0]
-  real(8),dimension(3),save      :: ei_y=[0d0,1d0,0d0]
-  real(8),dimension(3),save      :: ei_z=[0d0,0d0,1d0]
+  real(8),dimension(3),save      :: ei_1=[1d0,0d0,0d0]
+  real(8),dimension(3),save      :: ei_2=[0d0,1d0,0d0]
+  real(8),dimension(3),save      :: ei_3=[0d0,0d0,1d0]
 
-  real(8),dimension(3),save      :: bk_x=[1d0,0d0,0d0]*pi2
-  real(8),dimension(3),save      :: bk_y=[0d0,1d0,0d0]*pi2
-  real(8),dimension(3),save      :: bk_z=[0d0,0d0,1d0]*pi2
+  real(8),dimension(3),save      :: bk_1=[1d0,0d0,0d0]*pi2
+  real(8),dimension(3),save      :: bk_2=[0d0,1d0,0d0]*pi2
+  real(8),dimension(3),save      :: bk_3=[0d0,0d0,1d0]*pi2
+  !
   real(8),dimension(3),save      :: BZ_origin=[0d0,0d0,0d0]
 
   logical,save                   :: io_eivec=.false.
@@ -127,6 +140,33 @@ contains
   end function i2indices
 
 
+
+
+  function cross_2d_d(a,b) result(c)
+    real(8),dimension(2) :: a,b
+    real(8)              :: c
+    c = a(1)*b(2) - a(2)*b(1)
+  end function cross_2d_d
+  function cross_2d_c(a,b) result(c)
+    complex(8),dimension(2) :: a,b
+    complex(8)              :: c
+    c = a(1)*b(2) - a(2)*b(1)
+  end function cross_2d_c
+  !
+  function cross_3d_d(a,b) result(c)
+    real(8),dimension(3) :: a,b
+    real(8),dimension(3) :: c
+    c(1) = a(2)*b(3) - a(3)*b(2)
+    c(2) = a(3)*b(1) - a(1)*b(3)
+    c(3) = a(1)*b(2) - a(2)*b(1)
+  end function cross_3d_d
+  function cross_3d_c(a,b) result(c)
+    complex(8),dimension(3) :: a,b
+    complex(8),dimension(3) :: c
+    c(1) = a(2)*b(3) - a(3)*b(2)
+    c(2) = a(3)*b(1) - a(1)*b(3)
+    c(3) = a(1)*b(2) - a(2)*b(1)
+  end function cross_3d_c
 
 
 

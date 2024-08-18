@@ -162,7 +162,7 @@ contains
              read(unitIO,*)rx,ry,rz,a,b,re,im
              !
              TB_w90%Rvec(ir,:)  = [rx,ry,rz]
-             TB_w90%Rgrid(ir,:) = rx*ei_x + ry*ei_y + rz*ei_z
+             TB_w90%Rgrid(ir,:) = rx*ei_1 + ry*ei_2 + rz*ei_3
              !
              TB_w90%Hij(a,b,ir)=dcmplx(re,im)
              if(spin_blocks)TB_w90%Hij(a+num_wann, b+num_wann, ir)=dcmplx(re,im)
