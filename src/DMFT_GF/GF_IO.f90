@@ -1,23 +1,14 @@
-module DMFT_GFIO
-  USE SF_CONSTANTS, only: one,xi,zero,pi
-  USE SF_IOTOOLS,   only: reg,str,splot,sread,file_gunzip,file_gzip,file_targz,file_untargz
-  USE SF_MISC,      only: assert_shape
-  USE SF_ARRAYS,    only: arange,linspace
-#ifdef _MPI
-  USE MPI
-  USE SF_MPI
-#endif
-  !
-  USE DMFT_CTRL_VARS
-
+module GF_IO
+  USE GF_COMMON
   implicit none
   private
 
 
   !DMFT INTERFACE:
   interface dmft_write_gf
-     module procedure :: dmft_gf_push_zeta
+     module procedure :: gf_push_zeta
      module procedure :: dmft_gf_print_rank2
+     module procedure :: dmft_gf_print_rank3
      module procedure :: dmft_gf_print_rank4
      module procedure :: dmft_gf_print_rank5
      module procedure :: dmft_gf_print_rank6
@@ -28,8 +19,9 @@ module DMFT_GFIO
 
   !AGNOSTIC INTERFACE:
   interface write_gf
-     module procedure :: dmft_gf_push_zeta
+     module procedure :: gf_push_zeta
      module procedure :: dmft_gf_print_rank2
+     module procedure :: dmft_gf_print_rank3
      module procedure :: dmft_gf_print_rank4
      module procedure :: dmft_gf_print_rank5
      module procedure :: dmft_gf_print_rank6
@@ -40,26 +32,6 @@ module DMFT_GFIO
 
 
 
-  integer                                    :: Lfreq
-  real(8),dimension(:),allocatable           :: wfreq
-
-  character(len=128)                         :: suffix
-  character(len=128)                         :: gf_suffix='.dat'
-  character(len=8)                           :: w_suffix
-  integer                                    :: Lk,Nlso,Nlat,Nspin,Norb,Nso,Nineq,Nilso,Ntot,Mdim
-  integer                                    :: i,j,ik,ilat,jlat,iorb,jorb,ispin,jspin,io,jo,is,js,iineq,iel,jel
-
-  real(8)                                    :: beta
-  real(8)                                    :: wini,wfin 
-  !
-  integer                                    :: mpi_ierr
-  integer                                    :: mpi_rank
-  integer                                    :: mpi_size
-  logical                                    :: mpi_master
-
-
-
-  public :: set_gf_suffix
   public :: dmft_write_gf
   public :: write_gf
 
@@ -123,7 +95,7 @@ contains
                 suffix=reg(fname)//"_"//&
                      str(Mlabels(iel))//str(io)//&
                      str(w_suffix)//str(gf_suffix)
-                call splot(reg(suffix),wfreq,Func(istride+io,istride+io,:))
+                call splot(reg(suffix),wio,Func(istride+io,istride+io,:))
              enddo
              istride=istride+Mvec(iel)
           enddo
@@ -140,7 +112,7 @@ contains
                            str(Mlabels(iel))//str(io)//&
                            str(Mlabels(jel))//str(jo)//&
                            str(w_suffix)//reg(gf_suffix)
-                      call splot(reg(suffix),wfreq,Func(istride+io,jstride+jo,:))
+                      call splot(reg(suffix),wio,Func(istride+io,jstride+jo,:))
                    enddo
                    jstride=jstride+Mvec(jel)
                 enddo
@@ -151,8 +123,105 @@ contains
           !
        end select
     endif
-    if(allocated(wfreq))deallocate(wfreq)
+    if(allocated(wio))deallocate(wio)
   end subroutine dmft_gf_print_rank2
+
+
+  subroutine dmft_gf_print_rank3(Func,fname,axis,iprint,ineq_index,ineq_pad,itar)
+    complex(8),dimension(:,:,:,:),intent(in) :: Func
+    character(len=*),intent(in)              :: fname
+    character(len=*)                         :: axis
+    integer,intent(in),optional              :: iprint
+    integer                                  :: iprint_
+    character(len=*),optional                :: ineq_index
+    character(len=:),allocatable             :: index
+    integer,optional                         :: ineq_pad
+    integer                                  :: pad
+    logical,optional                         :: itar
+    logical                                  :: itar_
+    !
+    iprint_=10;if(present(iprint))iprint_=iprint
+    index='_indx';if(present(ineq_index))index="_"//reg(ineq_index)
+    pad=6        ;if(present(ineq_pad))pad=ineq_pad
+    itar_=.false.;if(present(itar))itar_=itar
+    !
+    !
+    !MPI setup:
+    mpi_master=.true.
+#ifdef _MPI    
+    if(check_MPI())mpi_master= get_master_MPI()
+#endif
+    !
+    !
+    Nlat  = size(Func,1)
+    Nso   = size(Func,2)
+    Lfreq = size(Func,4)
+    call assert_shape(Func,[Nlat,Nso,Nso,Lfreq],"dmft_gf_print_rank3","Func")
+    !
+    call build_frequency_array(axis)
+    !
+    if(mpi_master)then
+       select case(iprint_)
+       case(1)                  !print only diagonal elements
+          write(*,"(A,1x,A)")reg(fname),"dmft_gfio: spin-orbital diagonal elements. Single File."
+          do io=1,Nso
+             suffix=reg(fname)//&
+                  "_io"//str(io)//"jo"//str(io)//&
+                  str(w_suffix)//reg(gf_suffix)
+             call splot(reg(suffix),wio,Func(:,io,jo,:))
+             call file_gzip(reg(suffix))
+          enddo
+          !
+       case(2,3)                  !print all off-diagonals
+          write(*,"(A,1x,A)")reg(fname),"dmft_gfio: all elements. Single File."
+          do io=1,Nso
+             do jo=1,Nso
+                suffix=reg(fname)//&
+                     "_io"//str(io)//"jo"//str(jo)//&
+                     str(w_suffix)//reg(gf_suffix)
+                call splot(reg(suffix),wio,Func(:,io,jo,:))
+                call file_gzip(reg(suffix))
+             enddo
+          enddo
+          !
+       case(4)                  !print only diagonal elements
+          write(*,"(A,1x,A)")reg(fname),"dmft_gfio: write spin-orbital diagonal elements."
+          do io=1,Nso
+             do ilat=1,Nlat
+                suffix=reg(fname)//&
+                     "_io"//str(io)//"jo"//str(io)//&
+                     str(w_suffix)//reg(index)//str(ilat,pad)//reg(gf_suffix)
+                call splot(reg(suffix),wio,Func(ilat,io,io,:))
+             enddo
+             suffix=reg(fname)//&
+                  "_io"//str(io)//"io"//str(io)//&
+                  str(w_suffix)
+             if(itar_)call file_targz(tarball=reg(suffix),&
+                  pattern=reg(suffix)//reg(index)//"*"//reg(gf_suffix))
+          enddo
+          !
+       case default
+          write(*,"(A,1x,A)")reg(fname),"dmft_gfio: write all elements."
+          do io=1,Nso
+             do jo=1,Nso
+                do ilat=1,Nlat
+                   suffix=reg(fname)//&
+                        "_io"//str(io)//"jo"//str(jo)//&
+                        str(w_suffix)//reg(index)//str(ilat,pad)//reg(gf_suffix)
+                   call splot(reg(suffix),wio,Func(ilat,io,jo,:))
+                enddo
+                suffix=reg(fname)//&
+                     "_io"//str(io)//"jo"//str(jo)//&
+                     str(w_suffix)
+                if(itar_)call file_targz(tarball=reg(suffix),&
+                     pattern=reg(suffix)//reg(index)//"*"//reg(gf_suffix))
+             enddo
+          enddo
+          !
+       end select
+    endif
+    if(allocated(wio))deallocate(wio)
+  end subroutine dmft_gf_print_rank3
 
 
 
@@ -189,7 +258,7 @@ contains
                      "_l"//str(iorb)//"m"//str(iorb)//&
                      "_s"//str(ispin)//&
                      str(w_suffix)//str(gf_suffix)
-                call splot(reg(suffix),wfreq,Func(ispin,ispin,iorb,iorb,:))
+                call splot(reg(suffix),wio,Func(ispin,ispin,iorb,iorb,:))
              enddo
           enddo
           !
@@ -202,7 +271,7 @@ contains
                         "_l"//str(iorb)//"m"//str(jorb)//&
                         "_s"//str(ispin)//&
                         str(w_suffix)//reg(gf_suffix)
-                   call splot(reg(suffix),wfreq,Func(ispin,ispin,iorb,jorb,:))
+                   call splot(reg(suffix),wio,Func(ispin,ispin,iorb,jorb,:))
                 enddo
              enddo
           enddo
@@ -217,7 +286,7 @@ contains
                            "_l"//str(iorb)//"m"//str(jorb)//&
                            "_s"//str(ispin)//str(jspin)//&
                            str(w_suffix)//reg(gf_suffix)
-                      call splot(reg(suffix),wfreq,Func(ispin,jspin,iorb,jorb,:))
+                      call splot(reg(suffix),wio,Func(ispin,jspin,iorb,jorb,:))
                    enddo
                 enddo
              enddo
@@ -225,7 +294,7 @@ contains
           !
        end select
     endif
-    if(allocated(wfreq))deallocate(wfreq)
+    if(allocated(wio))deallocate(wio)
   end subroutine dmft_gf_print_rank4
 
 
@@ -274,7 +343,7 @@ contains
                      "_l"//str(iorb)//"m"//str(iorb)//&
                      "_s"//str(ispin)//&
                      str(w_suffix)//reg(gf_suffix)
-                call splot(reg(suffix),wfreq,Func(:,ispin,ispin,iorb,iorb,:))
+                call splot(reg(suffix),wio,Func(:,ispin,ispin,iorb,iorb,:))
                 call file_gzip(reg(suffix))
              enddo
           enddo
@@ -288,7 +357,7 @@ contains
                         "_l"//str(iorb)//"m"//str(jorb)//&
                         "_s"//str(ispin)//&
                         str(w_suffix)//reg(gf_suffix)
-                   call splot(reg(suffix),wfreq,Func(:,ispin,ispin,iorb,jorb,:))
+                   call splot(reg(suffix),wio,Func(:,ispin,ispin,iorb,jorb,:))
                    call file_gzip(reg(suffix))
                 enddo
              enddo
@@ -304,7 +373,7 @@ contains
                            "_l"//str(iorb)//"m"//str(jorb)//&
                            "_s"//str(ispin)//str(jspin)//&
                            str(w_suffix)//reg(gf_suffix)
-                      call splot(reg(suffix),wfreq,Func(:,ispin,jspin,iorb,jorb,:))
+                      call splot(reg(suffix),wio,Func(:,ispin,jspin,iorb,jorb,:))
                       call file_gzip(reg(suffix))
                    enddo
                 enddo
@@ -320,7 +389,7 @@ contains
                         "_l"//str(iorb)//"m"//str(iorb)//&
                         "_s"//str(ispin)//&
                         str(w_suffix)//reg(index)//str(ilat,pad)//reg(gf_suffix)
-                   call splot(reg(suffix),wfreq,Func(ilat,ispin,ispin,iorb,iorb,:))
+                   call splot(reg(suffix),wio,Func(ilat,ispin,ispin,iorb,iorb,:))
                 enddo
                 suffix=reg(fname)//&
                      "_l"//str(iorb)//"m"//str(iorb)//&
@@ -341,7 +410,7 @@ contains
                            "_l"//str(iorb)//"m"//str(jorb)//&
                            "_s"//str(ispin)//&
                            str(w_suffix)//reg(index)//str(ilat,pad)//reg(gf_suffix)
-                      call splot(reg(suffix),wfreq,Func(ilat,ispin,ispin,iorb,jorb,:))
+                      call splot(reg(suffix),wio,Func(ilat,ispin,ispin,iorb,jorb,:))
                    enddo
                    suffix=reg(fname)//&
                         "_l"//str(iorb)//"m"//str(jorb)//&
@@ -364,7 +433,7 @@ contains
                               "_l"//str(iorb)//"m"//str(jorb)//&
                               "_s"//str(ispin)//str(jspin)//&
                               str(w_suffix)//reg(index)//str(ilat,pad)//reg(gf_suffix)
-                         call splot(reg(suffix),wfreq,Func(ilat,ispin,jspin,iorb,jorb,:))
+                         call splot(reg(suffix),wio,Func(ilat,ispin,jspin,iorb,jorb,:))
                       enddo
                       suffix=reg(fname)//&
                            "_l"//str(iorb)//"m"//str(jorb)//&
@@ -379,7 +448,7 @@ contains
           !
        end select
     endif
-    if(allocated(wfreq))deallocate(wfreq)
+    if(allocated(wio))deallocate(wio)
   end subroutine dmft_gf_print_rank5
 
 
@@ -426,7 +495,7 @@ contains
                      "_l"//str(iorb)//"m"//str(iorb)//&
                      "_s"//str(ispin)//&
                      str(w_suffix)//reg(gf_suffix)
-                call splot(reg(suffix),wfreq,Func(:,:,ispin,ispin,iorb,iorb,:))
+                call splot(reg(suffix),wio,Func(:,:,ispin,ispin,iorb,iorb,:))
                 call file_gzip(reg(suffix))
              enddo
           enddo
@@ -440,7 +509,7 @@ contains
                         "_l"//str(iorb)//"m"//str(jorb)//&
                         "_s"//str(ispin)//&
                         str(w_suffix)//reg(gf_suffix)
-                   call splot(reg(suffix),wfreq,Func(:,:,ispin,ispin,iorb,jorb,:))
+                   call splot(reg(suffix),wio,Func(:,:,ispin,ispin,iorb,jorb,:))
                    call file_gzip(reg(suffix))
                 enddo
              enddo
@@ -456,7 +525,7 @@ contains
                            "_l"//str(iorb)//"m"//str(jorb)//&
                            "_s"//str(ispin)//str(jspin)//&
                            str(w_suffix)//reg(gf_suffix)
-                      call splot(reg(suffix),wfreq,Func(:,:,ispin,jspin,iorb,jorb,:))
+                      call splot(reg(suffix),wio,Func(:,:,ispin,jspin,iorb,jorb,:))
                       call file_gzip(reg(suffix))
                    enddo
                 enddo
@@ -475,7 +544,7 @@ contains
                            "_s"//str(ispin)//&
                            str(w_suffix)//reg(index)//&
                            str(ilat,pad)//"_"//str(jlat,pad)//reg(gf_suffix)
-                      call splot(reg(suffix),wfreq,Func(ilat,jlat,ispin,ispin,iorb,iorb,:))
+                      call splot(reg(suffix),wio,Func(ilat,jlat,ispin,ispin,iorb,iorb,:))
                    enddo
                 enddo
                 suffix=reg(fname)//&
@@ -500,7 +569,7 @@ contains
                               "_s"//str(ispin)//&
                               str(w_suffix)//reg(index)//&
                               str(ilat,pad)//"_"//str(jlat,pad)//reg(gf_suffix)
-                         call splot(reg(suffix),wfreq,Func(ilat,jlat,ispin,ispin,iorb,jorb,:))
+                         call splot(reg(suffix),wio,Func(ilat,jlat,ispin,ispin,iorb,jorb,:))
                       enddo
                    enddo
                    suffix=reg(fname)//&
@@ -528,7 +597,7 @@ contains
                                  "_s"//str(ispin)//str(jspin)//&
                                  str(w_suffix)//reg(index)//&
                                  str(ilat,pad)//"_"//str(jlat,pad)//reg(gf_suffix)
-                            call splot(reg(suffix),wfreq,Func(ilat,jlat,ispin,jspin,iorb,jorb,:))
+                            call splot(reg(suffix),wio,Func(ilat,jlat,ispin,jspin,iorb,jorb,:))
                          enddo
                       enddo
                       suffix=reg(fname)//&
@@ -543,7 +612,7 @@ contains
           enddo
        end select
     endif
-    if(allocated(wfreq))deallocate(wfreq)
+    if(allocated(wio))deallocate(wio)
   end subroutine dmft_gf_print_rank6
 
 
@@ -595,7 +664,7 @@ contains
                                  "_l"//str(iorb)//"m"//str(jorb)//&
                                  "_s"//str(ispin)//&
                                  str(w_suffix)//reg(index)//str(iineq,pad)//reg(gf_suffix)
-                            call splot(reg(suffix),wfreq,Func(iineq,ilat,jlat,ispin,ispin,iorb,jorb,:))
+                            call splot(reg(suffix),wio,Func(iineq,ilat,jlat,ispin,ispin,iorb,jorb,:))
                          enddo
                          suffix=reg(fname)//&
                               "_i"//str(ilat)//"j"//str(jlat)//&
@@ -624,7 +693,7 @@ contains
                                     "_l"//str(iorb)//"m"//str(jorb)//&
                                     "_s"//str(ispin)//str(jspin)//&
                                     str(w_suffix)//reg(index)//str(iineq,pad)//reg(gf_suffix)
-                               call splot(reg(suffix),wfreq,Func(iineq,ilat,jlat,ispin,jspin,iorb,jorb,:))
+                               call splot(reg(suffix),wio,Func(iineq,ilat,jlat,ispin,jspin,iorb,jorb,:))
                             enddo
                             suffix=reg(fname)//&
                                  "_i"//str(ilat)//"j"//str(jlat)//&
@@ -642,7 +711,7 @@ contains
           !
        end select
     endif
-    if(allocated(wfreq))deallocate(wfreq)
+    if(allocated(wio))deallocate(wio)
   end subroutine dmft_gf_print_cluster_ineq
 #endif
 
@@ -665,49 +734,48 @@ contains
   !##################################################################
 
 
+  ! subroutine set_gf_suffix(string)
+  !   character(len=*) :: string
+  !   gf_suffix=reg(string)
+  ! end subroutine set_gf_suffix
 
 
 
-  subroutine set_gf_suffix(string)
-    character(len=*) :: string
-    gf_suffix=reg(string)
-  end subroutine set_gf_suffix
-
-  subroutine dmft_gf_push_zeta(zeta)
-    real(8),dimension(:) :: zeta
-    Lfreq=size(zeta)
-    if(allocated(wfreq))deallocate(wfreq)
-    allocate(wfreq(Lfreq))
-    wfreq=zeta
-  end subroutine dmft_gf_push_zeta
+  ! subroutine dmft_gf_push_zeta(zeta)
+  !   real(8),dimension(:) :: zeta
+  !   Lfreq=size(zeta)
+  !   if(allocated(wio))deallocate(wio)
+  !   allocate(wio(Lfreq))
+  !   wio=zeta
+  ! end subroutine dmft_gf_push_zeta
 
 
-  subroutine build_frequency_array(axis)
-    character(len=*)              :: axis
-    if(allocated(wfreq))then
-       if(size(wfreq)/=Lfreq)stop "dmft_gfio_build_frequency_array ERROR: pushed wfreq has wrong size"
-    else
-       allocate(wfreq(Lfreq))
-       select case(axis)
-       case default;
-          stop "dmft_gfio_build_frequency_array ERROR: axis undefined. axis=[matsubara,realaxis]"
-       case("matsubara","mats","m")
-          call get_ctrl_var(beta,"BETA")
-          wfreq = pi/beta*(2*arange(1,Lfreq)-1)
-       case("realaxis","real","r")
-          call get_ctrl_var(wini,"WINI")
-          call get_ctrl_var(wfin,"WFIN")
-          wfreq = linspace(wini,wfin,Lfreq)
-       end select
-    endif
-    select case(axis)
-    case default;stop "dmft_gfio_build_frequency_array ERROR: axis undefined. axis=[matsubara,realaxis]"
-    case("matsubara","mats");w_suffix="_iw"
-    case("realaxis","real") ;w_suffix="_realw"
-    end select
-    return
-  end subroutine build_frequency_array
+  ! subroutine build_frequency_array(axis)
+  !   character(len=*)              :: axis
+  !   if(allocated(wio))then
+  !      if(size(wio)/=Lfreq)stop "dmft_gfio_build_frequency_array ERROR: pushed wio has wrong size"
+  !   else
+  !      allocate(wio(Lfreq))
+  !      select case(axis)
+  !      case default;
+  !         stop "dmft_gfio_build_frequency_array ERROR: axis undefined. axis=[matsubara,realaxis]"
+  !      case("matsubara","mats","m")
+  !         call get_ctrl_var(beta,"BETA")
+  !         wio = pi/beta*(2*arange(1,Lfreq)-1)
+  !      case("realaxis","real","r")
+  !         call get_ctrl_var(wini,"WINI")
+  !         call get_ctrl_var(wfin,"WFIN")
+  !         wio = linspace(wini,wfin,Lfreq)
+  !      end select
+  !   endif
+  !   select case(axis)
+  !   case default;stop "dmft_gfio_build_frequency_array ERROR: axis undefined. axis=[matsubara,realaxis]"
+  !   case("matsubara","mats");w_suffix="_iw"
+  !   case("realaxis","real") ;w_suffix="_realw"
+  !   end select
+  !   return
+  ! end subroutine build_frequency_array
 
 
 
-end module DMFT_GFIO
+end module GF_IO

@@ -1,7 +1,7 @@
 ##################################################
 # DMFT_TOOLS PROJECT
 ##################################################
-CMAKE_MINIMUM_REQUIRED(VERSION 3.0.0)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.5.0)
 PROJECT(dmft_tools Fortran)
 SET(VERSION 2.2.3)
 

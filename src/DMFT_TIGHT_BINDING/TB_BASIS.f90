@@ -229,7 +229,7 @@ contains
   subroutine print_ei(pfile)
     character(len=*),optional :: pfile
     integer                   :: unit,i
-    if(io_eivec)return
+    ! if(io_eivec)return
     if(.not.set_eivec)stop "TB_print_ei error: ei basis not set"
     mpi_master=.true.
 #ifdef _MPI    
@@ -244,13 +244,13 @@ contains
        write(unit,"(A,3F8.4,A1)")"ei_3 = [",(ei_3(i),i=1,3),"]"
        if(present(pfile))close(unit)
     endif
-    io_eivec=.true.
+    ! io_eivec=.true.
   end subroutine print_ei
 
   subroutine print_bk(pfile)
     character(len=*),optional :: pfile
     integer                   :: unit,i
-    if(io_bkvec)return
+    ! if(io_bkvec)return
     if(.not.set_bkvec)stop "TB_bk_length error: bk basis not set"
     mpi_master=.true.
 #ifdef _MPI    
@@ -265,7 +265,7 @@ contains
        write(unit,"(A,3F8.4,A1)")"bk_3 = [",(bk_3(i),i=1,3),"]"
        if(present(pfile))close(unit)
     endif
-    io_bkvec=.true.
+    ! io_bkvec=.true.
   end subroutine print_bk
 
 
@@ -337,15 +337,17 @@ contains
 
 
 
-  subroutine build_kgrid(Nkvec,kgrid,origin,width)
+  subroutine build_kgrid(Nkvec,kgrid,origin,project,width)
     integer,dimension(:)                    :: Nkvec
     real(8),dimension(:,:)                  :: kgrid ![Nk][Ndim]
+    logical,optional :: project
     real(8),dimension(size(Nkvec)),optional :: origin
     real(8),dimension(size(Nkvec)),optional :: width
     real(8),dimension(size(Nkvec))          :: kvec
     real(8),dimension(:),allocatable        :: grid_x,grid_y,grid_z
     integer                                 :: ik,Ivec(3),Nk(3),ndim,Nktot,i
     real(8),dimension(3)                    :: ktmp,wtmp
+    logical :: project_
     !
     if(.not.set_bkvec)stop "TB_build_grid ERROR: bk vectors not set"
     !
@@ -355,6 +357,7 @@ contains
     BZ_origin = 0d0
     call assert_shape(kgrid,[Nktot,Ndim],"build_kgrid","kgrid")
     !
+    project_=.true.;if(present(project))project_=project
     if(present(origin))BZ_origin(:Ndim)=origin
     if(present(width))wtmp(1:ndim)=width
     Nk=1
@@ -376,7 +379,9 @@ contains
     do ik=1,Nktot
        ivec = i2indices(ik,Nk)
        ktmp = [grid_x(ivec(1)), grid_y(ivec(2)), grid_z(ivec(3))]
-       kgrid(ik,:) = ktmp(1)*bk_1(:ndim) + ktmp(2)*bk_2(:ndim) + ktmp(3)*bk_3(:ndim)
+       kgrid(ik,:) = ktmp(1:ndim)
+       if(project_)&
+            kgrid(ik,:) = ktmp(1)*bk_1(:ndim) + ktmp(2)*bk_2(:ndim) + ktmp(3)*bk_3(:ndim)
     end do
   end subroutine build_kgrid
 
@@ -612,12 +617,13 @@ contains
     integer,dimension(:)                          :: Nrvec ! Nr=product(Nrvec);Ndim=size(Nrvec)
     real(8),dimension(product(Nrvec),size(Nrvec)) :: Rgrid ![Nk][Ndim]
     real(8),dimension(size(Nrvec))                :: Rvec  ![Ndim]
-    integer                                       :: ir,ix,iy,iz,Nr(3)
+    integer                                       :: ir,ix,iy,iz,Nr(3),D
     !
     if(.not.set_eivec)stop "TB_build_Rgrid ERROR: Ei vectors not set"
     !
+    D = size(Nrvec)
     Nr=1
-    do ir=1,size(Nrvec)
+    do ir=1,D
        Nr(ir)=Nrvec(ir)
     enddo
     if(product(Nr)/=product(Nrvec))stop "TB_build_Rgrid ERROR: product(Nrvec) != product(Nr)"
@@ -628,7 +634,7 @@ contains
     do iz=1,Nr(3)
        do iy=1,Nr(2)
           do ix=1,Nr(1)
-             Rvec = ix*ei_1 + iy*ei_2 + iz*ei_3
+             Rvec = ix*ei_1(1:D) + iy*ei_2(1:D) + iz*ei_3(1:D)
              ir=ir+1
              Rgrid(ir,:)=Rvec
           enddo

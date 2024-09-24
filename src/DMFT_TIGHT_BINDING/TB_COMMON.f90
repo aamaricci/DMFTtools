@@ -9,7 +9,6 @@ module TB_COMMON
   USE SF_MISC, only: assert_shape,sort_array
   USE SF_OPTIMIZE,only: fmin_cgminimize,fzero
   USE DMFT_CTRL_VARS
-  USE DMFT_GFIO
 #ifdef _MPI
   USE MPI
   USE SF_MPI
@@ -95,8 +94,8 @@ module TB_COMMON
   !
   real(8),dimension(3),save      :: BZ_origin=[0d0,0d0,0d0]
 
-  logical,save                   :: io_eivec=.false.
-  logical,save                   :: io_bkvec=.false.
+  ! logical,save                   :: io_eivec=.false.
+  ! logical,save                   :: io_bkvec=.false.
   logical,save                   :: set_eivec=.false.
   logical,save                   :: set_bkvec=.false.
 

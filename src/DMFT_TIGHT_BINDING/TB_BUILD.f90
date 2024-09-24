@@ -15,7 +15,7 @@ contains
 
   !< build the \hat{H}({\mathbf k}) or \hat{H}({\mathbf k};i,j) Hamiltonian matrix
   ! from the function user defined hk_model procedure.
-  subroutine build_hk_model_kgrid(Hk,hk_model,Norb,kgrid,wdos)
+  subroutine build_hk_model_kgrid(Hk,hk_model,Norb,kgrid)
     integer                                       :: Norb
     integer                                       :: Nktot
     real(8),dimension(:,:)                        :: kgrid ![Nktot][Ndim]
@@ -29,8 +29,6 @@ contains
          complex(8),dimension(N,N)                :: hk_model
        end function hk_model
     end interface
-    logical,optional                              :: wdos
-    logical                                       :: wdos_
     !
     !MPI setup:
 #ifdef _MPI    
@@ -48,8 +46,6 @@ contains
     mpi_rank=0
     mpi_master=.true.
 #endif
-    !
-    wdos_=.false.
     !
     Nktot  = size(kgrid,1)
     !
@@ -72,7 +68,7 @@ contains
 
 
 
-  subroutine build_hk_model_Nkvec(Hk,hk_model,Norb,Nkvec,kgrid_out,wdos,iprint)
+  subroutine build_hk_model_Nkvec(Hk,hk_model,Norb,Nkvec,kgrid_out,iprint)
     integer,dimension(:),intent(in)                :: Nkvec
     integer                                        :: Norb
     real(8),dimension(product(Nkvec),size(Nkvec))  :: kgrid ![Nk][Ndim]
@@ -86,14 +82,13 @@ contains
          complex(8),dimension(N,N) :: hk_model
        end function hk_model
     end interface
-    logical,optional                           :: wdos,iprint
-    logical                                    :: wdos_,iprint_
+    logical,optional                           :: iprint
+    logical                                    :: iprint_
     integer                                    :: unit_io
     real(8),dimension(:,:),allocatable,optional,intent(out)         :: kgrid_out
     !
     iprint_=.false.
     if(present(iprint)) iprint_=iprint
-    write(*,*) iprint_
     !
     !MPI setup:
 #ifdef _MPI    
@@ -112,7 +107,6 @@ contains
     mpi_master=.true.
 #endif
     !
-    wdos_=.false.
     !
     call build_kgrid(Nkvec,kgrid)
     !
@@ -154,7 +148,7 @@ contains
 
 
 
-  subroutine build_hkr_model_kgrid(hk,hkr_model,Nlat,Norb,kgrid,pbc,wdos)
+  subroutine build_hkr_model_kgrid(hk,hkr_model,Nlat,Norb,kgrid,pbc)
     integer                                                 :: Nlat,Norb
     logical                                                 :: pbc
     real(8),dimension(:,:)                                  :: kgrid ![Nktot][Ndim]
@@ -169,8 +163,6 @@ contains
          complex(8),dimension(Nlat*Norb,Nlat*Norb)          :: hkr_model
        end function hkr_model
     end interface
-    logical,optional                           :: wdos
-    logical                                    :: wdos_
     !
     !MPI setup:
 #ifdef _MPI    
@@ -188,8 +180,6 @@ contains
     mpi_rank=0
     mpi_master=.true.
 #endif
-    !
-    wdos_=.false.
     !
     Nktot  = size(kgrid,1)
     Haux   = zero
@@ -212,7 +202,7 @@ contains
 
 
 
-  subroutine build_hkr_model_nkvec(hk,hkr_model,Nlat,Norb,Nkvec,pbc,wdos)
+  subroutine build_hkr_model_nkvec(hk,hkr_model,Nlat,Norb,Nkvec,pbc)
     integer                                                  :: Nlat,Norb
     logical                                                  :: pbc
     integer,dimension(:),intent(in)                          :: Nkvec
@@ -228,8 +218,6 @@ contains
          complex(8),dimension(Nlat*Norb,Nlat*Norb)           :: hkr_model
        end function hkr_model
     end interface
-    logical,optional                                         :: wdos
-    logical                                                  :: wdos_
     !
     !MPI setup:
 #ifdef _MPI    
@@ -247,8 +235,6 @@ contains
     mpi_rank=0
     mpi_master=.true.
 #endif
-    !
-    wdos_=.false.
     !
     call build_kgrid(Nkvec,kgrid)
     !
@@ -408,7 +394,7 @@ contains
 
 
 
-  subroutine build_Hij_Nrvec(Hij,ts_model,Nso,Nrvec,Links,pbc,wdos)
+  subroutine build_Hij_Nrvec(Hij,ts_model,Nso,Nrvec,Links,pbc)
     integer                                                     :: Nso
     integer,dimension(:),intent(in)                             :: Nrvec
     integer,dimension(:,:),intent(in)                           :: Links ![Nlink][dim]
@@ -429,9 +415,6 @@ contains
          complex(8),dimension(Nso,Nso) :: ts_model
        end function ts_model
     end interface
-    logical,optional                           :: wdos
-    logical                                    :: wdos_
-    wdos_=.false.;if(present(wdos))wdos_=wdos
     !
     pbc_ = .true. ; if(present(pbc))pbc_=pbc
     !
