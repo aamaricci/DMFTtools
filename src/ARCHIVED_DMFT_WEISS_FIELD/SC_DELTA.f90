@@ -1,6 +1,6 @@
-module LEGACY_SC_DELTA
+module ARCHIVED_SC_DELTA
   USE DMFT_CTRL_VARS
-  USE LEGACY_SC_COMMON
+  USE ARCHIVED_SC_COMMON
   implicit none
   private
 
@@ -825,4 +825,4 @@ contains
     !
   end subroutine dmft_get_delta_superc_ineq
 
-end module LEGACY_SC_DELTA
+end module ARCHIVED_SC_DELTA

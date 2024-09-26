@@ -14,6 +14,7 @@ all: $(OBJS) gf
 
 gf:
 	make -C ./DMFT_GF
+	make -C ./DMFT_WEISS_FIELD
 
 
 .f90.o:	

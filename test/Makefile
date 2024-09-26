@@ -7,9 +7,9 @@ all: bin
 bin:
 	mkdir $(TSTBIN)
 	mkdir $(TSTBIN)/DMFT_GF
-# mkdir $(TSTBIN)/DMFT_WEISS_FIELD
+	mkdir $(TSTBIN)/DMFT_WEISS_FIELD
 	echo DMFT_GF > $(TSTBIN)/list_dir
-# echo DMFT_WEISS_FIELD >> $(TSTBIN)/list_dir
+	echo DMFT_WEISS_FIELD >> $(TSTBIN)/list_dir
 
 test:
 	./test.sh

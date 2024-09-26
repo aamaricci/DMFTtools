@@ -13,26 +13,24 @@ module GF_GK
   ! . rank-6   [Nlat,Nlat,Nspin,Nspin,Norb,Norb,:]
   ! . rank-7   [Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,:] Hk Matrix
   public :: get_gk_normal_hk_rank2
-  public :: get_gk_normal_tridiag_rank2
-  public :: get_gk_normal_dos_rank2
-  !
   public :: get_gk_normal_hk_rank3 
-  !
   public :: get_gk_normal_hk_rank4
-  public :: get_gk_normal_dos_rank4
-  !
   public :: get_gk_normal_hk_rank5
-  public :: get_gk_normal_tridiag_rank5
-  public :: get_gk_normal_dos_rank5
   public :: get_gk_normal_hk_rank5_6
-  !
   public :: get_gk_normal_hk_rank6
-  !
 #if __GFORTRAN__ &&  __GNUC__ > 8
   public :: get_gk_normal_hk_rank7
+#endif
+  !
+  public :: get_gk_normal_tridiag_rank2
+  public :: get_gk_normal_tridiag_rank5
+#if __GFORTRAN__ &&  __GNUC__ > 8
   public :: get_gk_normal_tridiag_rank7
 #endif
-
+  !
+  public :: get_gk_normal_dos_rank2  
+  public :: get_gk_normal_dos_rank4
+  public :: get_gk_normal_dos_rank5
   !
   !        SUPERC
   ! . rank-2   [2,N,N,:]
@@ -41,15 +39,15 @@ module GF_GK
   ! . rank-5   [2,Nlat,Nspin,Nspin,Norb,Norb,:]
   ! . rank-5_6 [2,Nlat,Nspin,Nspin,Norb,Norb,:]->[2,Nlat,Nlat,Nspin,Nspin,Norb,Norb,:]
   public :: get_gk_superc_hk_rank2
-  public :: get_gk_superc_dos_rank2
   public :: get_gk_superc_hk_rank3
   public :: get_gk_superc_hk_rank4
-  public :: get_gk_superc_dos_rank4
   public :: get_gk_superc_hk_rank5
 #if __GFORTRAN__ &&  __GNUC__ > 8
   public :: get_gk_superc_hk_rank5_6
 #endif
   !
+  public :: get_gk_superc_dos_rank2
+  public :: get_gk_superc_dos_rank4
 
 
 
@@ -119,8 +117,7 @@ contains
     !
     Gk = zero
     do i=1+mpi_rank,Lfreq,mpi_size
-       Gk(:,:,i) = invert_gki_normal_rank2(&
-            wfreq(i)+xmu,Hk(:,:),Sigma(:,:,i))
+       Gk(:,:,i) = gki_normal(wfreq(i)+xmu,Hk(:,:),Sigma(:,:,i))
        if(mpi_master)call eta(i,Lfreq)
     end do
     call gf_reduce(Gk)
@@ -128,44 +125,250 @@ contains
     if(mpi_master)call stop_timer
   end subroutine get_gk_normal_hk_rank2
 
-  subroutine get_gk_normal_tridiag_rank2(Hk,Gk,Sigma,axis,Nsites,Ncell)
-    complex(8),dimension(:,:),intent(in)      :: Hk
-    complex(8),dimension(:,:,:),intent(in)    :: Sigma
-    complex(8),dimension(:,:,:),intent(inout) :: Gk
-    character(len=*)                          :: axis
-    integer,intent(in)                        :: Nsites,Ncell
+
+  ! G/Sigma Shape: ![Nlat,Nso,Nso][:]
+  !##################################################################
+  subroutine get_gk_normal_hk_rank3(Hk,Gk,Sigma,axis)
+    complex(8),dimension(:,:),intent(in)        :: Hk
+    complex(8),dimension(:,:,:,:),intent(in)    :: Sigma     
+    complex(8),dimension(:,:,:,:),intent(inout) :: Gk
+    character(len=*)                            :: axis
     !
     !MPI setup:
     call set_gf_mpi()
     !
     Ntot  = size(Hk,1)
-    Lfreq = size(Sigma,3)
-    Nlso  = Ntot
+    Nlat  = size(Sigma,1)
+    Nso   = size(Sigma,2)
+    Lfreq = size(Sigma,4)
     !
-    if(mpi_master)write(*,"(A)")"Get Green's function [N,N], Axis:"//str(axis)
-    if(mpi_master)write(*,"(A)")"Block Tridiagonal Gaussian elimination algorithm."
-
+    if(mpi_master)write(*,"(A)")"Get Green's function [Nlat,Nso,Nso], Axis:"//str(axis)
     if(mpi_master)call start_timer
-    !  
+    !
     !Testing part:
-    if(Nsites*Ncell/=Ntot)stop "get_gk_normal_tridiag_rank2 erro:  Nsites*Ncell != size(Hk,1)==Ntot"
-    call assert_shape(Hk,[Ntot,Nlso],'get_gk_normal_tridiag_rank2',"Hk")
-    call assert_shape(Sigma,[Ntot,Nlso,Lfreq],'get_gk_normal_tridiag_rank2',"Sigma")
-    call assert_shape(Gk,[Ntot,Nlso,Lfreq],'get_gk_normal_tridiag_rank2',"Gk")
+    call assert_shape(Hk,[Ntot,Nlat*Nso],"get_gk_normal_hk_rank3","Hk")
+    call assert_shape(Sigma,[Nlat,Nso,Nso,Lfreq],"get_gk_normal_hk_rank3","Sigma")
+    call assert_shape(Gk, [Nlat,Nso,Nso,Lfreq],"get_gk_normal_hk_rank3","Gk")
     !
     call build_frequency_array(axis)
     !
     Gk = zero
     do i=1+mpi_rank,Lfreq,mpi_size
-       Gk(:,:,i) = invert_gki_normal_tridiag_rank2(&
-            wfreq(i)+xmu,Hk(:,:),Sigma(:,:,i),Nsites,Ncell)
+       Gk(:,:,:,i) =  to_rank3( gki_normal(wfreq(i)+xmu,Hk(:,:),from_rank3(Sigma(:,:,:,i))) )
        if(mpi_master)call eta(i,Lfreq)
     end do
     call gf_reduce(Gk)
     !
     if(mpi_master)call stop_timer
-  end subroutine get_gk_normal_tridiag_rank2
+  end subroutine get_gk_normal_hk_rank3
 
+
+  !G/Sigma shape: [Nspin,Nspin,Norb,Norb][:]
+  !##################################################################
+  subroutine get_gk_normal_hk_rank4(Hk,Gk,Sigma,axis)
+    complex(8),dimension(:,:),intent(in)          :: Hk
+    complex(8),dimension(:,:,:,:,:),intent(in)    :: Sigma     
+    complex(8),dimension(:,:,:,:,:),intent(inout) :: Gk
+    character(len=*)                              :: axis
+    !
+    !MPI setup:
+    call set_gf_mpi()
+    !
+    Ntot  = size(Hk,1)
+    Nspin = size(Sigma,1)
+    Norb  = size(Sigma,3)
+    Lfreq = size(Sigma,5)
+    !
+    if(mpi_master)write(*,"(A)")"Get Green's function [Nspin,Nspin,Norb,Norb], Axis:"//str(axis)
+    if(mpi_master)call start_timer
+    !
+    !Testing part:
+    call assert_shape(Hk,[Ntot,Nspin*Norb],"get_gk_normal_hk_rank4","Hk")
+    call assert_shape(Sigma,[Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_hk_rank4","Sigma")
+    call assert_shape(Gk, [Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_hk_rank4","Gk")
+    !
+    call build_frequency_array(axis)
+    !
+    Gk = zero
+    do i=1+mpi_rank,Lfreq,mpi_size
+       Gk(:,:,:,:,i) = to_rank4( gki_normal(wfreq(i)+xmu,Hk(:,:),from_rank4(Sigma(:,:,:,:,i))) )
+       if(mpi_master)call eta(i,Lfreq)
+    end do
+    call gf_reduce(Gk)
+    !
+    if(mpi_master)call stop_timer
+  end subroutine get_gk_normal_hk_rank4
+
+  !G/Sigma shape: [Nlat,Nspin,Nspin,Norb,Norb][:]
+  !##################################################################
+  subroutine get_gk_normal_hk_rank5(Hk,Gk,Sigma,axis)
+    complex(8),dimension(:,:),intent(in)            :: Hk
+    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sigma     
+    complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gk
+    character(len=*)                                :: axis
+    !
+    !MPI setup:
+    call set_gf_mpi()
+    !
+    Ntot  = size(Hk,1)
+    Nlat  = size(Sigma,1)
+    Nspin = size(Sigma,2)
+    Norb  = size(Sigma,4)
+    Lfreq = size(Sigma,6)
+    !
+    if(mpi_master)write(*,"(A)")"Get Green's function [Nlat,Nspin,Nspin,Norb,Norb], Axis:"//str(axis)
+    if(mpi_master)call start_timer
+    !
+    !Testing part:
+    call assert_shape(Hk,[Ntot,Nlat*Nspin*Norb],"get_gk_normal_hk_rank5","Hk")
+    call assert_shape(Sigma,[Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_hk_rank5","Sigma")
+    call assert_shape(Gk, [Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_hk_rank5","Gk")
+    !
+    call build_frequency_array(axis)
+    !
+    Gk = zero
+    do i=1+mpi_rank,Lfreq,mpi_size
+       Gk(:,:,:,:,:,i) = to_rank5( gki_normal(wfreq(i)+xmu,Hk(:,:),from_rank5(Sigma(:,:,:,:,:,i))) )
+       if(mpi_master)call eta(i,Lfreq)
+    end do
+    call gf_reduce(Gk)
+    !
+    if(mpi_master)call stop_timer
+  end subroutine get_gk_normal_hk_rank5
+
+  !G/Sigma shape: [Nspin,Nspin,Norb,Norb][:] -> [Nlat,Nlat,Nspin,Nspin,Norb,Norb][:]
+  !##################################################################
+  subroutine get_gk_normal_hk_rank5_6(Hk,Gk,Sigma,axis)
+    complex(8),dimension(:,:),intent(in)              :: Hk
+    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Sigma     
+    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gk
+    character(len=*)                                  :: axis
+    !
+    !MPI setup:
+    call set_gf_mpi()
+    !
+    Ntot  = size(Hk,1)
+    Nlat  = size(Sigma,1)
+    Nspin = size(Sigma,2)
+    Norb  = size(Sigma,4)
+    Lfreq = size(Sigma,6)
+    !
+    if(mpi_master)write(*,"(A)")"Get Green's function [Nlat,Nspin,Nspin,Norb,Norb], Axis:"//str(axis)
+    if(mpi_master)call start_timer
+    !
+    !Testing part:
+    call assert_shape(Hk,[Ntot,Nlat*Nspin*Norb],"get_gk_normal_hk_rank5","Hk")
+    call assert_shape(Sigma,[Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_hk_rank5","Sigma")
+    call assert_shape(Gk, [Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_hk_rank5","Gk")
+    !
+    call build_frequency_array(axis)
+    !
+    Gk = zero
+    do i=1+mpi_rank,Lfreq,mpi_size
+       Gk(:,:,:,:,:,:,i) = to_rank6( gki_normal(wfreq(i)+xmu,Hk(:,:),from_rank5(Sigma(:,:,:,:,:,i))) )
+       if(mpi_master)call eta(i,Lfreq)
+    end do
+    call gf_reduce(Gk)
+    !
+    if(mpi_master)call stop_timer
+  end subroutine get_gk_normal_hk_rank5_6
+
+
+
+  !G/Sigma shape: [Nlat,Nlat,Nspin,Nspin,Norb,Norb][:]
+  !##################################################################
+  subroutine get_gk_normal_hk_rank6(Hk,Gk,Sigma,axis)
+    complex(8),dimension(:,:),intent(in)              :: Hk
+    complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Sigma     
+    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gk
+    character(len=*)                                  :: axis
+    !
+    !MPI setup:
+    call set_gf_mpi()
+    !
+    Ntot  = size(Hk,1)
+    Nlat  = size(Sigma,1)
+    Nspin = size(Sigma,3)
+    Norb  = size(Sigma,5)
+    Lfreq = size(Sigma,7)
+    !
+    if(mpi_master)write(*,"(A)")"Get Green's function [Nlat,Nlat,Nspin,Nspin,Norb,Norb], Axis:"//str(axis)
+    if(mpi_master)call start_timer
+    !
+    !Testing part:
+    call assert_shape(Hk,[Ntot,Nlat*Nspin*Norb],"get_gk_normal_hk_rank6","Hk")
+    call assert_shape(Sigma,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_hk_rank6","Sigma")
+    call assert_shape(Gk, [Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_hk_rank6","Gk")
+    !
+    call build_frequency_array(axis)
+    !
+    Gk = zero
+    do i=1+mpi_rank,Lfreq,mpi_size
+       Gk(:,:,:,:,:,:,i) = to_rank6( gki_normal(wfreq(i)+xmu,Hk(:,:),from_rank6(Sigma(:,:,:,:,:,:,i))) )
+       if(mpi_master)call eta(i,Lfreq)
+    end do
+    call gf_reduce(Gk)
+    !
+    if(mpi_master)call stop_timer
+  end subroutine get_gk_normal_hk_rank6
+
+
+  !G/Sigma shape: ![Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb][:]
+  !##################################################################
+#if __GFORTRAN__ &&  __GNUC__ > 8
+  subroutine get_gk_normal_hk_rank7(Hk,Gk,Sigma,axis)
+    complex(8),dimension(:,:),intent(in)                :: Hk
+    complex(8),dimension(:,:,:,:,:,:,:,:),intent(in)    :: Sigma     
+    complex(8),dimension(:,:,:,:,:,:,:,:),intent(inout) :: Gk
+    character(len=*)                                    :: axis
+    !
+    !MPI setup:
+    call set_gf_mpi()
+    !
+    Ntot  = size(Hk,1)
+    Nineq = size(Sigma,1)
+    Nlat  = size(Sigma,2)
+    Nspin = size(Sigma,4)
+    Norb  = size(Sigma,6)
+    Lfreq = size(Sigma,8)
+    !
+    if(mpi_master)write(*,"(A)")"Get Green's function [Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb], Axis:"//str(axis)
+    if(mpi_master)call start_timer
+    !
+    !Testing part:
+    call assert_shape(Hk,[Ntot,Nineq*Nlat*Nspin*Norb],"get_gk_normal_hk_rank7","Hk")
+    call assert_shape(Sigma,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_hk_rank7","Sigma")
+    call assert_shape(Gk, [Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_hk_rank7","Gk")
+    !
+    call build_frequency_array(axis)
+    !
+    Gk = zero
+    do i=1+mpi_rank,Lfreq,mpi_size
+       Gk(:,:,:,:,:,:,:,i) = to_rank7( gki_normal(wfreq(i)+xmu,Hk(:,:),from_rank7(Sigma(:,:,:,:,:,:,:,i))) )
+       if(mpi_master)call eta(i,Lfreq)
+    end do
+    call gf_reduce(Gk)
+    !
+    if(mpi_master)call stop_timer
+  end subroutine get_gk_normal_hk_rank7
+#endif
+
+
+
+
+
+
+
+
+  !##################################################################
+  !##################################################################
+  !##################################################################
+
+
+
+
+  !G/Sigma shape: [N,N][:]
+  !##################################################################
   subroutine get_gk_normal_dos_rank2(Ebands,Dbands,Hloc,Gk,Sigma,axis,diagonal)
     real(8),dimension(:),intent(in)            :: Ebands    ![N]
     real(8),dimension(:),intent(in)            :: Dbands    ![N] /[1]
@@ -235,83 +438,8 @@ contains
   end subroutine get_gk_normal_dos_rank2
 
 
-
-
-  ! G/Sigma Shape: ![Nlat,Nso,Nso][:]
-  !##################################################################
-  subroutine get_gk_normal_hk_rank3(Hk,Gk,Sigma,axis)
-    complex(8),dimension(:,:),intent(in)        :: Hk
-    complex(8),dimension(:,:,:,:),intent(in)    :: Sigma     
-    complex(8),dimension(:,:,:,:),intent(inout) :: Gk
-    character(len=*)                            :: axis
-    !
-    !MPI setup:
-    call set_gf_mpi()
-    !
-    Ntot  = size(Hk,1)
-    Nlat  = size(Sigma,1)
-    Nso   = size(Sigma,2)
-    Lfreq = size(Sigma,4)
-    !
-    if(mpi_master)write(*,"(A)")"Get Green's function [Nlat,Nso,Nso], Axis:"//str(axis)
-    if(mpi_master)call start_timer
-    !
-    !Testing part:
-    call assert_shape(Hk,[Ntot,Nlat*Nso],"get_gk_normal_hk_rank3","Hk")
-    call assert_shape(Sigma,[Nlat,Nso,Nso,Lfreq],"get_gk_normal_hk_rank3","Sigma")
-    call assert_shape(Gk, [Nlat,Nso,Nso,Lfreq],"get_gk_normal_hk_rank3","Gk")
-    !
-    call build_frequency_array(axis)
-    !
-    Gk = zero
-    do i=1+mpi_rank,Lfreq,mpi_size
-       Gk(:,:,:,i) = invert_gki_normal_rank3(&
-            wfreq(i)+xmu,Hk(:,:),Sigma(:,:,:,i))
-       if(mpi_master)call eta(i,Lfreq)
-    end do
-    call gf_reduce(Gk)
-    !
-    if(mpi_master)call stop_timer
-  end subroutine get_gk_normal_hk_rank3
-
-
   !G/Sigma shape: [Nspin,Nspin,Norb,Norb][:]
   !##################################################################
-  subroutine get_gk_normal_hk_rank4(Hk,Gk,Sigma,axis)
-    complex(8),dimension(:,:),intent(in)          :: Hk
-    complex(8),dimension(:,:,:,:,:),intent(in)    :: Sigma     
-    complex(8),dimension(:,:,:,:,:),intent(inout) :: Gk
-    character(len=*)                              :: axis
-    !
-    !MPI setup:
-    call set_gf_mpi()
-    !
-    Ntot  = size(Hk,1)
-    Nspin = size(Sigma,1)
-    Norb  = size(Sigma,3)
-    Lfreq = size(Sigma,5)
-    !
-    if(mpi_master)write(*,"(A)")"Get Green's function [Nspin,Nspin,Norb,Norb], Axis:"//str(axis)
-    if(mpi_master)call start_timer
-    !
-    !Testing part:
-    call assert_shape(Hk,[Ntot,Nspin*Norb],"get_gk_normal_hk_rank4","Hk")
-    call assert_shape(Sigma,[Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_hk_rank4","Sigma")
-    call assert_shape(Gk, [Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_hk_rank4","Gk")
-    !
-    call build_frequency_array(axis)
-    !
-    Gk = zero
-    do i=1+mpi_rank,Lfreq,mpi_size
-       Gk(:,:,:,:,i) = invert_gki_normal_rank4(&
-            wfreq(i)+xmu,Hk(:,:),Sigma(:,:,:,:,i))
-       if(mpi_master)call eta(i,Lfreq)
-    end do
-    call gf_reduce(Gk)
-    !
-    if(mpi_master)call stop_timer
-  end subroutine get_gk_normal_hk_rank4
-
   subroutine get_gk_normal_dos_rank4(Ebands,Dbands,Hloc,Gk,Sigma,axis,diagonal)
     real(8),dimension(:),intent(in)               :: Ebands    ![N]
     real(8),dimension(:),intent(in)               :: Dbands    ![N] /[1]
@@ -347,8 +475,7 @@ contains
     Gk = zero
     dosdiag:if(dos_diag)then
        do i=1+mpi_rank, Lfreq, mpi_size
-          zeta = (wfreq(i)+xmu)*eye(Ntot)-&
-               reshape_rank4_to_matrix(Sigma(:,:,:,:,i),Nspin,Norb)
+          zeta = (wfreq(i)+xmu)*eye(Ntot) - from_rank4(Sigma(:,:,:,:,i))
           do concurrent(ispin=1:Nspin,iorb=1:Norb)
              io = iorb + (ispin-1)*Norb
              Gk(ispin,ispin,iorb,iorb,i) = Dbands(io)/( zeta(io,io)-Hloc(io)-Ebands(io) )
@@ -358,11 +485,10 @@ contains
     else
        allocate(Gdos_tmp(Ntot,Ntot)) ;Gdos_tmp=zero
        do i = 1+mpi_rank, Lfreq, mpi_size
-          zeta     = (wfreq(i)+xmu)*eye(Ntot)-&
-               reshape_rank4_to_matrix(Sigma(:,:,:,:,i),Nspin,Norb)
+          zeta     = (wfreq(i)+xmu)*eye(Ntot) - from_rank4(Sigma(:,:,:,:,i))
           Gdos_tmp = zeta-diag(Hloc(:))-diag(Ebands(:))
           call inv(Gdos_tmp)
-          Gk(:,:,:,:,i) = Dbands(1)*reshape_matrix_to_rank4(Gdos_tmp,Nspin,Norb)
+          Gk(:,:,:,:,i) = Dbands(1)*to_rank4(Gdos_tmp)
           if(mpi_master)call eta(i,Lfreq)
        end do
     end if dosdiag
@@ -374,85 +500,6 @@ contains
 
   !G/Sigma shape: [Nlat,Nspin,Nspin,Norb,Norb][:]
   !##################################################################
-  subroutine get_gk_normal_hk_rank5(Hk,Gk,Sigma,axis)
-    complex(8),dimension(:,:),intent(in)            :: Hk
-    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sigma     
-    complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gk
-    character(len=*)                                :: axis
-    !
-    !MPI setup:
-    call set_gf_mpi()
-    !
-    Ntot  = size(Hk,1)
-    Nlat  = size(Sigma,1)
-    Nspin = size(Sigma,2)
-    Norb  = size(Sigma,4)
-    Lfreq = size(Sigma,6)
-    !
-    if(mpi_master)write(*,"(A)")"Get Green's function [Nlat,Nspin,Nspin,Norb,Norb], Axis:"//str(axis)
-    if(mpi_master)call start_timer
-    !
-    !Testing part:
-    call assert_shape(Hk,[Ntot,Nlat*Nspin*Norb],"get_gk_normal_hk_rank5","Hk")
-    call assert_shape(Sigma,[Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_hk_rank5","Sigma")
-    call assert_shape(Gk, [Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_hk_rank5","Gk")
-    !
-    call build_frequency_array(axis)
-    !
-    Gk = zero
-    do i=1+mpi_rank,Lfreq,mpi_size
-       Gk(:,:,:,:,:,i) = invert_gki_normal_rank5(&
-            wfreq(i)+xmu,Hk(:,:),Sigma(:,:,:,:,:,i))
-       if(mpi_master)call eta(i,Lfreq)
-    end do
-    call gf_reduce(Gk)
-    !
-    if(mpi_master)call stop_timer
-  end subroutine get_gk_normal_hk_rank5
-
-  subroutine get_gk_normal_tridiag_rank5(Hk,Gk,Sigma,axis,Nsites,Ncell)
-    complex(8),dimension(:,:),intent(in)          :: Hk
-    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sigma     
-    complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gk
-    character(len=*)                                :: axis
-    integer,intent(in)                              :: Nsites,Ncell
-    !
-    !MPI setup:
-    call set_gf_mpi()
-    !
-    Ntot  = size(Hk,1)
-    Nlat  = size(Sigma,1)
-    Nspin = size(Sigma,2)
-    Norb  = size(Sigma,4)
-    Lfreq = size(Sigma,6)
-    Nlso  = Nlat*Nspin*Norb
-    !
-    if(mpi_master)write(*,"(A)")"Get Green's function [Nlat,Nspin,Nspin,Norb,Norb], Axis:"//str(axis)
-    if(mpi_master)write(*,"(A)")"Block Tridiagonal Gaussian elimination algorithm:"
-    if(mpi_master)call start_timer
-    !
-    !Testing part:
-    if(Nsites*Ncell/=Ntot)stop &
-         "get_gk_normal_tridiag_rank5 erro:  Nsites*Ncell != size(Hk,1)==Ntot"
-    call assert_shape(Hk,[Ntot,Nlso],"get_gk_normal_tridiag_rank5","Hk")
-    call assert_shape(Sigma,[Nlat,Nspin,Nspin,Norb,Norb,Lfreq],&
-         "get_gk_normal_tridiag_rank5","Sigma")
-    call assert_shape(Gk, [Nlat,Nspin,Nspin,Norb,Norb,Lfreq],&
-         "get_gk_normal_tridiag_rank5","Gk")
-    !
-    call build_frequency_array(axis)
-    !
-    Gk = zero
-    do i=1+mpi_rank,Lfreq,mpi_size
-       Gk(:,:,:,:,:,i) = invert_gki_normal_tridiag_rank5(&
-            wfreq(i)+xmu,Hk(:,:),Sigma(:,:,:,:,:,i),Nsites,Ncell)
-       if(mpi_master)call eta(i,Lfreq)
-    end do
-    call gf_reduce(Gk)
-    !
-    if(mpi_master)call stop_timer
-  end subroutine get_gk_normal_tridiag_rank5
-
   subroutine get_gk_normal_dos_rank5(Ebands,Dbands,Hloc,Gk,Sigma,axis,diagonal)
     real(8),dimension(:),intent(in)               :: Ebands ![N]
     real(8),dimension(:),intent(in)               :: Dbands ![N] /[1]
@@ -489,8 +536,7 @@ contains
     Gk = zero
     dosdiag:if(dos_diag)then
        do i=1+mpi_rank, Lfreq, mpi_size
-          zeta = (wfreq(i)+xmu)*eye(Ntot)-&
-               reshape_rank5_to_matrix(Sigma(:,:,:,:,:,i),Nlat,Nspin,Norb)
+          zeta = (wfreq(i)+xmu)*eye(Ntot)-from_rank5(Sigma(:,:,:,:,:,i))
           do concurrent(ilat=1:Nlat,ispin=1:Nspin,iorb=1:Norb)
              io = iorb + (ispin-1)*Norb + (ilat-1)*Nspin*Norb
              Gk(ilat,ispin,ispin,iorb,iorb,i) = &
@@ -501,11 +547,10 @@ contains
     else
        allocate(Gdos_tmp(Ntot,Ntot)) ;Gdos_tmp=zero
        do i = 1+mpi_rank, Lfreq, mpi_size
-          zeta = (wfreq(i)+xmu)*eye(Ntot)-&
-               reshape_rank5_to_matrix(Sigma(:,:,:,:,:,i),Nlat,Nspin,Norb)
+          zeta = (wfreq(i)+xmu)*eye(Ntot)-from_rank5(Sigma(:,:,:,:,:,i))
           Gdos_tmp = zeta-diag(Hloc(:))-diag(Ebands(:))
           call inv(Gdos_tmp)
-          Gk(:,:,:,:,:,i) = Dbands(1)*reshape_matrix_to_rank5(Gdos_tmp,Nlat,Nspin,Norb)
+          Gk(:,:,:,:,:,i) = Dbands(1)*to_rank5(Gdos_tmp)
           if(mpi_master)call eta(i,Lfreq)
        end do
     end if dosdiag
@@ -516,13 +561,61 @@ contains
 
 
 
-  !G/Sigma shape: [Nspin,Nspin,Norb,Norb][:] -> [Nlat,Nlat,Nspin,Nspin,Norb,Norb][:]
+
   !##################################################################
-  subroutine get_gk_normal_hk_rank5_6(Hk,Gk,Sigma,axis)
-    complex(8),dimension(:,:),intent(in)              :: Hk
-    complex(8),dimension(:,:,:,:,:,:),intent(in)      :: Sigma     
-    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gk
-    character(len=*)                                  :: axis
+  !##################################################################
+  !##################################################################
+
+
+
+
+  ! G/Sigma Shape: [N,N][:]
+  !##################################################################
+  subroutine get_gk_normal_tridiag_rank2(Hk,Gk,Sigma,axis,Nsites,Ncell)
+    complex(8),dimension(:,:),intent(in)      :: Hk
+    complex(8),dimension(:,:,:),intent(in)    :: Sigma
+    complex(8),dimension(:,:,:),intent(inout) :: Gk
+    character(len=*)                          :: axis
+    integer,intent(in)                        :: Nsites,Ncell
+    !
+    !MPI setup:
+    call set_gf_mpi()
+    !
+    Ntot  = size(Hk,1)
+    Lfreq = size(Sigma,3)
+    Nlso  = Ntot
+    !
+    if(mpi_master)write(*,"(A)")"Get Green's function [N,N], Axis:"//str(axis)
+    if(mpi_master)write(*,"(A)")"Block Tridiagonal Gaussian elimination algorithm."
+    if(mpi_master)call start_timer
+    !  
+    !Testing part:
+    if(Nsites*Ncell/=Ntot)stop "get_gk_normal_tridiag_rank2 erro:  Nsites*Ncell != size(Hk,1)==Ntot"
+    call assert_shape(Hk,[Ntot,Nlso],'get_gk_normal_tridiag_rank2',"Hk")
+    call assert_shape(Sigma,[Ntot,Nlso,Lfreq],'get_gk_normal_tridiag_rank2',"Sigma")
+    call assert_shape(Gk,[Ntot,Nlso,Lfreq],'get_gk_normal_tridiag_rank2',"Gk")
+    !
+    call build_frequency_array(axis)
+    !
+    Gk = zero
+    do i=1+mpi_rank,Lfreq,mpi_size
+       Gk(:,:,i) = gki_tridiag(wfreq(i)+xmu,Hk(:,:),Sigma(:,:,i),Nsites,Ncell)
+       if(mpi_master)call eta(i,Lfreq)
+    end do
+    call gf_reduce(Gk)
+    !
+    if(mpi_master)call stop_timer
+  end subroutine get_gk_normal_tridiag_rank2
+
+
+  !G/Sigma shape: [Nlat,Nspin,Nspin,Norb,Norb][:]
+  !##################################################################
+  subroutine get_gk_normal_tridiag_rank5(Hk,Gk,Sigma,axis,Nsites,Ncell)
+    complex(8),dimension(:,:),intent(in)          :: Hk
+    complex(8),dimension(:,:,:,:,:,:),intent(in)    :: Sigma     
+    complex(8),dimension(:,:,:,:,:,:),intent(inout) :: Gk
+    character(len=*)                                :: axis
+    integer,intent(in)                              :: Nsites,Ncell
     !
     !MPI setup:
     call set_gf_mpi()
@@ -532,110 +625,37 @@ contains
     Nspin = size(Sigma,2)
     Norb  = size(Sigma,4)
     Lfreq = size(Sigma,6)
+    Nlso  = Nlat*Nspin*Norb
     !
     if(mpi_master)write(*,"(A)")"Get Green's function [Nlat,Nspin,Nspin,Norb,Norb], Axis:"//str(axis)
+    if(mpi_master)write(*,"(A)")"Block Tridiagonal Gaussian elimination algorithm:"
     if(mpi_master)call start_timer
     !
     !Testing part:
-    call assert_shape(Hk,[Ntot,Nlat*Nspin*Norb],"get_gk_normal_hk_rank5","Hk")
-    call assert_shape(Sigma,[Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_hk_rank5","Sigma")
-    call assert_shape(Gk, [Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_hk_rank5","Gk")
+    if(Nsites*Ncell/=Ntot)stop &
+         "get_gk_normal_tridiag_rank5 erro:  Nsites*Ncell != size(Hk,1)==Ntot"
+    call assert_shape(Hk,[Ntot,Nlso],"get_gk_normal_tridiag_rank5","Hk")
+    call assert_shape(Sigma,[Nlat,Nspin,Nspin,Norb,Norb,Lfreq],&
+         "get_gk_normal_tridiag_rank5","Sigma")
+    call assert_shape(Gk, [Nlat,Nspin,Nspin,Norb,Norb,Lfreq],&
+         "get_gk_normal_tridiag_rank5","Gk")
     !
     call build_frequency_array(axis)
     !
     Gk = zero
     do i=1+mpi_rank,Lfreq,mpi_size
-       Gk(:,:,:,:,:,:,i) = invert_gki_normal_rank5_6(&
-            wfreq(i)+xmu,Hk(:,:),Sigma(:,:,:,:,:,i))
+       Gk(:,:,:,:,:,i) = to_rank5( gki_tridiag(wfreq(i)+xmu,Hk(:,:), from_rank5(Sigma(:,:,:,:,:,i)),Nsites,Ncell) )
        if(mpi_master)call eta(i,Lfreq)
     end do
     call gf_reduce(Gk)
     !
     if(mpi_master)call stop_timer
-  end subroutine get_gk_normal_hk_rank5_6
+  end subroutine get_gk_normal_tridiag_rank5
 
 
-
-  !G/Sigma shape: [Nlat,Nlat,Nspin,Nspin,Norb,Norb][:]
-  !##################################################################
-  subroutine get_gk_normal_hk_rank6(Hk,Gk,Sigma,axis)
-    complex(8),dimension(:,:),intent(in)              :: Hk
-    complex(8),dimension(:,:,:,:,:,:,:),intent(in)    :: Sigma     
-    complex(8),dimension(:,:,:,:,:,:,:),intent(inout) :: Gk
-    character(len=*)                                  :: axis
-    !
-    !MPI setup:
-    call set_gf_mpi()
-    !
-    Ntot  = size(Hk,1)
-    Nlat  = size(Sigma,1)
-    Nspin = size(Sigma,3)
-    Norb  = size(Sigma,5)
-    Lfreq = size(Sigma,7)
-    !
-    if(mpi_master)write(*,"(A)")"Get Green's function [Nlat,Nlat,Nspin,Nspin,Norb,Norb], Axis:"//str(axis)
-    if(mpi_master)call start_timer
-    !
-    !Testing part:
-    call assert_shape(Hk,[Ntot,Nlat*Nspin*Norb],"get_gk_normal_hk_rank6","Hk")
-    call assert_shape(Sigma,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_hk_rank6","Sigma")
-    call assert_shape(Gk, [Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_hk_rank6","Gk")
-    !
-    call build_frequency_array(axis)
-    !
-    Gk = zero
-    do i=1+mpi_rank,Lfreq,mpi_size
-       Gk(:,:,:,:,:,:,i) = invert_gki_normal_rank6(&
-            wfreq(i)+xmu,Hk(:,:),Sigma(:,:,:,:,:,:,i))
-       if(mpi_master)call eta(i,Lfreq)
-    end do
-    call gf_reduce(Gk)
-    !
-    if(mpi_master)call stop_timer
-  end subroutine get_gk_normal_hk_rank6
-
-
-  !G/Sigma shape: ![Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb][:]
-  !##################################################################
 #if __GFORTRAN__ &&  __GNUC__ > 8
-  subroutine get_gk_normal_hk_rank7(Hk,Gk,Sigma,axis)
-    complex(8),dimension(:,:),intent(in)                :: Hk
-    complex(8),dimension(:,:,:,:,:,:,:,:),intent(in)    :: Sigma     
-    complex(8),dimension(:,:,:,:,:,:,:,:),intent(inout) :: Gk
-    character(len=*)                                    :: axis
-    !
-    !MPI setup:
-    call set_gf_mpi()
-    !
-    Ntot  = size(Hk,1)
-    Nineq = size(Sigma,1)
-    Nlat  = size(Sigma,2)
-    Nspin = size(Sigma,4)
-    Norb  = size(Sigma,6)
-    Lfreq = size(Sigma,8)
-    !
-    if(mpi_master)write(*,"(A)")"Get Green's function [Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb], Axis:"//str(axis)
-    if(mpi_master)call start_timer
-    !
-    !Testing part:
-    call assert_shape(Hk,[Ntot,Nineq*Nlat*Nspin*Norb],"get_gk_normal_hk_rank7","Hk")
-    call assert_shape(Sigma,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_hk_rank7","Sigma")
-    call assert_shape(Gk, [Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"get_gk_normal_hk_rank7","Gk")
-    !
-    call build_frequency_array(axis)
-    !
-    Gk = zero
-    do i=1+mpi_rank,Lfreq,mpi_size
-       Gk(:,:,:,:,:,:,:,i) = invert_gki_normal_rank7(&
-            wfreq(i)+xmu,Hk(:,:),Sigma(:,:,:,:,:,:,:,i))
-       if(mpi_master)call eta(i,Lfreq)
-    end do
-    call gf_reduce(Gk)
-    !
-    if(mpi_master)call stop_timer
-  end subroutine get_gk_normal_hk_rank7
-
-
+  !G/Sigma shape: [Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb][:]
+  !##################################################################
   subroutine get_gk_normal_tridiag_rank7(Hk,Gk,Sigma,axis,Nsites,Ncell)
     complex(8),dimension(:,:),intent(in)                :: Hk
     complex(8),dimension(:,:,:,:,:,:,:,:),intent(in)    :: Sigma  
@@ -672,8 +692,7 @@ contains
     !Allocate and setup the Matsubara freq.
     Gk = zero
     do i=1+mpi_rank,Lfreq,mpi_size
-       Gk(:,:,:,:,:,:,:,i) = invert_gki_normal_tridiag_rank7(&
-            wfreq(i)+xmu,Hk(:,:),Sigma(:,:,:,:,:,:,:,i),Nsites,Ncell)
+       Gk(:,:,:,:,:,:,:,i) = to_rank7( gki_tridiag(wfreq(i)+xmu,Hk(:,:),from_rank7(Sigma(:,:,:,:,:,:,:,i)),Nsites,Ncell) )
        if(mpi_master)call eta(i,Lfreq)
     end do
     call gf_reduce(Gk)
@@ -681,10 +700,6 @@ contains
     if(mpi_master)call stop_timer
   end subroutine get_gk_normal_tridiag_rank7
 #endif
-
-
-
-
 
 
 
@@ -742,8 +757,8 @@ contains
     !
     Gk=zero
     do i=1+mpi_rank,Lfreq,mpi_size
-       Z           = sc_zi_rank2(i,Sigma,axis)
-       Gk(:,:,:,i) = invert_gki_superc_rank2(Z,Hk(:,:,:))
+       Z           = sc_zi(i,Sigma,axis)
+       Gk(:,:,:,i) = gki_superc_rank2(Z,Hk(:,:,:))
        if(mpi_master)call eta(i,Lfreq)
     end do
     call gf_reduce(Gk)
@@ -752,6 +767,187 @@ contains
   end subroutine get_gk_superc_hk_rank2
 
 
+  !G/Sigma shape: [2][Nlat,Nso,Nso][:]
+  !##################################################################
+  subroutine get_gk_superc_hk_rank3(Hk,Gk,Sigma,axis)
+    complex(8),dimension(:,:,:),intent(in)              :: Hk
+    complex(8),dimension(:,:,:,:,:),intent(in)          :: Sigma
+    complex(8),dimension(:,:,:,:,:),intent(inout)       :: Gk
+    character(len=*)                                    :: axis
+    complex(8),dimension(:,:,:,:),allocatable           :: Z
+    !
+    !MPI setup:
+    call set_gf_mpi()
+    !
+    !
+    Ntot  = size(Hk,2) 
+    Nlat  = size(Sigma,2)
+    Nso   = size(Sigma,3)
+    Lfreq = size(Sigma,5)
+    !
+    if(mpi_master)write(*,"(A)")"Get Nambu Green's function [Nlat,Nso,Nso], Axis:"//str(axis)
+    if(mpi_master)call start_timer
+    !
+    !Testing part:  
+    call assert_shape(Hk,[2,Ntot,Nso],'get_gk_superc',"Hk")
+    call assert_shape(Sigma,[2,Nlat,Ntot,Nso,Lfreq],'get_gk_superc',"Sigma")
+    call assert_shape(Gk,[2,Nlat,Nso,Nso,Lfreq],'get_gk_superc',"Gk")
+    !
+    call build_frequency_array(axis)
+    !
+    allocate(Z(2,2,Ntot,Ntot))
+    !
+    Gk=zero
+    do i=1+mpi_rank,Lfreq,mpi_size
+       Z             = sc_zi(i,Sigma,axis)
+       Gk(:,:,:,:,i) = gki_superc_rank3(Z,Hk(:,:,:))
+       if(mpi_master)call eta(i,Lfreq)
+    end do
+    call gf_reduce(Gk)
+    !
+    if(mpi_master)call stop_timer
+  end subroutine get_gk_superc_hk_rank3
+
+  !G/Sigma shape: [2][Nspin,Nspin,Norb,Norb][:]
+  !##################################################################
+  subroutine get_gk_superc_hk_rank4(Hk,Gk,Sigma,axis)
+    complex(8),dimension(:,:,:),intent(in)              :: Hk
+    complex(8),dimension(:,:,:,:,:,:),intent(in)        :: Sigma
+    complex(8),dimension(:,:,:,:,:,:),intent(inout)     :: Gk
+    character(len=*)                                    :: axis
+    complex(8),dimension(:,:,:,:),allocatable           :: Z
+    !
+    !MPI setup:
+    call set_gf_mpi()
+    !
+    !
+    Ntot  = size(Hk,2)
+    Nspin = size(Sigma,2)
+    Norb  = size(Sigma,4)
+    Lfreq = size(Sigma,6)
+    Nso   = Nspin*Norb
+    !
+    if(mpi_master)write(*,"(A)")"Get Nambu Green's function [2][Nspin,Nspin,Norb,Norb], axis:"//str(axis)
+    if(mpi_master)call start_timer
+    !
+    !Testing part:  
+    call assert_shape(Hk,[2,Ntot,Nso],'get_gk_superc',"Hk")
+    call assert_shape(Sigma,[2,Nspin,Nspin,Norb,Norb,Lfreq],'get_gk_superc',"Sigma")
+    call assert_shape(Gk,[2,Nspin,Nspin,Norb,Norb,Lfreq],'get_gk_superc',"Gk")
+    !
+    call build_frequency_array(axis)
+    !
+    allocate(Z(2,2,Ntot,Ntot))
+    !
+    Gk=zero
+    do i=1+mpi_rank,Lfreq,mpi_size
+       Z               = sc_zi(i,Sigma,axis)
+       Gk(:,:,:,:,:,i) = gki_superc_rank4(Z,Hk(:,:,:))
+       if(mpi_master)call eta(i,Lfreq)
+    end do
+    call gf_reduce(Gk)
+    !
+    if(mpi_master)call stop_timer
+  end subroutine get_gk_superc_hk_rank4
+
+  !G/Sigma shape: [2][Nlat,Nspin,Nspin,Norb,Norb][:]
+  !##################################################################
+  subroutine get_gk_superc_hk_rank5(Hk,Gk,Sigma,axis)
+    complex(8),dimension(:,:,:),intent(in)              :: Hk
+    complex(8),dimension(:,:,:,:,:,:,:),intent(in)      :: Sigma
+    complex(8),dimension(:,:,:,:,:,:,:),intent(inout)   :: Gk
+    character(len=*)                                    :: axis
+    complex(8),dimension(:,:,:,:),allocatable           :: Z
+    !
+    !MPI setup:
+    call set_gf_mpi()
+    !
+    !
+    Ntot  = size(Hk,2)  
+    Nlat  = size(Sigma,2)
+    Nspin = size(Sigma,3)
+    Norb  = size(Sigma,5)
+    Lfreq = size(Sigma,7)
+    Nlso  = Nlat*Nspin*Norb
+    !
+    if(mpi_master)write(*,"(A)")"Get Nambu Green's function [2][Nlat,Nspin,Nspin,Norb,Norb], axis:"//str(axis)
+    if(mpi_master)call start_timer
+    !
+    !Testing part:  
+    call assert_shape(Hk,[2,Ntot,Nlso],'get_gk_superc',"Hk")
+    call assert_shape(Sigma,[2,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],'get_gk_superc',"Sigma")
+    call assert_shape(Gk,[2,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],'get_gk_superc',"Gk")
+    !
+    call build_frequency_array(axis)
+    !
+    allocate(Z(2,2,Ntot,Ntot))
+    !
+    Gk=zero
+    do i=1+mpi_rank,Lfreq,mpi_size
+       Z                 = sc_zi(i,Sigma,axis)
+       Gk(:,:,:,:,:,:,i) = gki_superc_rank5(Z,Hk(:,:,:))
+       if(mpi_master)call eta(i,Lfreq)
+    end do
+    call gf_reduce(Gk)
+    !
+    if(mpi_master)call stop_timer
+  end subroutine get_gk_superc_hk_rank5
+
+
+#if __GFORTRAN__ &&  __GNUC__ > 8
+  !Sigma shape: [2][Nlat,Nspin,Nspin,Norb,Norb][:]
+  !G     shape: [2][Nlat,Nlat,Nspin,Nspin,Norb,Norb][:]
+  !##################################################################
+  subroutine get_gk_superc_hk_rank5_6(Hk,Gk,Sigma,axis)
+    complex(8),dimension(:,:,:),intent(in)              :: Hk
+    complex(8),dimension(:,:,:,:,:,:,:),intent(in)      :: Sigma
+    complex(8),dimension(:,:,:,:,:,:,:,:),intent(inout) :: Gk
+    character(len=*)                                    :: axis
+    complex(8),dimension(:,:,:,:),allocatable           :: Z
+    !
+    !MPI setup:
+    call set_gf_mpi()
+    !
+    !
+    Ntot  = size(Hk,2) 
+    Nlat = size(Sigma,2)
+    Nspin = size(Sigma,3)
+    Norb  = size(Sigma,5)
+    Lfreq = size(Sigma,7)
+    Nlso  = Nlat*Nspin*Norb
+    !
+    if(mpi_master)write(*,"(A)")"Get Nambu Green's function [2][Nlat,Nspin,Nspin,Norb,Norb], axis:"//str(axis)
+    if(mpi_master)call start_timer
+    !
+    !Testing part:  
+    call assert_shape(Hk,[2,Ntot,Nlso],'get_gk_superc',"Hk")
+    call assert_shape(Sigma,[2,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],'get_gk_superc',"Sigma")
+    call assert_shape(Gk,[2,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],'get_gk_superc',"Gk")
+    !
+    call build_frequency_array(axis)
+    !
+    allocate(Z(2,2,Ntot,Ntot))
+    !
+    Gk=zero
+    do i=1+mpi_rank,Lfreq,mpi_size
+       Z                   = sc_zi(i,Sigma,axis)
+       Gk(:,:,:,:,:,:,:,i) = gki_superc_rank6(Z,Hk(:,:,:))
+       if(mpi_master)call eta(i,Lfreq)
+    end do
+    call gf_reduce(Gk)
+    !
+    if(mpi_master)call stop_timer
+  end subroutine get_gk_superc_hk_rank5_6
+#endif  
+
+
+
+
+
+
+
+  ! G/Sigma Shape: [2][N,N][:]
+  !##################################################################
   subroutine get_gk_superc_dos_rank2(Ebands,Dbands,Hloc,Gk,Sigma,axis)
     real(8),dimension(:,:),intent(in)                   :: Ebands    ![2,N]
     real(8),dimension(:),intent(in)                     :: Dbands    ![N]
@@ -812,91 +1008,8 @@ contains
     if(mpi_master)call stop_timer
   end subroutine get_gk_superc_dos_rank2
 
-  !G/Sigma shape: [2][Nlat,Nso,Nso][:]
-  !##################################################################
-  subroutine get_gk_superc_hk_rank3(Hk,Gk,Sigma,axis)
-    complex(8),dimension(:,:,:),intent(in)              :: Hk
-    complex(8),dimension(:,:,:,:,:),intent(in)          :: Sigma
-    complex(8),dimension(:,:,:,:,:),intent(inout)       :: Gk
-    character(len=*)                                    :: axis
-    complex(8),dimension(:,:,:,:),allocatable           :: Z
-    !
-    !MPI setup:
-    call set_gf_mpi()
-    !
-    !
-    Ntot  = size(Hk,2) 
-    Nlat  = size(Sigma,2)
-    Nso   = size(Sigma,3)
-    Lfreq = size(Sigma,5)
-    !
-    if(mpi_master)write(*,"(A)")"Get Nambu Green's function [Nlat,Nso,Nso], Axis:"//str(axis)
-    if(mpi_master)call start_timer
-    !
-    !Testing part:  
-    call assert_shape(Hk,[2,Ntot,Nso],'get_gk_superc',"Hk")
-    call assert_shape(Sigma,[2,Nlat,Ntot,Nso,Lfreq],'get_gk_superc',"Sigma")
-    call assert_shape(Gk,[2,Nlat,Nso,Nso,Lfreq],'get_gk_superc',"Gk")
-    !
-    call build_frequency_array(axis)
-    !
-    allocate(Z(2,2,Ntot,Ntot))
-    !
-    Gk=zero
-    do i=1+mpi_rank,Lfreq,mpi_size
-       Z             = sc_zi_rank3(i,Sigma,axis)
-       Gk(:,:,:,:,i) = invert_gki_superc_rank3(Z,Hk(:,:,:))
-       if(mpi_master)call eta(i,Lfreq)
-    end do
-    call gf_reduce(Gk)
-    !
-    if(mpi_master)call stop_timer
-  end subroutine get_gk_superc_hk_rank3
-
   !G/Sigma shape: [2][Nspin,Nspin,Norb,Norb][:]
   !##################################################################
-  subroutine get_gk_superc_hk_rank4(Hk,Gk,Sigma,axis)
-    complex(8),dimension(:,:,:),intent(in)              :: Hk
-    complex(8),dimension(:,:,:,:,:,:),intent(in)        :: Sigma
-    complex(8),dimension(:,:,:,:,:,:),intent(inout)     :: Gk
-    character(len=*)                                    :: axis
-    complex(8),dimension(:,:,:,:),allocatable           :: Z
-    !
-    !MPI setup:
-    call set_gf_mpi()
-    !
-    !
-    Ntot  = size(Hk,2)
-    Nspin = size(Sigma,2)
-    Norb  = size(Sigma,4)
-    Lfreq = size(Sigma,6)
-    Nso   = Nspin*Norb
-    !
-    if(mpi_master)write(*,"(A)")"Get Nambu Green's function [2][Nspin,Nspin,Norb,Norb], axis:"//str(axis)
-    if(mpi_master)call start_timer
-    !
-    !Testing part:  
-    call assert_shape(Hk,[2,Ntot,Nso],'get_gk_superc',"Hk")
-    call assert_shape(Sigma,[2,Nspin,Nspin,Norb,Norb,Lfreq],'get_gk_superc',"Sigma")
-    call assert_shape(Gk,[2,Nspin,Nspin,Norb,Norb,Lfreq],'get_gk_superc',"Gk")
-    !
-    call build_frequency_array(axis)
-    !
-    allocate(Z(2,2,Ntot,Ntot))
-    !
-    Gk=zero
-    do i=1+mpi_rank,Lfreq,mpi_size
-       Z                 = sc_zi_rank4(i,Sigma,axis)
-       Gk(:,:,:,:,:,i) = invert_gki_superc_rank4(Z,Hk(:,:,:))
-       if(mpi_master)call eta(i,Lfreq)
-    end do
-    call gf_reduce(Gk)
-    !
-    if(mpi_master)call stop_timer
-  end subroutine get_gk_superc_hk_rank4
-
-
-
   subroutine get_gk_superc_dos_rank4(Ebands,Dbands,Hloc,Gk,Sigma,axis)
     real(8),dimension(:,:),intent(in)               :: Ebands    ![2,N]
     real(8),dimension(:),intent(in)                 :: Dbands    ![N]
@@ -959,98 +1072,6 @@ contains
     !
     if(mpi_master)call stop_timer
   end subroutine get_gk_superc_dos_rank4
-
-  !G/Sigma shape: [2][Nlat,Nspin,Nspin,Norb,Norb][:]
-  !##################################################################
-  subroutine get_gk_superc_hk_rank5(Hk,Gk,Sigma,axis)
-    complex(8),dimension(:,:,:),intent(in)              :: Hk
-    complex(8),dimension(:,:,:,:,:,:,:),intent(in)      :: Sigma
-    complex(8),dimension(:,:,:,:,:,:,:),intent(inout)   :: Gk
-    character(len=*)                                    :: axis
-    complex(8),dimension(:,:,:,:),allocatable           :: Z
-    !
-    !MPI setup:
-    call set_gf_mpi()
-    !
-    !
-    Ntot  = size(Hk,2)  
-    Nlat  = size(Sigma,2)
-    Nspin = size(Sigma,3)
-    Norb  = size(Sigma,5)
-    Lfreq = size(Sigma,7)
-    Nlso  = Nlat*Nspin*Norb
-    !
-    if(mpi_master)write(*,"(A)")"Get Nambu Green's function [2][Nlat,Nspin,Nspin,Norb,Norb], axis:"//str(axis)
-    if(mpi_master)call start_timer
-    !
-    !Testing part:  
-    call assert_shape(Hk,[2,Ntot,Nlso],'get_gk_superc',"Hk")
-    call assert_shape(Sigma,[2,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],'get_gk_superc',"Sigma")
-    call assert_shape(Gk,[2,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],'get_gk_superc',"Gk")
-    !
-    call build_frequency_array(axis)
-    !
-    allocate(Z(2,2,Ntot,Ntot))
-    !
-    Gk=zero
-    do i=1+mpi_rank,Lfreq,mpi_size
-       Z                 = sc_zi_rank5(i,Sigma,axis)
-       Gk(:,:,:,:,:,:,i) = invert_gki_superc_rank5(Z,Hk(:,:,:))
-       if(mpi_master)call eta(i,Lfreq)
-    end do
-    call gf_reduce(Gk)
-    !
-    if(mpi_master)call stop_timer
-  end subroutine get_gk_superc_hk_rank5
-
-
-#if __GFORTRAN__ &&  __GNUC__ > 8
-  !Sigma shape: [2][Nlat,Nspin,Nspin,Norb,Norb][:]
-  !G     shape: [2][Nlat,Nlat,Nspin,Nspin,Norb,Norb][:]
-  !##################################################################
-  subroutine get_gk_superc_hk_rank5_6(Hk,Gk,Sigma,axis)
-    complex(8),dimension(:,:,:),intent(in)              :: Hk
-    complex(8),dimension(:,:,:,:,:,:,:),intent(in)      :: Sigma
-    complex(8),dimension(:,:,:,:,:,:,:,:),intent(inout) :: Gk
-    character(len=*)                                    :: axis
-    complex(8),dimension(:,:,:,:),allocatable           :: Z
-    !
-    !MPI setup:
-    call set_gf_mpi()
-    !
-    !
-    Ntot  = size(Hk,2) 
-    Nlat = size(Sigma,2)
-    Nspin = size(Sigma,3)
-    Norb  = size(Sigma,5)
-    Lfreq = size(Sigma,7)
-    Nlso  = Nlat*Nspin*Norb
-    !
-    if(mpi_master)write(*,"(A)")"Get Nambu Green's function [2][Nlat,Nspin,Nspin,Norb,Norb], axis:"//str(axis)
-    if(mpi_master)call start_timer
-    !
-    !Testing part:  
-    call assert_shape(Hk,[2,Ntot,Nlso],'get_gk_superc',"Hk")
-    call assert_shape(Sigma,[2,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],'get_gk_superc',"Sigma")
-    call assert_shape(Gk,[2,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],'get_gk_superc',"Gk")
-    !
-    call build_frequency_array(axis)
-    !
-    allocate(Z(2,2,Ntot,Ntot))
-    !
-    Gk=zero
-    do i=1+mpi_rank,Lfreq,mpi_size
-       Z                   = sc_zi_rank5(i,Sigma,axis)
-       Gk(:,:,:,:,:,:,:,i) = invert_gki_superc_rank6(Z,Hk(:,:,:))
-       if(mpi_master)call eta(i,Lfreq)
-    end do
-    call gf_reduce(Gk)
-    !
-    if(mpi_master)call stop_timer
-  end subroutine get_gk_superc_hk_rank5_6
-#endif  
-
-
 
 
 end module GF_GK

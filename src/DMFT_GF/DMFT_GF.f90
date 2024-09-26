@@ -1,5 +1,5 @@
 MODULE DMFT_GF
-  USE GF_COMMON!, only:gf_push_zeta
+  USE GF_COMMON, only:gf_push_zeta
   USE GF_IO
   USE GF_GLOC
   USE GF_GK
@@ -188,22 +188,10 @@ MODULE DMFT_GF
 
   !GLOC:
   public :: dmft_get_gloc
-  public :: get_gloc
   public :: dmft_get_gk
-  public :: get_gk
   public :: dmft_write_gf
+  public :: get_gloc
+  public :: get_gk
   public :: write_gf
-
-  public :: reshape_matrix_to_rank3
-  public :: reshape_matrix_to_rank4
-  public :: reshape_matrix_to_rank5
-  public :: reshape_matrix_to_rank6
-  public :: reshape_matrix_to_rank7
-
-  public :: reshape_rank3_to_matrix
-  public :: reshape_rank4_to_matrix
-  public :: reshape_rank5_to_matrix
-  public :: reshape_rank6_to_matrix
-  public :: reshape_rank7_to_matrix
 
 END MODULE DMFT_GF

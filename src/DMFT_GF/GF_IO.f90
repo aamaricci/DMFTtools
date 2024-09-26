@@ -31,7 +31,6 @@ module GF_IO
   end interface write_gf
 
 
-
   public :: dmft_write_gf
   public :: write_gf
 

@@ -1,4 +1,4 @@
-module LEGACY_SC_COMMON
+module ARCHIVED_SC_COMMON
   USE SF_TIMER
   USE SF_CONSTANTS, only: one,xi,zero,pi
   USE SF_IOTOOLS,   only:reg,txtfy
@@ -341,4 +341,4 @@ contains
   end function c_nn2nso
 
 
-end module LEGACY_SC_COMMON
+end module ARCHIVED_SC_COMMON

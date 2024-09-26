@@ -1,6 +1,6 @@
-module LEGACY_SC_WEISS
+module ARCHIVED_SC_WEISS
   USE DMFT_CTRL_VARS
-  USE LEGACY_SC_COMMON
+  USE ARCHIVED_SC_COMMON
   implicit none
   private
 
@@ -852,4 +852,4 @@ contains
     !
   end subroutine dmft_get_weiss_superc_ineq
 
-end module LEGACY_SC_WEISS
+end module ARCHIVED_SC_WEISS

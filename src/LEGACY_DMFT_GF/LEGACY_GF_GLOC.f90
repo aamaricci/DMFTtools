@@ -1,5 +1,5 @@
-module GF_GLOC
-  USE GF_COMMON
+module LEGACY_GF_GLOC
+  USE LEGACY_GF_COMMON
   implicit none
   private
 
@@ -250,9 +250,9 @@ contains
     !case F  => 1  DOS, H(e)=diag(Ebands), non-diagonal case
     !case T  => >1 DOS, Ebands, diagonal case
     if(present(diagonal))then
-      dos_diag=diagonal
+       dos_diag=diagonal
     else
-      dos_diag = .not.(size(Dbands,1) < size(Ebands,1))
+       dos_diag = .not.(size(Dbands,1) < size(Ebands,1))
     endif
     !
     !Testing part:
@@ -628,9 +628,9 @@ contains
     !
     SF = reshape_rank4_to_matrix(Sigma,Nspin,Norb,Lfreq)
     if(present(diagonal))then
-      call get_gloc_normal_dos(Ebands,Dbands,Hloc,GF,SF,axis,diagonal)
+       call get_gloc_normal_dos(Ebands,Dbands,Hloc,GF,SF,axis,diagonal)
     else
-      call get_gloc_normal_dos(Ebands,Dbands,Hloc,GF,SF,axis)
+       call get_gloc_normal_dos(Ebands,Dbands,Hloc,GF,SF,axis)
     endif
     Gloc = reshape_matrix_to_rank4(GF,Nspin,Norb,Lfreq)
     deallocate(SF,GF)
@@ -996,4 +996,4 @@ contains
 
 
 
-end module GF_GLOC
+end module LEGACY_GF_GLOC

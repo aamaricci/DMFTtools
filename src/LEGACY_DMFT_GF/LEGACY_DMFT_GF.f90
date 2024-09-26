@@ -1,7 +1,7 @@
 module LEGACY_DMFT_GF
-  USE GF_COMMON, only:gf_push_zeta
-  USE GF_GLOC
-  USE GF_GK
+  USE LEGACY_GF_COMMON, only:gf_push_zeta
+  USE LEGACY_GF_GLOC
+  USE LEGACY_GF_GK
   implicit none
   private
 

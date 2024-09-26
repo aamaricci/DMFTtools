@@ -1,8 +1,8 @@
-module LEGACY_SC_GLOBAL
+module ARCHIVED_SC_GLOBAL
   USE DMFT_CTRL_VARS
-  USE LEGACY_SC_COMMON
-  USE LEGACY_SC_WEISS
-  USE LEGACY_SC_DELTA
+  USE ARCHIVED_SC_COMMON
+  USE ARCHIVED_SC_WEISS
+  USE ARCHIVED_SC_DELTA
   implicit none
   private
 
@@ -155,4 +155,4 @@ contains
     end select
   end subroutine dmft_sc_superc_ineq
 
-end module LEGACY_SC_GLOBAL
+end module ARCHIVED_SC_GLOBAL

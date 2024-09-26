@@ -1,5 +1,5 @@
-module GF_GK
-  USE GF_COMMON
+module LEGACY_GF_GK
+  USE LEGACY_GF_COMMON
   implicit none
   private
 
@@ -124,7 +124,7 @@ contains
     call assert_shape(Sigma,[Ntot,Ntot,Lfreq],'get_gk_normal_tridiag',"Sigma")
     call assert_shape(Gk,[Ntot,Ntot,Lfreq],'get_gk_normal_tridiag',"Gk")
     !
-        call build_frequency_array(axis)
+    call build_frequency_array(axis)
     !
     allocate(csi(Ntot,Ntot,Lfreq))
     !
@@ -179,7 +179,7 @@ contains
     call assert_shape(Sigma,[Ntot,Ntot,Lfreq],"dmft_get_gk_normal_dos","Sigma")
     call assert_shape(Gk,[Ntot,Ntot,Lfreq],"dmft_get_gk_normal_dos","Gk")
     !
-        call build_frequency_array(axis)
+    call build_frequency_array(axis)
     !
     !Allocate and setup the Matsubara freq.
     allocate(csi(Ntot,Ntot,Lfreq))
@@ -272,7 +272,7 @@ contains
     call assert_shape(Sigma,[2,Ntot,Ntot,Lfreq],'get_gk_superc',"Sigma")
     call assert_shape(Gk,[2,Ntot,Ntot,Lfreq],'get_gk_superc',"Gk")
     !
-        call build_frequency_array(axis)
+    call build_frequency_array(axis)
     !
     allocate(csi(2,2,Ntot,Ntot,Lfreq))
     !
@@ -345,7 +345,7 @@ contains
     call assert_shape(Sigma,[2,Ntot,Ntot,Lfreq],'get_gk_superc_dos',"Sigma")
     call assert_shape(Gk,[2,Ntot,Ntot,Lfreq],'get_gk_superc_dos',"Gk")
     !
-        call build_frequency_array(axis)
+    call build_frequency_array(axis)
     !
     !
     allocate(csi(2,2,Ntot,Ntot,Lfreq));csi = zero
@@ -801,4 +801,4 @@ contains
 
 
 
-end module GF_GK
+end module LEGACY_GF_GK

@@ -3,63 +3,69 @@ program test
   USE DMFT_CTRL_VARS
   USE DMFT_GF
   USE ASSERTING
+  USE DMFT_WEISS_FIELD
+  USE LEGACY_DMFT_WEISS_FIELD
   implicit none
-  integer,parameter                                  :: Nspin = 2
-  integer,parameter                                  :: Norb  = 2
-  integer,parameter                                  :: Nx    = 6, Nlat=Nx*Nx
-  integer,parameter                                  :: Nkx   = 6, Nk=Nkx*Nkx
-  integer,parameter                                  :: L     = 512
-  integer,parameter                                  :: Le    = 5000
-  real(8)                                            :: xmu   = 0d0
-  real(8)                                            :: beta  = 100d0
-  real(8)                                            :: wini  = -5d0
-  real(8)                                            :: wfin  = 5d0
-  real(8)                                            :: eps   = 0.02d0  
-  real(8)                                            :: Mh    = 1d0
-  real(8)                                            :: lambda= 0.3d0
-  real(8)                                            :: delta = 0.3d0
-  integer                                            :: Nso
-  integer                                            :: Nlso
-  complex(8),dimension(Nspin*Norb,Nspin*Norb,L)      :: S_rank2=zero
-  complex(8),dimension(Nlat,Nspin*Norb,Nspin*Norb,L) :: S_rank3=zero
-  complex(8),dimension(Nspin,Nspin,Norb,Norb,L)      :: S_rank4=zero
-  complex(8),dimension(Nlat,Nspin,Nspin,Norb,Norb,L) :: S_rank5=zero
-  complex(8),dimension(Nspin*Norb,Nspin*Norb,L)      :: mG0_rank2,mG_rank2
-  complex(8),dimension(Nlat,Nspin*Norb,Nspin*Norb,L) :: mG0_rank3,mG_rank3
-  complex(8),dimension(Nspin,Nspin,Norb,Norb,L)      :: mG0_rank4,mG_rank4
-  complex(8),dimension(Nlat,Nspin,Nspin,Norb,Norb,L) :: mG0_rank5,mG_rank5
-  complex(8),dimension(Nspin*Norb,Nspin*Norb,L)      :: rG0_rank2,rG_rank2
-  complex(8),dimension(Nlat,Nspin*Norb,Nspin*Norb,L) :: rG0_rank3,rG_rank3
-  complex(8),dimension(Nspin,Nspin,Norb,Norb,L)      :: rG0_rank4,rG_rank4
-  complex(8),dimension(Nlat,Nspin,Nspin,Norb,Norb,L) :: rG0_rank5,rG_rank5
+  integer,parameter                                    :: Nspin = 1
+  integer,parameter                                    :: Norb  = 2
+  integer,parameter                                    :: Nx    = 6, Nlat=Nx*Nx
+  integer,parameter                                    :: Nkx   = 12, Nk=Nkx*Nkx
+  integer,parameter                                    :: Nso   = Nspin*Norb
+  integer,parameter                                    :: Nlso  = Nlat*Nso
+  integer,parameter                                    :: L     = 512
+  integer,parameter                                    :: Le    = 5000
+  real(8)                                              :: xmu   = 0d0
+  real(8)                                              :: beta  = 100d0
+  real(8)                                              :: wini  = -5d0
+  real(8)                                              :: wfin  = 5d0
+  real(8)                                              :: eps   = 0.02d0  
+  real(8)                                              :: Mh    = 1d0
+  real(8)                                              :: lambda= 0.3d0
+  real(8)                                              :: delta = 0.0d0
   !
-  complex(8),dimension(2,Norb,Norb,L)                :: scS_rank2=zero
-  complex(8),dimension(2,Nlat,Norb,Norb,L)           :: scS_rank3=zero
-  complex(8),dimension(2,1,1,Norb,Norb,L)            :: scS_rank4=zero
-  complex(8),dimension(2,Nlat,1,1,Norb,Norb,L)       :: scS_rank5=zero
-  complex(8),dimension(2,Norb,Norb,L)                :: scmG0_rank2,scmG_rank2
-  complex(8),dimension(2,Nlat,Norb,Norb,L)           :: scmG0_rank3,scmG_rank3
-  complex(8),dimension(2,1,1,Norb,Norb,L)            :: scmG0_rank4,scmG_rank4
-  complex(8),dimension(2,Nlat,1,1,Norb,Norb,L)       :: scmG0_rank5,scmG_rank5
-  complex(8),dimension(2,Norb,Norb,L)                :: scrG0_rank2,scrG_rank2
-  complex(8),dimension(2,Nlat,Norb,Norb,L)           :: scrG0_rank3,scrG_rank3
-  complex(8),dimension(2,1,1,Norb,Norb,L)            :: scrG0_rank4,scrG_rank4
-  complex(8),dimension(2,Nlat,1,1,Norb,Norb,L)       :: scrG0_rank5,scrG_rank5
-  integer,dimension(:,:),allocatable                 :: Links
-  complex(8),dimension(:,:,:,:),allocatable          :: Hlat
-  complex(8),dimension(:,:,:),allocatable            :: Hk,Hij
-  complex(8),dimension(:,:,:,:),allocatable          :: scHk,scHij
-  complex(8),dimension(:,:),allocatable              :: Hloc
-  real(8),dimension(Nspin*Norb,Le)                   :: Ebands,Dbands
-  real(8),dimension(Nspin*Norb)                      :: Wband
-  real(8),dimension(Nspin*Norb)                      :: De,H0
-  complex(8),dimension(Nspin*Norb,Nspin*Norb)        :: Gamma1,Gamma2,Gamma5
-  real(8),dimension(3)                               :: ei_1=[1d0,0d0,0d0],ei_2=[0d0,1d0,0d0],ei_3=[0d0,0d0,1d0]
-  real(8),dimension(3)                               :: bk_1=[pi2,0d0,0d0],bk_2=[0d0,pi2,0d0],bk_3=[0d0,0d0,pi2]
-  integer                                            :: i,j,iso,jso,ii,jj
-  integer                                            :: ilat,jlat,ispin,jspin,iorb,jorb,io,jo
-  complex(8)                                         :: zeta
-  real(8),dimension(L)                               :: wm,wr
+  complex(8),dimension(Nso,Nso,L)                      :: S_rank2=zero
+  complex(8),dimension(Nlat,Nso,Nso,L)                 :: S_rank3=zero
+  complex(8),dimension(Nspin,Nspin,Norb,Norb,L)        :: S_rank4=zero
+  complex(8),dimension(Nlat,Nspin,Nspin,Norb,Norb,L)   :: S_rank5=zero
+  complex(8),dimension(2,Nso,Nso,L)                    :: scS_rank2=zero
+  complex(8),dimension(2,Nlat,Nso,Nso,L)               :: scS_rank3=zero
+  complex(8),dimension(2,Nspin,Nspin,Norb,Norb,L)      :: scS_rank4=zero
+  complex(8),dimension(2,Nlat,Nspin,Nspin,Norb,Norb,L) :: scS_rank5=zero
+  !
+  complex(8),dimension(Nso,Nso,L)                      :: mG0_rank2,mG_rank2,mW_rank2
+  complex(8),dimension(Nlat,Nso,Nso,L)                 :: mG0_rank3,mG_rank3,mW_rank3
+  complex(8),dimension(Nspin,Nspin,Norb,Norb,L)        :: mG0_rank4,mG_rank4,mW_rank4
+  complex(8),dimension(Nlat,Nspin,Nspin,Norb,Norb,L)   :: mG0_rank5,mG_rank5,mW_rank5
+  complex(8),dimension(Nso,Nso,L)                      :: rG0_rank2,rG_rank2,rW_rank2
+  complex(8),dimension(Nlat,Nso,Nso,L)                 :: rG0_rank3,rG_rank3,rW_rank3
+  complex(8),dimension(Nspin,Nspin,Norb,Norb,L)        :: rG0_rank4,rG_rank4,rW_rank4
+  complex(8),dimension(Nlat,Nspin,Nspin,Norb,Norb,L)   :: rG0_rank5,rG_rank5,rW_rank5
+  !
+  complex(8),dimension(2,Nso,Nso,L)                    :: scmG0_rank2,scmG_rank2,scmW_rank2
+  complex(8),dimension(2,Nlat,Nso,Nso,L)               :: scmG0_rank3,scmG_rank3,scmW_rank3
+  complex(8),dimension(2,Nspin,Nspin,Norb,Norb,L)      :: scmG0_rank4,scmG_rank4,scmW_rank4
+  complex(8),dimension(2,Nlat,Nspin,Nspin,Norb,Norb,L) :: scmG0_rank5,scmG_rank5,scmW_rank5
+  complex(8),dimension(2,Nso,Nso,L)                    :: scrG0_rank2,scrG_rank2,scrW_rank2
+  complex(8),dimension(2,Nlat,Nso,Nso,L)               :: scrG0_rank3,scrG_rank3,scrW_rank3
+  complex(8),dimension(2,Nspin,Nspin,Norb,Norb,L)      :: scrG0_rank4,scrG_rank4,scrW_rank4
+  complex(8),dimension(2,Nlat,Nspin,Nspin,Norb,Norb,L) :: scrG0_rank5,scrG_rank5,scrW_rank5
+  !
+  complex(8),dimension(Nso,Nso,Nk)                     :: Hk
+  complex(8),dimension(Nlso,Nlso,1)                    :: Hij
+  complex(8),dimension(2,Nso,Nso,Nk)                   :: scHk
+  complex(8),dimension(2,Nlso,Nlso,1)                  :: scHij
+  !
+  complex(8),dimension(Nso,Nso)                        :: Hloc
+  complex(8),dimension(Nlat,Nso,Nso)                   :: Hloc_rank3
+  complex(8),dimension(Nspin,Nspin,Norb,Norb)          :: Hloc_rank4
+  complex(8),dimension(Nlat,Nspin,Nspin,Norb,Norb)     :: Hloc_rank5
+  integer,dimension(4,2)                               :: Links
+  real(8),dimension(3)                                 :: ei_1=[1d0,0d0,0d0],ei_2=[0d0,1d0,0d0],ei_3=[0d0,0d0,1d0]
+  real(8),dimension(3)                                 :: bk_1=[pi2,0d0,0d0],bk_2=[0d0,pi2,0d0],bk_3=[0d0,0d0,pi2]
+  integer                                              :: i,j,iso,jso,ii,jj
+  integer                                              :: ilat,jlat,ispin,jspin,iorb,jorb,io,jo
+  complex(8)                                           :: zeta
+  real(8),dimension(L)                                 :: wm,wr
 
 
 
@@ -72,220 +78,185 @@ program test
   call add_ctrl_var(eps,"eps")
 
 
-  gamma1=kron( pauli_tau_z, pauli_sigma_x)
-  gamma2=kron( pauli_tau_0,-pauli_sigma_y)
-  gamma5=kron( pauli_tau_0, pauli_sigma_z)
-
-
-  Nso   = Nspin*Norb
-  Nlso  = Nlat*Nspin*Norb
-
-  !######################################################################
-  !NORMAL
-  !######################################################################
-  !Setup BHZ model 2d,
-  ! H(k)
-  allocate(Hk(Nso,Nso,Nk))
-  allocate(Hloc(Nso,Nso))
-  call TB_build_Hk(Hk,hk_bhz,Nso,[Nkx,Nkx])
-  Hloc = sum(Hk,3)/Nk;where(abs(Hloc)<1d-4)Hloc=zero
-  call print_matrix(Hloc)
-  ! H(ij)
-  allocate(Hlat(Nso,Nso,Nlat,Nlat))
-  allocate(Links(4,2))
-  Links(1,:) = [1 ,0]
-  Links(2,:) = [0 ,1]
-  Links(3,:) = [-1,0]
-  Links(4,:) = [0,-1]
-  call TB_build_Hlat(Hlat,ts_bhz,Nso,[Nx,Nx],Links,pbc=.true.)
-  allocate(Hij(Nlso,Nlso,1))
-  do concurrent(i=1:Nlat,j=1:Nlat,iso=1:Nso,jso=1:Nso)
-     ii = iso + (i-1)*Nso
-     jj = jso + (j-1)*Nso
-     Hij(ii,jj,1) = Hlat(iso,jso,i,j)
-  enddo
-  !
-  !Get exact Green's functions:
-  call get_gf_hk(Hk,mG0_rank2,'mats')
-  call get_gf_hk(Hk,rG0_rank2,'real')
-  call get_gf_hlat(Hij(:,:,1),mG0_rank3,'mats')
-  call get_gf_hlat(Hij(:,:,1),rG0_rank3,'real')
-  do concurrent(ispin=1:Nspin,jspin=1:Nspin,iorb=1:Norb,jorb=1:Norb)
-     io = iorb+(ispin-1)*Norb
-     jo = jorb+(jspin-1)*Norb
-     mG0_rank4(ispin,jspin,iorb,jorb,:)   = mG0_rank2(io,jo,:)
-     mG0_rank5(:,ispin,jspin,iorb,jorb,:) = mG0_rank3(:,io,jo,:)
-     rG0_rank4(ispin,jspin,iorb,jorb,:)   = rG0_rank2(io,jo,:)
-     rG0_rank5(:,ispin,jspin,iorb,jorb,:) = rG0_rank3(:,io,jo,:)
-  enddo
-  !
-  !
-  !> CHECK: Build all ranks  GF, Mats and Real
-  call get_gloc(Hk, mG_rank2,S_rank2,axis='m')
-  call get_gloc(Hk, mG_rank4,S_rank4,axis='m')
-  call get_gloc(Hij,mG_rank3,S_rank3,axis='m')
-  call get_gloc(Hij,mG_rank5,S_rank5,axis='m')
-  !
-  call get_gloc(Hk, rG_rank2,S_rank2,axis='r')
-  call get_gloc(Hk, rG_rank4,S_rank4,axis='r')
-  call get_gloc(Hij,rG_rank3,S_rank3,axis='r')
-  call get_gloc(Hij,rG_rank5,S_rank5,axis='r')
-  !
-  !> ASSERT EQUALITY WITH EXACT ONES:
-  call assert(mG_rank2,mG0_rank2,"Matsubara H(k): get_gloc_rank2",tol=1d-12)
-  call assert(mG_rank3,mG0_rank3,"Matsubara H(k): get_gloc_rank3",tol=1d-12)
-  call assert(mG_rank4,mG0_rank4,"Matsubara H(k): get_gloc_rank4",tol=1d-12)
-  call assert(mG_rank5,mG0_rank5,"Matsubara H(k): get_gloc_rank5",tol=1d-12)
-  call assert(rG_rank2,rG0_rank2,"Realaxis  H(k): get_gloc_rank2",tol=1d-12)
-  call assert(rG_rank3,rG0_rank3,"Realaxis  H(k): get_gloc_rank3",tol=1d-12)
-  call assert(rG_rank4,rG0_rank4,"Realaxis  H(k): get_gloc_rank4",tol=1d-12)
-  call assert(rG_rank5,rG0_rank5,"Realaxis  H(k): get_gloc_rank5",tol=1d-12)
-  call wait(500)
-
-
-  ! DOS:
-  Wband = [1d0,0.5d0,1d0,0.5d0]
-  H0    = [0d0,0d0,0d0,0d0]
-  do io=1,Nso
-     Ebands(io,:) = linspace(-Wband(io),Wband(io),Le,mesh=de(io))
-     Dbands(io,:) = dens_bethe(Ebands(io,:),Wband(io))*de(io)
-  enddo
-  !
-  !> Get exact Green's functions 
-  wm = pi/beta*(2*arange(1,L)-1)
-  wr = linspace(wini,wfin,L)
-  mG0_rank2=zero
-  S_rank2 =zero
-  do io=1,Nso
-     do i=1,L
-        zeta = xi*wm(i) - S_rank2(io,io,i) - H0(io)
-        mG0_rank2(io,io,i) = gfbethe(wm(i),zeta,Wband(io))
-        zeta = dcmplx(wr(i),eps) - S_rank2(io,io,i) - H0(io)
-        rG0_rank2(io,io,i) = gfbether(wr(i),zeta,Wband(io))
-     enddo
-  enddo
-  do concurrent(ispin=1:Nspin,jspin=1:Nspin,iorb=1:Norb,jorb=1:Norb)
-     io = iorb+(ispin-1)*Norb
-     jo = jorb+(jspin-1)*Norb
-     mG0_rank4(ispin,jspin,iorb,jorb,:)   = mG0_rank2(io,jo,:)
-     rG0_rank4(ispin,jspin,iorb,jorb,:)   = rG0_rank2(io,jo,:)
-  enddo
-  !
-  !> CHECK: Build all ranks  GF, Mats and Real 
-  call get_gloc(Ebands,Dbands,H0,mG_rank2,S_rank2,axis='m')
-  call get_gloc(Ebands,Dbands,H0,mG_rank4,S_rank4,axis='m')
-  call get_gloc(Ebands,Dbands,H0,rG_rank2,S_rank2,axis='r')
-  call get_gloc(Ebands,Dbands,H0,rG_rank4,S_rank4,axis='r')
-  !> ASSERT EQUALITY WITH EXACT ONES:
-  call assert(mG_rank2,mG0_rank2,"Matsubara DOS: get_gloc_rank2",tol=1d-4)
-  call assert(mG_rank4,mG0_rank4,"Matsubara DOS: get_gloc_rank4",tol=1d-4)
-  call assert(rG_rank2,rG0_rank2,"Realaxis  DOS: get_gloc_rank2",tol=1d-2)
-  call assert(rG_rank4,rG0_rank4,"Realaxis  DOS: get_gloc_rank4",tol=1d-2)
-  call wait(500)
-  !######################################################################
-  !######################################################################
-
-
-
-  deallocate(Hk,Hloc,Hlat,Links,Hij)
-
-
-  !######################################################################
-  !SUPERC
-  !######################################################################
-
-  Nso   = Norb
-  Nlso  = Nlat*Norb
-
   !Setup 2bHM model 2d,
   !H(k)
-  allocate(Hk(Nso,Nso,Nk))
-  allocate(Hloc(Nso,Nso))
   call TB_build_Hk(Hk,hk_hm2b,Nso,[Nkx,Nkx])
-  Hloc = sum(Hk,3)/Nk;where(abs(Hloc)<1d-4)Hloc=zero
-  call print_matrix(Hloc)
-  allocate(scHk(2,Nso,Nso,Nk));scHk=zero
   scHk(1,:,:,:) = Hk 
   scHk(2,:,:,:) =-conjg(Hk)
   !
   !H(ij)
-  allocate(Hlat(Nso,Nso,Nlat,Nlat))
-  allocate(Links(4,2))
   Links(1,:) = [1 ,0]
   Links(2,:) = [0 ,1]
   Links(3,:) = [-1,0]
   Links(4,:) = [0,-1]
-  call TB_build_Hlat(Hlat,ts_hm2b,Nso,[Nx,Nx],Links,pbc=.true.)
-  allocate(Hij(Nlat*Nso,Nlat*Nso,1))
-  do concurrent(i=1:Nlat,j=1:Nlat,iso=1:Nso,jso=1:Nso)
-     ii = iso + (i-1)*Nso
-     jj = jso + (j-1)*Nso
-     Hij(ii,jj,1) = Hlat(iso,jso,i,j)
-  enddo
-  allocate(scHij(2,Nlat*Nso,Nlat*Nso,1));scHij=zero
+  call TB_build_Hlat(Hij(:,:,1),ts_hm2b,Nso,[Nx,Nx],Links,pbc=.true.) 
   scHij(1,:,:,1) = Hij(:,:,1)
   scHij(2,:,:,1) =-conjg(Hij(:,:,1))
+  !
+  Hloc = sum(Hk,3)/Nk;where(abs(Hloc)<1d-4)Hloc=zero
+  call print_matrix(Hloc)
+  do concurrent(io=1:Nso,jo=1:Nso)
+     Hloc_rank4(1,1,io,jo) = Hloc(io,jo)
+     do ilat=1,Nlat
+        Hloc_rank3(ilat,io,jo)     = Hloc(io,jo)
+        Hloc_rank5(ilat,1,1,io,jo) = Hloc(io,jo)
+     enddo
+  enddo
+  !
+  !
+  !
+  !Build normal and superc 1st-order Sigma^{1}, Self^{1}
+  !Set SC Sigma (BCS-like)
+  S_rank2 = zero; forall(io=1:Nso)S_rank2(io,3-io,:) = lambda
+  S_rank3 = zero; forall(io=1:Nso)S_rank3(:,io,3-io,:) = lambda
+  S_rank4 = zero; forall(io=1:Nso)S_rank4(:,:,io,3-io,:) = lambda
+  S_rank5 = zero; forall(io=1:Nso)S_rank5(:,:,:,io,3-io,:) = lambda
   !
   !Set SC Sigma (BCS-like)
   scS_rank2 = zero; forall(io=1:Nso)scS_rank2(2,io,io,:) = -delta
   scS_rank3 = zero; forall(io=1:Nso)scS_rank3(2,:,io,io,:) = -delta
   scS_rank4 = zero; forall(io=1:Nso)scS_rank4(2,1,1,io,io,:) = -delta
   scS_rank5 = zero; forall(io=1:Nso)scS_rank5(2,:,1,1,io,io,:) = -delta
-  !
-  !Get exact BCS Green's functions:
-  call get_gf_schk(Hk,scS_rank2,scmG0_rank2,'mats')
-  call get_gf_schk(Hk,scS_rank2,scrG0_rank2,'real')
-  call get_gf_schlat(Hij(:,:,1),scS_rank3,scmG0_rank3,'mats')
-  call get_gf_schlat(Hij(:,:,1),scS_rank3,scrG0_rank3,'real')
 
-  do concurrent(iorb=1:Nso,jorb=1:Nso)
-     scmG0_rank4(:,1,1,iorb,jorb,:)   = scmG0_rank2(:,iorb,jorb,:)
-     scrG0_rank4(:,1,1,iorb,jorb,:)   = scrG0_rank2(:,iorb,jorb,:)
-     do ilat=1,Nlat
-        scmG0_rank3(:,ilat,iorb,jorb,:)       = scmG0_rank3(:,ilat,iorb,jorb,:)
-        scrG0_rank3(:,ilat,iorb,jorb,:)       = scrG0_rank3(:,ilat,iorb,jorb,:)
-        scmG0_rank5(:,ilat,1,1,iorb,jorb,:)   = scmG0_rank3(:,ilat,iorb,jorb,:)
-        scrG0_rank5(:,ilat,1,1,iorb,jorb,:)   = scrG0_rank3(:,ilat,iorb,jorb,:)
-     enddo
-  enddo
-  !
-  !> CHECK: Build all ranks Nambu GF, Mats and Real
+
+  call get_gloc(Hk, mG_rank2,S_rank2,axis='m')
+  call get_gloc(Hk, mG_rank4,S_rank4,axis='m')
+  call get_gloc(Hij,mG_rank3,S_rank3,axis='m')
+  call get_gloc(Hij,mG_rank5,S_rank5,axis='m')
+
+  call get_gloc(Hk, rG_rank2,S_rank2,axis='r')
+  call get_gloc(Hk, rG_rank4,S_rank4,axis='r')
+  call get_gloc(Hij,rG_rank3,S_rank3,axis='r')
+  call get_gloc(Hij,rG_rank5,S_rank5,axis='r')
+
   call get_gloc(scHk, scmG_rank2,scS_rank2,axis='m')
   call get_gloc(scHk, scmG_rank4,scS_rank4,axis='m')
   call get_gloc(scHij,scmG_rank3,scS_rank3,axis='m')
   call get_gloc(scHij,scmG_rank5,scS_rank5,axis='m')
+
   call get_gloc(scHk, scrG_rank2,scS_rank2,axis='r')
   call get_gloc(scHk, scrG_rank4,scS_rank4,axis='r')
   call get_gloc(scHij,scrG_rank3,scS_rank3,axis='r')
   call get_gloc(scHij,scrG_rank5,scS_rank5,axis='r')
+
+
+
+  !> Get Weiss
+  call legacy_dmft_weiss(mG_rank2,S_rank2,mW_rank2)
+  call legacy_dmft_weiss(mG_rank5,S_rank5,mW_rank5)
+  call legacy_dmft_weiss(&
+       scmG_rank2(1,:,:,:),scmG_rank2(2,:,:,:),&
+       scS_rank2(1,:,:,:),scS_rank2(2,:,:,:),&
+       scmW_rank2(1,:,:,:),scmW_rank2(2,:,:,:) )
+  call legacy_dmft_weiss(&
+       scmG_rank5(1,:,:,:,:,:,:),scmG_rank5(2,:,:,:,:,:,:),&
+       scS_rank5(1,:,:,:,:,:,:),scS_rank5(2,:,:,:,:,:,:),&
+       scmW_rank5(1,:,:,:,:,:,:),scmW_rank5(2,:,:,:,:,:,:) )
+  do concurrent(iorb=1:Norb,jorb=1:Norb)
+     mW_rank4(1,1,iorb,jorb,:)     = mW_rank2(iorb,jorb,:)
+     mW_rank3(:,iorb,jorb,:)       = mW_rank5(:,1,1,iorb,jorb,:)
+     scmW_rank4(:,1,1,iorb,jorb,:) = scmW_rank2(:,iorb,jorb,:)
+     scmW_rank3(:,:,iorb,jorb,:)   = scmW_rank5(:,:,1,1,iorb,jorb,:)
+  enddo
   !
-  !> ASSERT EQUALITY WITH EXACT ONES:
-  call assert(scmG_rank2,scmG0_rank2,"SC Matsubara H(k): get_gloc_rank2",tol=1d-12)
-  call assert(scmG_rank3,scmG0_rank3,"SC Matsubara H(k): get_gloc_rank3",tol=1d-12)
-  call assert(scmG_rank4,scmG0_rank4,"SC Matsubara H(k): get_gloc_rank4",tol=1d-12)
-  call assert(scmG_rank5,scmG0_rank5,"SC Matsubara H(k): get_gloc_rank5",tol=1d-12)
-  call assert(scrG_rank2,scrG0_rank2,"SC Realaxis  H(k): get_gloc_rank2",tol=1d-12)
-  call assert(scrG_rank3,scrG0_rank3,"SC Realaxis  H(k): get_gloc_rank3",tol=1d-12)
-  call assert(scrG_rank4,scrG0_rank4,"SC Realaxis  H(k): get_gloc_rank4",tol=1d-12)
-  call assert(scrG_rank5,scrG0_rank5,"SC Realaxis  H(k): get_gloc_rank5",tol=1d-12)
-  call wait(500)
+  call dmft_weiss(mG_rank2,S_rank2,mG0_rank2)
+  call dmft_weiss(mG_rank3,S_rank3,mG0_rank3)
+  call dmft_weiss(mG_rank4,S_rank4,mG0_rank4)
+  call dmft_weiss(mG_rank5,S_rank5,mG0_rank5)
+  call dmft_weiss( scmG_rank2(1,:,:,:),scmG_rank2(2,:,:,:),&
+       scS_rank2(1,:,:,:),scS_rank2(2,:,:,:),&
+       scmG0_rank2(1,:,:,:),scmG0_rank2(2,:,:,:))
+
+  call dmft_weiss( scmG_rank3(1,:,:,:,:),scmG_rank3(2,:,:,:,:),&
+       scS_rank3(1,:,:,:,:),scS_rank3(2,:,:,:,:),&
+       scmG0_rank3(1,:,:,:,:),scmG0_rank3(2,:,:,:,:))
+
+  call dmft_weiss( scmG_rank4(1,:,:,:,:,:),scmG_rank4(2,:,:,:,:,:),&
+       scS_rank4(1,:,:,:,:,:),scS_rank4(2,:,:,:,:,:),&
+       scmG0_rank4(1,:,:,:,:,:),scmG0_rank4(2,:,:,:,:,:))
+
+  call dmft_weiss( scmG_rank5(1,:,:,:,:,:,:),scmG_rank5(2,:,:,:,:,:,:),&
+       scS_rank5(1,:,:,:,:,:,:),scS_rank5(2,:,:,:,:,:,:),&
+       scmG0_rank5(1,:,:,:,:,:,:),scmG0_rank5(2,:,:,:,:,:,:))
+
+
+
+  call assert(mW_rank2,mG0_rank2,"Weiss_rank2",tol=1d-12)
+  call assert(mW_rank3,mG0_rank3,"Weiss_rank3",tol=1d-12)
+  call assert(mW_rank4,mG0_rank4,"Weiss_rank4",tol=1d-12)
+  call assert(mW_rank5,mG0_rank5,"Weiss_rank5",tol=1d-12)
+  call assert(scmW_rank2,scmG0_rank2,"scWeiss_rank2",tol=1d-12)
+  call assert(scmW_rank3,scmG0_rank3,"scWeiss_rank3",tol=1d-12)
+  call assert(scmW_rank4,scmG0_rank4,"scWeiss_rank4",tol=1d-12)
+  call assert(scmW_rank5,scmG0_rank5,"scWeiss_rank5",tol=1d-12)
+
+  call wait(1000)
+
+
+
+
+
+
+
+  !> Get Delta
+  call legacy_dmft_delta(mG_rank2,S_rank2,mW_rank2,Hloc)
+  call legacy_dmft_delta(mG_rank5,S_rank5,mW_rank5,Hloc_rank5)
+  call legacy_dmft_delta(&
+       scmG_rank2(1,:,:,:),scmG_rank2(2,:,:,:),&
+       scS_rank2(1,:,:,:),scS_rank2(2,:,:,:),&
+       scmW_rank2(1,:,:,:),scmW_rank2(2,:,:,:), Hloc)
+  call legacy_dmft_delta(&
+       scmG_rank5(1,:,:,:,:,:,:),scmG_rank5(2,:,:,:,:,:,:),&
+       scS_rank5(1,:,:,:,:,:,:),scS_rank5(2,:,:,:,:,:,:),&
+       scmW_rank5(1,:,:,:,:,:,:),scmW_rank5(2,:,:,:,:,:,:), Hloc_rank5 )
+  do concurrent(iorb=1:Norb,jorb=1:Norb)
+     mW_rank4(1,1,iorb,jorb,:)     = mW_rank2(iorb,jorb,:)
+     mW_rank3(:,iorb,jorb,:)       = mW_rank5(:,1,1,iorb,jorb,:)
+     scmW_rank4(:,1,1,iorb,jorb,:) = scmW_rank2(:,iorb,jorb,:)
+     scmW_rank3(:,:,iorb,jorb,:)   = scmW_rank5(:,:,1,1,iorb,jorb,:)
+  enddo
+  !
+  call dmft_delta(mG_rank2,S_rank2,mG0_rank2,Hloc)
+  call dmft_delta(mG_rank3,S_rank3,mG0_rank3,Hloc_rank3)
+  call dmft_delta(mG_rank4,S_rank4,mG0_rank4,Hloc_rank4)
+  call dmft_delta(mG_rank5,S_rank5,mG0_rank5,Hloc_rank5)
+  call dmft_delta( scmG_rank2(1,:,:,:),scmG_rank2(2,:,:,:),&
+       scS_rank2(1,:,:,:),scS_rank2(2,:,:,:),&
+       scmG0_rank2(1,:,:,:),scmG0_rank2(2,:,:,:), Hloc)
+
+  call dmft_delta( scmG_rank3(1,:,:,:,:),scmG_rank3(2,:,:,:,:),&
+       scS_rank3(1,:,:,:,:),scS_rank3(2,:,:,:,:),&
+       scmG0_rank3(1,:,:,:,:),scmG0_rank3(2,:,:,:,:), Hloc_rank3)
+
+  call dmft_delta( scmG_rank4(1,:,:,:,:,:),scmG_rank4(2,:,:,:,:,:),&
+       scS_rank4(1,:,:,:,:,:),scS_rank4(2,:,:,:,:,:),&
+       scmG0_rank4(1,:,:,:,:,:),scmG0_rank4(2,:,:,:,:,:),Hloc_rank4)
+
+  call dmft_delta( scmG_rank5(1,:,:,:,:,:,:),scmG_rank5(2,:,:,:,:,:,:),&
+       scS_rank5(1,:,:,:,:,:,:),scS_rank5(2,:,:,:,:,:,:),&
+       scmG0_rank5(1,:,:,:,:,:,:),scmG0_rank5(2,:,:,:,:,:,:),Hloc_rank5)
+
+
+
+  call assert(mW_rank2,mG0_rank2,"Delta_rank2",tol=1d-12)
+  call assert(mW_rank3,mG0_rank3,"Delta_rank3",tol=1d-12)
+  call assert(mW_rank4,mG0_rank4,"Delta_rank4",tol=1d-12)
+  call assert(mW_rank5,mG0_rank5,"Delta_rank5",tol=1d-12)
+  call assert(scmW_rank2,scmG0_rank2,"scDelta_rank2",tol=1d-12)
+  call assert(scmW_rank3,scmG0_rank3,"scDelta_rank3",tol=1d-12)
+  call assert(scmW_rank4,scmG0_rank4,"scDelta_rank4",tol=1d-12)
+  call assert(scmW_rank5,scmG0_rank5,"scDelta_rank5",tol=1d-12)
+
+
+
+
 
 
 contains
 
+  ! call write_gf(scmW_rank2(1,:,:,:),"legacyG","mats",iprint=1)
+  ! call write_gf(scmG0_rank2(1,:,:,:),"newG","mats",iprint=1)
 
-  function hk_bhz(kpoint,N) result(hk)
-    real(8),dimension(:)      :: kpoint
-    integer                   :: N
-    real(8)                   :: ek
-    real(8)                   :: kx,ky
-    complex(8),dimension(N,N) :: hk
-    if(N/=4)stop "hk_model: error in N dimensions"
-    kx=kpoint(1)
-    ky=kpoint(2)
-    ek = -1d0*(cos(kx)+cos(ky))
-    Hk = (Mh+ek)*Gamma5 + lambda*sin(kx)*Gamma1 + lambda*sin(ky)*Gamma2
-  end function hk_bhz
 
   function hk_hm2b(kpoint,N) result(hk)
     real(8),dimension(:)      :: kpoint
@@ -301,50 +272,30 @@ contains
   end function hk_hm2b
 
 
-
-  function ts_bhz(link,Nso) result(Hts)
-    integer                       :: link
-    integer                       :: Nso
-    complex(8),dimension(Nso,Nso) :: Hts
-    select case(link)
-    case (0) !LOCAL PART
-       Hts =  Mh*Gamma5
-    case (1) !RIGHT HOPPING
-       Hts = -0.5d0*Gamma5 + xi*0.5d0*lambda*Gamma1
-    case (2) !UP HOPPING
-       Hts = -0.5d0*Gamma5 + xi*0.5d0*lambda*Gamma2
-    case (3) !LEFT HOPPING
-       Hts = -0.5d0*Gamma5 - xi*0.5d0*lambda*Gamma1
-    case (4) !DOWN HOPPING
-       Hts = -0.5d0*Gamma5 - xi*0.5d0*lambda*Gamma2
-    case default 
-       stop "ts_model ERROR: link != {0,...,4}"
-    end select
-  end function ts_bhz
-
   function ts_hm2b(link,N) result(Hts)
     integer                       :: link
     integer                       :: N
     complex(8),dimension(N,N) :: Hts
     select case(link)
     case (0) !LOCAL PART
-       Hts =  0d0!Mh*pauli_tau_z
+       Hts =  Mh*pauli_tau_z
     case (1) !RIGHT HOPPING
-       Hts = -0.5d0*pauli_tau_z !+ xi*0.5d0*lambda*Gamma1
+       Hts = -0.5d0*pauli_tau_z !+ xi*0.5d0*lambda*pauli_tau_x
     case (2) !UP HOPPING
-       Hts = -0.5d0*pauli_tau_z !+ xi*0.5d0*lambda*Gamma2
+       Hts = -0.5d0*pauli_tau_z !+ xi*0.5d0*lambda*pauli_tau_y
     case (3) !LEFT HOPPING
-       Hts = -0.5d0*pauli_tau_z !- xi*0.5d0*lambda*Gamma1
+       Hts = -0.5d0*pauli_tau_z !- xi*0.5d0*lambda*pauli_tau_x
     case (4) !DOWN HOPPING
-       Hts = -0.5d0*pauli_tau_z !- xi*0.5d0*lambda*Gamma2
+       Hts = -0.5d0*pauli_tau_z !- xi*0.5d0*lambda*pauli_tau_y
     case default 
        stop "ts_model ERROR: link != {0,...,4}"
     end select
   end function ts_hm2b
 
 
-  subroutine get_gf_hk(Hk,Gloc,axis)
+  subroutine get_gf_hk(Hk,S,Gloc,axis)
     complex(8),dimension(Nso,Nso,Nk) :: Hk
+    complex(8),dimension(Nso,Nso,L)  :: S
     complex(8),dimension(Nso,Nso,L)  :: Gloc
     character(len=*)                 :: axis
     complex(8),dimension(L)          :: wfreq
@@ -358,7 +309,7 @@ contains
     !
     Gloc = zero
     do ik=1,Nk
-       U = Hk(:,:,ik)
+       U = Hk(:,:,ik) + S(:,:,1)
        call eigh(U,E)
        forall(i=1:L)csi(:,i)=one/(wfreq(i)+xmu-E(:))
        do concurrent(io=1:Nso,jo=1:Nso,i=1:L)
@@ -398,9 +349,9 @@ contains
   end subroutine get_gf_schk
 
 
-
-  subroutine get_gf_hlat(Hij,Gloc,axis)
+  subroutine get_gf_hlat(Hij,S,Gloc,axis)
     complex(8),dimension(Nlso,Nlso)      :: Hij
+    complex(8),dimension(Nlat,Nso,Nso,L) :: S
     complex(8),dimension(Nlat,Nso,Nso,L) :: Gloc
     character(len=*)                     :: axis
     complex(8),dimension(L)              :: wfreq
@@ -413,7 +364,8 @@ contains
     write(*,"(A)")"Get local Green's function Hij, axis:"//str(axis)
     wfreq = build_frequency_array(axis)
     !
-    U = Hij
+    U = Hij + from_rank3(S(:,:,:,1))
+    !
     call eigh(U,E)
     !
     !Allocate and setup the Matsubara freq.
@@ -584,15 +536,16 @@ contains
 
 
 
-  subroutine TB_build_Hlat(Hij,ts_model,Nso,Nrvec,Links,pbc)
+  subroutine TB_build_Hlat(H,ts_model,Nso,Nrvec,Links,pbc)
     integer                                                     :: Nso
     integer,dimension(:),intent(in)                             :: Nrvec
+    complex(8),dimension(product(Nrvec)*Nso,product(Nrvec)*Nso) :: H
     integer,dimension(:,:),intent(in)                           :: Links ![Nlink][dim]
     logical,optional                                            :: pbc
     logical                                                     :: pbc_
     integer,dimension(product(Nrvec),size(Nrvec))               :: RNgrid
     integer                                                     :: Nlat,Nlink
-    integer                                                     :: ilat,jlat
+    integer                                                     :: ilat,jlat,iso,jso,ii,jj
     integer,dimension(size(Nrvec))                              :: Ri,Rj
     integer                                                     :: i,ilink
     complex(8),dimension(Nso,Nso,product(Nrvec),product(Nrvec)) :: Hij
@@ -635,6 +588,14 @@ contains
           Hij(:,:,ilat,jlat) = Hij(:,:,ilat,jlat) + ts_model(ilink,Nso)
        enddo do_links
     enddo do_lattice
+    !
+    H = zero
+    do concurrent(ilat=1:Nlat,jlat=1:Nlat,iso=1:Nso,jso=1:Nso)
+       ii = iso + (ilat-1)*Nso
+       jj = jso + (jlat-1)*Nso
+       H(ii,jj) = Hij(iso,jso,ilat,jlat)
+    enddo
+    !
     return
   end subroutine TB_build_Hlat
 
