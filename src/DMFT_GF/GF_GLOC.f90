@@ -587,16 +587,25 @@ contains
     if(mpi_master)write(*,"(A)")"DOS integration algorithm."
     if(mpi_master)call start_timer
     !
+    !case F  => 1  DOS, H(e)=diag(Ebands), non-diagonal case
+    !case T  => >1 DOS, Ebands, diagonal case
+    if(present(diagonal))then
+       dos_diag=diagonal
+    else
+       dos_diag = .not.(size(Dbands,1) < size(Ebands,1))
+    endif
     !
     call assert_shape(Sigma,[Nspin,Nspin,Norb,Norb,Lfreq],"get_gloc_normal_rank4","Sigma")
     call assert_shape(Gloc, [Nspin,Nspin,Norb,Norb,Lfreq],"get_gloc_normal_rank4","Gloc")
+    !
+    call build_frequency_array(axis)
     !
     allocate(Zeta(Ntot,Ntot))
     !
     Gloc = zero
     dosdiag:if(dos_diag)then
        dLfmpi: if(Lfreq>=Lk)then
-          do i=1+mpi_rank, Lfreq, mpi_size
+          do i= 1+mpi_rank, Lfreq, mpi_size
              zeta = (wfreq(i)+xmu)*eye(Ntot)-from_rank4(Sigma(:,:,:,:,i))
              do concurrent(ispin=1:Nspin,iorb=1:Norb)
                 io = iorb + (ispin-1)*Norb
