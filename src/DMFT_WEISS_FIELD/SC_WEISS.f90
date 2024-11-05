@@ -82,7 +82,11 @@ contains
     call assert_shape(Sigma,[Ntot,Nlat*Nso,Lfreq],"dmft_get_weiss_normal_rank2","Sigma")
     call assert_shape(Weiss,[Ntot,Nlat*Nso,Lfreq],"dmft_get_weiss_normal_rank2","Weiss")
     !
+    Weiss = zero
+    !
     allocate(calG0(Nlat,Nso,Nso))
+    calG0 = zero
+    !
     MPIloop:do i=1+mpi_rank,Lfreq,mpi_size
        do ilat=1,Nlat
           call dmft_weiss_normal( get_block(ilat,Gloc(:,:,i)), get_block(ilat,Sigma(:,:,i)), calG0(ilat,:,:))
@@ -114,8 +118,12 @@ contains
     call assert_shape(Gloc, [Nlat,Nso,Nso,Lfreq],"dmft_get_weiss_normal_rank3","Gloc")
     call assert_shape(Weiss,[Nlat,Nso,Nso,Lfreq],"dmft_get_weiss_normal_rank3","Weiss")
     !
+    Weiss = zero
+    !
     if(allocated(Wtmp))deallocate(Wtmp)
     allocate(Wtmp(Ntot,Ntot))
+    Wtmp = zero
+    !
     MPIloop:do i=1+mpi_rank,Lfreq,mpi_size
        call dmft_weiss_normal( from_rank3(Gloc(:,:,:,i)), from_rank3(Sigma(:,:,:,i)), Wtmp)
        Weiss(:,:,:,i) = to_rank3(Wtmp)
@@ -146,8 +154,12 @@ contains
     call assert_shape(Gloc, [Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_weiss_normal_rank4","Gloc")
     call assert_shape(Weiss,[Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_weiss_normal_rank4","Weiss")
     !
+    Weiss = zero
+    !
     if(allocated(Wtmp))deallocate(Wtmp)
     allocate(Wtmp(Ntot,Ntot))
+    Wtmp = zero
+    !
     MPIloop:do i=1+mpi_rank,Lfreq,mpi_size
        call dmft_weiss_normal(from_rank4(Gloc(:,:,:,:,i)), from_rank4(Sigma(:,:,:,:,i)), Wtmp)
        Weiss(:,:,:,:,i) = to_rank4(Wtmp)
@@ -178,9 +190,12 @@ contains
     call assert_shape(Gloc, [Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_weiss_normal_rank5","Gloc")
     call assert_shape(Weiss,[Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_weiss_normal_rank5","Weiss")
     !
+    Weiss = zero
     !
     if(allocated(Wtmp))deallocate(Wtmp)
     allocate(Wtmp(Ntot,Ntot))
+    Wtmp = zero
+    !
     MPIloop:do i=1+mpi_rank,Lfreq,mpi_size
        call dmft_weiss_normal(from_rank5(Gloc(:,:,:,:,:,i)), from_rank5(Sigma(:,:,:,:,:,i)), Wtmp)
        Weiss(:,:,:,:,:,i) = to_rank5(Wtmp)
@@ -211,8 +226,12 @@ contains
     call assert_shape(Gloc, [Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_weiss_normal_rank6","Gloc")
     call assert_shape(Weiss,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_weiss_normal_rank6","Weiss")
     !
+    Weiss = zero
+    !
     if(allocated(Wtmp))deallocate(Wtmp)
     allocate(Wtmp(Ntot,Ntot))
+    Wtmp = zero
+    !
     MPIloop:do i=1+mpi_rank,Lfreq,mpi_size
        call dmft_weiss_normal(from_rank6(Gloc(:,:,:,:,:,:,i)),from_rank6(Sigma(:,:,:,:,:,:,i)),Wtmp)
        Weiss(:,:,:,:,:,:,i) = to_rank6(Wtmp)
@@ -247,8 +266,12 @@ contains
     call assert_shape(Gloc, [Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_weiss_normal_rank7","Gloc")
     call assert_shape(Weiss,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_weiss_normal_rank7","Weiss")
     !
+    Weiss = zero
+    !
     if(allocated(Wtmp))deallocate(Wtmp)
     allocate(Wtmp(Ntot,Ntot))
+    Wtmp = zero
+    !
     MPIloop:do i=1+mpi_rank,Lfreq,mpi_size
        call dmft_weiss_normal(from_rank7(Gloc(:,:,:,:,:,:,:,i)), from_rank7(Sigma(:,:,:,:,:,:,:,i)),Wtmp)
        Weiss(:,:,:,:,:,:,:,i) = to_rank7(Wtmp)
@@ -302,7 +325,12 @@ contains
     call assert_shape(Weiss,[Ntot,Nlat*Nso,Lfreq],"dmft_get_weiss_superc_rank2","Weiss")
     call assert_shape(Theta,[Ntot,Nlat*Nso,Lfreq],"dmft_get_weiss_superc_rank2","Theta")
     !
+    Weiss = zero
+    Theta = zero
+    !
     allocate(calG0(2,Nlat,Nso,Nso))
+    calG0 = zero
+    !
     MPIloop: do i=1+mpi_rank,Lfreq,mpi_size
        do ilat=1,Nlat        
           call dmft_weiss_superc(&
@@ -347,8 +375,13 @@ contains
     call assert_shape(Floc, [Nlat,Nso,Nso,Lfreq],"dmft_get_weiss_superc_rank3","Floc")
     call assert_shape(Theta,[Nlat,Nso,Nso,Lfreq],"dmft_get_weiss_superc_rank3","Theta")
     !
+    Weiss = zero
+    Theta = zero
+    !
     if(allocated(Ttmp))deallocate(Ttmp)
     allocate(Ttmp(2,Ntot,Ntot))
+    Ttmp = zero
+    !
     MPIloop:do i=1+mpi_rank,Lfreq,mpi_size
        call dmft_weiss_superc(&
             from_rank3(Gloc(:,:,:,i)) , from_rank3(Floc(:,:,:,i)), &
@@ -390,8 +423,13 @@ contains
     call assert_shape(Floc, [Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_weiss_superc_rank4","Floc")
     call assert_shape(Theta,[Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_weiss_superc_rank4","Theta")
     !
+    Weiss = zero
+    Theta = zero
+    !
     if(allocated(Ttmp))deallocate(Ttmp)
     allocate(Ttmp(2,Ntot,Ntot))
+    Ttmp = zero
+    !
     MPIloop:do i=1+mpi_rank,Lfreq,mpi_size
        call dmft_weiss_superc(&
             from_rank4(Gloc(:,:,:,:,i)) , from_rank4(Floc(:,:,:,:,i)), &
@@ -434,8 +472,13 @@ contains
     call assert_shape(Floc, [Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_weiss_superc_rank5","Floc")
     call assert_shape(Theta,[Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_weiss_superc_rank5","Theta")
     !
+    Weiss = zero
+    Theta = zero
+    !
     if(allocated(Ttmp))deallocate(Ttmp)
     allocate(Ttmp(2,Ntot,Ntot))
+    Ttmp = zero
+    !
     MPIloop:do i=1+mpi_rank,Lfreq,mpi_size
        call dmft_weiss_superc(&
             from_rank5(Gloc(:,:,:,:,:,i)) , from_rank5(Floc(:,:,:,:,:,i)), &
@@ -477,8 +520,13 @@ contains
     call assert_shape(Floc, [Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_weiss_superc_rank6","Floc")
     call assert_shape(Theta,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_weiss_superc_rank6","Theta")
     !
+    Weiss = zero
+    Theta = zero
+    !
     if(allocated(Ttmp))deallocate(Ttmp)
     allocate(Ttmp(2,Ntot,Ntot))
+    Ttmp = zero
+    !
     MPIloop:do i=1+mpi_rank,Lfreq,mpi_size
        call dmft_weiss_superc(&
             from_rank6(Gloc(:,:,:,:,:,:,i)) , from_rank6(Floc(:,:,:,:,:,:,i)), &
@@ -522,8 +570,13 @@ contains
     call assert_shape(Floc, [Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_weiss_superc_rank7","Floc")
     call assert_shape(Theta,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_weiss_superc_rank7","Theta")
     !
+    Weiss = zero
+    Theta = zero
+    !
     if(allocated(Ttmp))deallocate(Ttmp)
     allocate(Ttmp(2,Ntot,Ntot))
+    Ttmp = zero
+    !
     MPIloop:do i=1+mpi_rank,Lfreq,mpi_size
        call dmft_weiss_superc(&
             from_rank7(Gloc(:,:,:,:,:,:,:,i)) , from_rank7(Floc(:,:,:,:,:,:,:,i)), &

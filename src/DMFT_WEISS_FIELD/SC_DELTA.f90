@@ -175,10 +175,14 @@ contains
     call assert_shape(Delta,[Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_delta_normal_rank4","Delta")
     call assert_shape(Hloc,[Nspin,Nspin,Norb,Norb],"dmft_get_delta_normal_rank4","Hloc")
     !
+    Delta = zero
+    !
     call build_frequency_array(axis_)
     !
     if(allocated(Wtmp))deallocate(Wtmp)
     allocate(Wtmp(Ntot,Ntot))
+    Wtmp = zero
+    !
     MPIloop:do i=1+mpi_rank,Lfreq,mpi_size
        call dmft_delta_normal((wfreq(i)+xmu)*eye(Ntot)-from_rank4(Hloc), &
             from_rank4(Gloc(:,:,:,:,i)), &
@@ -218,10 +222,14 @@ contains
     call assert_shape(Delta,[Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_delta_normal_rank5","Delta")
     call assert_shape(Hloc, [Nlat,Nspin,Nspin,Norb,Norb],"dmft_get_delta_normal_rank5","Hloc")
     !
+    Delta = zero
+    !
     call build_frequency_array(axis_)
     !
     if(allocated(Wtmp))deallocate(Wtmp)
     allocate(Wtmp(Ntot,Ntot))
+    Wtmp = zero
+    !
     MPIloop:do i=1+mpi_rank,Lfreq,mpi_size
        call dmft_delta_normal((wfreq(i)+xmu)*eye(Ntot)-from_rank5(Hloc), &
             from_rank5(Gloc(:,:,:,:,:,i)), &
@@ -261,10 +269,14 @@ contains
     call assert_shape(Delta,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_delta_normal_rank6","Delta")
     call assert_shape(Hloc,[Nlat,Nlat,Nspin,Nspin,Norb,Norb],"dmft_get_delta_normal_rank6","Hloc")
     !
+    Delta = zero
+    !
     call build_frequency_array(axis_)
     !
     if(allocated(Wtmp))deallocate(Wtmp)
     allocate(Wtmp(Ntot,Ntot))
+    Wtmp = zero
+    !
     MPIloop:do i=1+mpi_rank,Lfreq,mpi_size
        call dmft_delta_normal((wfreq(i)+xmu)*eye(Ntot)-from_rank6(Hloc), &
             from_rank6(Gloc(:,:,:,:,:,:,i)), &
@@ -307,10 +319,14 @@ contains
     call assert_shape(Delta,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_delta_normal_rank7","Delta")
     call assert_shape(Hloc,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb],"dmft_get_delta_normal_rank7","Hloc")
     !
+    Delta = zero
+    !
     call build_frequency_array(axis_)
     !
     if(allocated(Wtmp))deallocate(Wtmp)
     allocate(Wtmp(Ntot,Ntot))
+    Wtmp = zero
+    !
     MPIloop:do i=1+mpi_rank,Lfreq,mpi_size
        call dmft_delta_normal((wfreq(i)+xmu)*eye(Ntot)-from_rank7(Hloc), &
             from_rank7(Gloc(:,:,:,:,:,:,:,i)), &
@@ -371,9 +387,14 @@ contains
     call assert_shape(Theta,[Ntot,Nlat*Nso,Lfreq],"dmft_get_delta_superc_rank2","Theta")
     call assert_shape(Hloc, [Ntot,Nlat*Nso],"dmft_get_delta_superc_rank2","Hloc")
     !
+    Delta = zero
+    Theta = zero
+    !
     call build_frequency_array(axis_)
     !
     allocate(calG0(2,Nlat,Nso,Nso))
+    calG0 = zero
+    !
     MPIloop: do i=1+mpi_rank,Lfreq,mpi_size
        do ilat=1,Nlat        
           call dmft_delta_superc((wfreq(i)+xmu)*eye(Ntot)-get_block(ilat,Hloc), &
@@ -424,10 +445,15 @@ contains
     call assert_shape(Theta,[Nlat,Nso,Nso,Lfreq],"dmft_get_delta_superc_rank3","Theta")
     call assert_shape(Hloc, [Nlat,Nso,Nso],"dmft_get_delta_superc_rank3","Hloc")
     !
+    Delta = zero
+    Theta = zero
+    !
     call build_frequency_array(axis_)
     !
     if(allocated(Ttmp))deallocate(Ttmp)
     allocate(Ttmp(2,Ntot,Ntot))
+    Ttmp = zero
+    !
     MPIloop: do i=1+mpi_rank,Lfreq,mpi_size
        call dmft_delta_superc((wfreq(i)+xmu)*eye(Ntot)-from_rank3(Hloc), &
             from_rank3(Gloc(:,:,:,i)) , from_rank3(Floc(:,:,:,i)), &
@@ -476,10 +502,15 @@ contains
     call assert_shape(Theta,[Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_delta_superc_rank4","Theta")
     call assert_shape(Hloc, [Nspin,Nspin,Norb,Norb],"dmft_get_delta_superc_rank4","Hloc")
     !
+    Delta = zero
+    Theta = zero
+    !
     call build_frequency_array(axis_)
     !
     if(allocated(Ttmp))deallocate(Ttmp)
     allocate(Ttmp(2,Ntot,Ntot))
+    Ttmp = zero
+    !
     MPIloop:do i=1+mpi_rank,Lfreq,mpi_size
        call dmft_delta_superc((wfreq(i)+xmu)*eye(Ntot)-from_rank4(Hloc), &
             from_rank4(Gloc(:,:,:,:,i)) , from_rank4(Floc(:,:,:,:,i)), &
@@ -528,10 +559,15 @@ contains
     call assert_shape(Theta,[Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_delta_superc_rank5","Theta")
     call assert_shape(Hloc,[Nlat,Nspin,Nspin,Norb,Norb],"dmft_get_delta_superc_rank5","Hloc")
     !
+    Delta = zero
+    Theta = zero
+    !
     call build_frequency_array(axis_)
     !
     if(allocated(Ttmp))deallocate(Ttmp)
     allocate(Ttmp(2,Ntot,Ntot))
+    Ttmp = zero
+    !
     MPIloop:do i=1+mpi_rank,Lfreq,mpi_size
        call dmft_delta_superc((wfreq(i)+xmu)*eye(Ntot)-from_rank5(Hloc), &
             from_rank5(Gloc(:,:,:,:,:,i)) , from_rank5(Floc(:,:,:,:,:,i)), &
@@ -580,8 +616,13 @@ contains
     call assert_shape(Theta,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_delta_superc_rank6","Theta")
     call assert_shape(Hloc,[Nlat,Nlat,Nspin,Nspin,Norb,Norb],"dmft_get_delta_superc_rank6","Hloc")
     !
+    Delta = zero
+    Theta = zero
+    !
     if(allocated(Ttmp))deallocate(Ttmp)
     allocate(Ttmp(2,Ntot,Ntot))
+    Ttmp = zero
+    !
     MPIloop:do i=1+mpi_rank,Lfreq,mpi_size
        call dmft_delta_superc((wfreq(i)+xmu)*eye(Ntot)-from_rank6(Hloc), &
             from_rank6(Gloc(:,:,:,:,:,:,i)) , from_rank6(Floc(:,:,:,:,:,:,i)), &
@@ -635,8 +676,13 @@ contains
     call assert_shape(Theta,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_delta_superc_rank7","Theta")
     call assert_shape(Hloc,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb],"dmft_get_delta_superc_rank7","Hloc")
     !
+    Delta = zero
+    Theta = zero
+    !
     if(allocated(Ttmp))deallocate(Ttmp)
     allocate(Ttmp(2,Ntot,Ntot))
+    Ttmp = zero
+    !
     MPIloop:do i=1+mpi_rank,Lfreq,mpi_size
        call dmft_delta_superc((wfreq(i)+xmu)*eye(Ntot)-from_rank7(Hloc), &
             from_rank7(Gloc(:,:,:,:,:,:,:,i)) , from_rank7(Floc(:,:,:,:,:,:,:,i)), &
