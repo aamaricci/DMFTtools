@@ -413,7 +413,7 @@ contains
     Nspin = size(Gloc,1)
     Norb  = size(Gloc,3)
     Lfreq = size(Gloc,5)    
-    Nso   = Nspin*Norb
+    Ntot  = Nspin*Norb
     !
     if(mpi_master)write(*,"(A)")"Get Weiss function [Nspin,Nspin,Norb,Norb]:"
     call assert_shape(Sigma,[Nspin,Nspin,Norb,Norb,Lfreq],"dmft_get_weiss_superc_rank4","Sigma")

@@ -922,7 +922,7 @@ contains
     !Testing part:  
     call assert_shape(Hk,[2,Ntot,Nlso],'get_gk_superc',"Hk")
     call assert_shape(Sigma,[2,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],'get_gk_superc',"Sigma")
-    call assert_shape(Gk,[2,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],'get_gk_superc',"Gk")
+    call assert_shape(Gk,[2,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lfreq],'get_gk_superc',"Gk")
     !
     call build_frequency_array(axis)
     !
