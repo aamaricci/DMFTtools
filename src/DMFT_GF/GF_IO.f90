@@ -168,7 +168,7 @@ contains
                   "_io"//str(io)//"jo"//str(io)//&
                   str(w_suffix)//reg(gf_suffix)
              call splot(reg(suffix),wio,Func(:,io,jo,:))
-             call file_gzip(reg(suffix))
+             call file_bzip(reg(suffix))
           enddo
           !
        case(2,3)                  !print all off-diagonals
@@ -179,7 +179,7 @@ contains
                      "_io"//str(io)//"jo"//str(jo)//&
                      str(w_suffix)//reg(gf_suffix)
                 call splot(reg(suffix),wio,Func(:,io,jo,:))
-                call file_gzip(reg(suffix))
+                call file_bzip(reg(suffix))
              enddo
           enddo
           !
@@ -195,7 +195,7 @@ contains
              suffix=reg(fname)//&
                   "_io"//str(io)//"io"//str(io)//&
                   str(w_suffix)
-             if(itar_)call file_targz(tarball=reg(suffix),&
+             if(itar_)call file_targz(tarball="tar_"//reg(suffix),&
                   pattern=reg(suffix)//reg(index)//"*"//reg(gf_suffix))
           enddo
           !
@@ -212,7 +212,7 @@ contains
                 suffix=reg(fname)//&
                      "_io"//str(io)//"jo"//str(jo)//&
                      str(w_suffix)
-                if(itar_)call file_targz(tarball=reg(suffix),&
+                if(itar_)call file_targz(tarball="tar_"//reg(suffix),&
                      pattern=reg(suffix)//reg(index)//"*"//reg(gf_suffix))
              enddo
           enddo
@@ -343,7 +343,7 @@ contains
                      "_s"//str(ispin)//&
                      str(w_suffix)//reg(gf_suffix)
                 call splot(reg(suffix),wio,Func(:,ispin,ispin,iorb,iorb,:))
-                call file_gzip(reg(suffix))
+                call file_bzip(reg(suffix))
              enddo
           enddo
           !
@@ -357,7 +357,7 @@ contains
                         "_s"//str(ispin)//&
                         str(w_suffix)//reg(gf_suffix)
                    call splot(reg(suffix),wio,Func(:,ispin,ispin,iorb,jorb,:))
-                   call file_gzip(reg(suffix))
+                   call file_bzip(reg(suffix))
                 enddo
              enddo
           enddo
@@ -373,7 +373,7 @@ contains
                            "_s"//str(ispin)//str(jspin)//&
                            str(w_suffix)//reg(gf_suffix)
                       call splot(reg(suffix),wio,Func(:,ispin,jspin,iorb,jorb,:))
-                      call file_gzip(reg(suffix))
+                      call file_bzip(reg(suffix))
                    enddo
                 enddo
              enddo
@@ -394,7 +394,7 @@ contains
                      "_l"//str(iorb)//"m"//str(iorb)//&
                      "_s"//str(ispin)//&
                      str(w_suffix)
-                if(itar_)call file_targz(tarball=reg(suffix),&
+                if(itar_)call file_targz(tarball="tar_"//reg(suffix),&
                      pattern=reg(suffix)//reg(index)//"*"//reg(gf_suffix))
              enddo
           enddo
@@ -415,7 +415,7 @@ contains
                         "_l"//str(iorb)//"m"//str(jorb)//&
                         "_s"//str(ispin)//&
                         str(w_suffix)
-                   if(itar_)call file_targz(tarball=reg(suffix),&
+                   if(itar_)call file_targz(tarball="tar_"//reg(suffix),&
                         pattern=reg(suffix)//reg(index)//"*"//reg(gf_suffix))
                 enddo
              enddo
@@ -438,7 +438,7 @@ contains
                            "_l"//str(iorb)//"m"//str(jorb)//&
                            "_s"//str(ispin)//str(jspin)//&
                            str(w_suffix)
-                      if(itar_)call file_targz(tarball=reg(suffix),&
+                      if(itar_)call file_targz(tarball="tar_"//reg(suffix),&
                            pattern=reg(suffix)//reg(index)//"*"//reg(gf_suffix))
                    enddo
                 enddo
@@ -495,7 +495,7 @@ contains
                      "_s"//str(ispin)//&
                      str(w_suffix)//reg(gf_suffix)
                 call splot(reg(suffix),wio,Func(:,:,ispin,ispin,iorb,iorb,:))
-                call file_gzip(reg(suffix))
+                call file_bzip(reg(suffix))
              enddo
           enddo
           !
@@ -509,7 +509,7 @@ contains
                         "_s"//str(ispin)//&
                         str(w_suffix)//reg(gf_suffix)
                    call splot(reg(suffix),wio,Func(:,:,ispin,ispin,iorb,jorb,:))
-                   call file_gzip(reg(suffix))
+                   call file_bzip(reg(suffix))
                 enddo
              enddo
           enddo
@@ -525,7 +525,7 @@ contains
                            "_s"//str(ispin)//str(jspin)//&
                            str(w_suffix)//reg(gf_suffix)
                       call splot(reg(suffix),wio,Func(:,:,ispin,jspin,iorb,jorb,:))
-                      call file_gzip(reg(suffix))
+                      call file_bzip(reg(suffix))
                    enddo
                 enddo
              enddo
@@ -550,7 +550,7 @@ contains
                      "_l"//str(iorb)//"m"//str(iorb)//&
                      "_s"//str(ispin)//&
                      str(w_suffix)
-                if(itar_)call file_targz(tarball=reg(suffix),&
+                if(itar_)call file_targz(tarball="tar_"//reg(suffix),&
                      pattern=reg(suffix)//reg(index)//"*"//reg(gf_suffix))
              enddo
           enddo
@@ -575,7 +575,7 @@ contains
                         "_l"//str(iorb)//"m"//str(jorb)//&
                         "_s"//str(ispin)//&
                         str(w_suffix)
-                   if(itar_)call file_targz(tarball=reg(suffix),&
+                   if(itar_)call file_targz(tarball="tar_"//reg(suffix),&
                         pattern=reg(suffix)//reg(index)//"*"//reg(gf_suffix))
                    !
                 enddo
@@ -603,7 +603,7 @@ contains
                            "_l"//str(iorb)//"m"//str(iorb)//&
                            "_s"//str(ispin)//str(jspin)//&
                            str(w_suffix)
-                      if(itar_)call file_targz(tarball=reg(suffix),&
+                      if(itar_)call file_targz(tarball="tar_"//reg(suffix),&
                            pattern=reg(suffix)//reg(index)//"*"//reg(gf_suffix))
                    enddo
                 enddo
@@ -670,7 +670,7 @@ contains
                               "_l"//str(iorb)//"m"//str(jorb)//&
                               "_s"//str(ispin)//&
                               str(w_suffix)
-                         if(present(itar).AND.itar)call file_targz(tarball=reg(suffix),&
+                         if(itar_)call file_targz(tarball="tar_"//reg(suffix),&
                               pattern=reg(suffix)//reg(index)//"*"//reg(gf_suffix))
                       enddo
                    enddo
@@ -699,7 +699,7 @@ contains
                                  "_l"//str(iorb)//"m"//str(jorb)//&
                                  "_s"//str(ispin)//str(jspin)//&
                                  str(w_suffix)
-                            if(present(itar).AND.itar)call file_targz(tarball=reg(suffix),&
+                            if(itar_)call file_targz(tarball="tar_"//reg(suffix),&
                                  pattern=reg(suffix)//reg(index)//"*"//reg(gf_suffix))
                          enddo
                       enddo

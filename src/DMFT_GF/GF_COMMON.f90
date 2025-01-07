@@ -1,7 +1,7 @@
 module GF_COMMON
   USE SF_TIMER
   USE SF_CONSTANTS, only: one,xi,zero,pi
-  USE SF_IOTOOLS,   only: reg,str,txtfy,splot,sread,file_gzip,file_gunzip,file_targz,file_untargz,to_lower
+  USE SF_IOTOOLS
   USE SF_LINALG,    only: eye,inv,inv_sym,inv_tridiag,get_tridiag,diag
   USE SF_ARRAYS,    only: linspace,arange
   USE SF_MISC,      only: assert_shape
