@@ -1309,7 +1309,7 @@ contains
              Gloc(2,io,jo,i) = Gloc(2,io,jo,i) + G(io,N+jo)*Dbands(io,ik)
           enddo
        enddo
-       call eta(ik,Lk)
+       if(mpi_master)call eta(ik,Lk)
     enddo
     call gf_reduce(Gloc)
     !
@@ -1378,7 +1378,7 @@ contains
              Gloc(2,ispin,jspin,iorb,jorb,i) = Gloc(2,ispin,jspin,iorb,jorb,i) + G(io,N+jo)*Dbands(io,ik)
           enddo
        enddo
-       call eta(ik,Lk)
+       if(mpi_master)call eta(ik,Lk)
     enddo
     call gf_reduce(Gloc)
     !
